@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
-import 'package:icu_connect/features/patients/screens/vital_signs_screen.dart'; // Will be created next
-import 'package:icu_connect/features/patients/screens/labs_screen.dart'; // Will be created next
+import 'package:icu_connect/features/doctor/patients/screens/vital_signs_screen.dart';
+
+import 'labs_screen.dart';
 
 class PatientDetailScreen extends StatelessWidget {
   final String name;

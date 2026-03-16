@@ -2,10 +2,26 @@ class AppTexts {
   // App Name
   static const String appName = 'ICU Connect';
 
-  // Auth
+  // Auth – fields & buttons
   static const String login = 'LOGIN';
   static const String userNameHint = 'USER NAME';
   static const String passwordHint = 'PASSWORD';
+  static const String emailLabel = 'Email';
+  static const String passwordLabel = 'Password';
+  static const String cancel = 'Cancel';
+
+  // Onboarding
+  static const String skip = 'Skip';
+  static const String getStarted = 'Get Started';
+
+  // Auth – validation messages
+  static const String emailRequired = 'Email is required';
+  static const String emailInvalid = 'Enter a valid email';
+  static const String passwordRequired = 'Password is required';
+
+  // Super Admin dialog
+  static const String superAdmin = 'Super Admin';
+  static const String restrictedAccess = 'Restricted Access';
 
   // Home
   static const String search = 'SEARCH';

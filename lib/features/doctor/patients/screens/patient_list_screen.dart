@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:icu_connect/features/patients/screens/patient_detail_screen.dart';
-import 'package:icu_connect/features/patients/widgets/patient_card.dart';
-// import 'package:icu_connect/features/patients/screens/patient_detail_screen.dart'; // Will impoort later
+import 'package:icu_connect/features/doctor/patients/screens/patient_detail_screen.dart';
+
+import '../widgets/patient_card.dart';
+
 
 class PatientListScreen extends StatelessWidget {
   const PatientListScreen({super.key});

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
-import 'package:icu_connect/features/auth/screens/login_screen.dart';
+import 'package:icu_connect/core/constants/app_images.dart';
+import 'package:icu_connect/features/doctor/onboarding/screens/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -32,13 +33,18 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller.forward();
 
-    // Navigate to Login after delay
     Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      }
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, animation, __) => const OnboardingScreen(),
+          transitionsBuilder: (_, animation, __, child) => FadeTransition(
+            opacity: animation,
+            child: child,
+          ),
+          transitionDuration: const Duration(milliseconds: 600),
+        ),
+      );
     });
   }
 
@@ -75,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   ),
                   child: ClipOval(
                     child: Image.asset(
-                      'assets/app_logo_without_back.png',
+                      AppImages.logoWithoutBack,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return const Icon(

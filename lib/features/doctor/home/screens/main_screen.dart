@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
-import 'package:icu_connect/features/home/widgets/side_drawer.dart';
-import 'package:icu_connect/features/patients/screens/patient_list_screen.dart';
-import 'package:icu_connect/features/patients/screens/add_edit_patient_screen.dart'; // Will be created next
+
+import '../../patients/screens/add_edit_patient_screen.dart';
+import '../../patients/screens/patient_list_screen.dart';
+import '../widgets/side_drawer.dart';
+
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});

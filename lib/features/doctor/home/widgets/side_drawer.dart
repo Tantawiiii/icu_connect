@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
-import 'package:icu_connect/features/auth/screens/login_screen.dart';
-import 'package:icu_connect/features/profile/screens/profile_screen.dart';
+
+
+import '../../auth/screens/login_screen.dart';
+import '../../profile/screens/profile_screen.dart';
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
@@ -13,10 +15,7 @@ class SideDrawer extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // Drawer Header (can be customized later, keeping simple for now)
             const SizedBox(height: 20),
-            
-            // Logged in User info (Placeholder)
             const ListTile(
               leading: CircleAvatar(
                 backgroundColor: AppColors.primary,
