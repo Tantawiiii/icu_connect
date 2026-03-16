@@ -16,6 +16,21 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   flutter_launcher_icons: ^0.14.4
+  bounce: ^1.0.2
+
+  # Networking
+  dio: ^5.7.0
+  pretty_dio_logger: ^1.4.0
+
+  # Secure token storage
+  flutter_secure_storage: ^9.2.2
+
+  # State management
+  flutter_bloc: ^9.1.0
+  equatable: ^2.0.7
+
+  # Preferences
+  shared_preferences: ^2.3.5
 
 dev_dependencies:
   flutter_test:
