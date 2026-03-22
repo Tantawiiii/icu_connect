@@ -29,13 +29,11 @@ class AuthInterceptor extends Interceptor {
     if (err.response?.statusCode == 401 && !_isRefreshing) {
       _isRefreshing = true;
       try {
-        final newToken = await _refreshToken();
-        if (newToken != null) {
-          await TokenStorage.instance.saveAccessToken(newToken);
-
-          // Retry the original request with the new token
+        final newAccessToken = await _refreshToken();
+        if (newAccessToken != null) {
+          // Retry the original request with the new access token
           final opts = err.requestOptions;
-          opts.headers['Authorization'] = 'Bearer $newToken';
+          opts.headers['Authorization'] = 'Bearer $newAccessToken';
           final response = await _dio.fetch(opts);
           handler.resolve(response);
           return;
@@ -49,9 +47,16 @@ class AuthInterceptor extends Interceptor {
     handler.next(err);
   }
 
+  /// Calls the refresh endpoint, persists both the new access token and the
+  /// rotated refresh token, then returns the new access token.
+  ///
+  /// Response shape:
+  /// ```json
+  /// { "success": true, "data": { "access_token": "...", "refresh_token": "..." } }
+  /// ```
   Future<String?> _refreshToken() async {
-    final refreshToken = await TokenStorage.instance.getRefreshToken();
-    if (refreshToken == null) return null;
+    final storedRefreshToken = await TokenStorage.instance.getRefreshToken();
+    if (storedRefreshToken == null) return null;
 
     final role = await TokenStorage.instance.getUserRole();
     final baseUrl = role == 'admin'
@@ -60,9 +65,29 @@ class AuthInterceptor extends Interceptor {
 
     final response = await Dio().post(
       '$baseUrl${ApiConstants.refreshToken}',
-      data: {'refresh_token': refreshToken},
+      data: {'refresh_token': storedRefreshToken},
+      options: Options(
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
     );
 
-    return response.data['access_token'] as String?;
+    final data = response.data['data'] as Map<String, dynamic>?;
+    if (data == null) return null;
+
+    final newAccessToken = data['access_token'] as String?;
+    final newRefreshToken = data['refresh_token'] as String?;
+
+    if (newAccessToken != null) {
+      await TokenStorage.instance.saveAccessToken(newAccessToken);
+    }
+    // Save rotated refresh token
+    if (newRefreshToken != null) {
+      await TokenStorage.instance.saveRefreshToken(newRefreshToken);
+    }
+
+    return newAccessToken;
   }
 }

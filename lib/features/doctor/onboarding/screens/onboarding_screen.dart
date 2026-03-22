@@ -234,8 +234,6 @@ class _Illustration extends StatelessWidget {
               size: 52,
             ),
           ),
-
-          // Small floating dots
           Positioned(
             top: 30,
             right: 50,

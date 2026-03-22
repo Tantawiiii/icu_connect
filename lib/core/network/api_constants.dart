@@ -35,13 +35,22 @@ class ApiConstants {
 
   // ── Admin – management endpoints ─────────────────────────────────────────
   static const String hospitals = '/hospitals';
-  static String hospitalById(String id) => '/hospitals/$id';
+  static String hospitalById(int id) => '/hospitals/$id';
+  static String hospitalRestore(int id) => '/hospitals/$id/restore';
   static const String users = '/users';
-  static String userById(String id) => '/users/$id';
+  static String userById(int id) => '/users/$id';
+  static String userRestore(int id) => '/users/$id/restore';
+  static const String labsTitles = '/labs-titles';
+  static String labTitleById(int id) => '/labs-titles/$id';
+  static const String vitalsTitles = '/vitals-titles';
+  static String vitalTitleById(int id) => '/vitals-titles/$id';
   static const String statistics = '/statistics';
   static const String dashboard = '/dashboard';
+  static const String admins = '/admins';
+  static String adminById(int id) => '/admins/$id';
 
   // ── Profile ───────────────────────────────────────────────────────────────
+  static const String authProfile = '/auth/profile';
   static const String profile = '/profile';
   static const String changePassword = '/profile/change-password';
 }
