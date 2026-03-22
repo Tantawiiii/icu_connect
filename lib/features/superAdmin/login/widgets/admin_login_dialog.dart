@@ -8,7 +8,7 @@ import '../../../../core/widgets/app_text_field.dart';
 import '../cubit/admin_login_cubit.dart';
 import '../cubit/admin_login_state.dart';
 import '../repository/admin_auth_repository.dart';
-import '../screens/super_admin_home_screen.dart';
+import '../../../superAdmin/home/screens/super_admin_home_screen.dart';
 
 Future<void> showAdminLoginDialog(BuildContext context) {
   return showDialog<void>(
@@ -116,7 +116,6 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
                     return null;
                   },
                 ),
-                // ── Error message ──────────────────────────────────────────
                 if (state is AdminLoginFailure) ...[
                   const SizedBox(height: 12),
                   Container(

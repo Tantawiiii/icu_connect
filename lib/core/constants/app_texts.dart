@@ -23,6 +23,126 @@ class AppTexts {
   static const String superAdmin = 'Super Admin';
   static const String restrictedAccess = 'Restricted Access';
 
+  // Super Admin home
+  static const String welcomeBack = 'Welcome back,';
+  static const String quickActions = 'Quick Actions';
+  static const String adminInfo = 'Admin Info';
+  static const String logoutConfirmMessage = 'Are you sure you want to logout?';
+
+  // Super Admin profile
+  static const String myProfile = 'My Profile';
+  static const String name = 'Name';
+  static const String phone = 'Phone';
+  static const String lastLogin = 'Last Login';
+  static const String status = 'Status';
+  static const String active = 'Active';
+  static const String inactive = 'Inactive';
+  static const String notAvailable = 'N/A';
+
+  // Quick action tiles
+  static const String hospitalsLabel = 'Hospitals';
+  static const String usersLabel = 'Users';
+  static const String dashboardLabel = 'Dashboard';
+
+  // Users CRUD
+  static const String addUser = 'Add User';
+  static const String editUser = 'Edit User';
+  static const String deleteUser = 'Delete User';
+  static const String restoreUser = 'Restore';
+  static const String deleteUserConfirmation =
+      'Are you sure you want to delete this user?';
+  static const String restoreUserConfirmation =
+      'Restore this deleted user?';
+  static const String userCreated = 'User created successfully';
+  static const String userUpdated = 'User updated successfully';
+  static const String userDeleted = 'User deleted successfully';
+  static const String userRestored = 'User restored successfully';
+  static const String roleLabel = 'Role';
+  static const String roleInHospital = 'Role in Hospital';
+  static const String assignedHospitals = 'Assigned Hospitals';
+  static const String addHospitalAssignment = 'Add Hospital';
+  static const String noHospitalsAssigned = 'No hospitals assigned';
+
+  // Hospitals CRUD
+  static const String addHospital = 'Add Hospital';
+  static const String editHospital = 'Edit Hospital';
+  static const String deleteHospital = 'Delete Hospital';
+  static const String restoreHospital = 'Restore';
+  static const String deleteHospitalConfirmation =
+      'Are you sure you want to delete this hospital?';
+  static const String restoreHospitalConfirmation =
+      'Restore this deleted hospital?';
+  static const String location = 'Location';
+  static const String totalBeds = 'Total Beds';
+  static const String availableBeds = 'Available Beds';
+  static const String occupiedBeds = 'Occupied Beds';
+  static const String deleted = 'Deleted';
+  static const String hospitalCreated = 'Hospital created successfully';
+  static const String hospitalUpdated = 'Hospital updated successfully';
+  static const String hospitalDeleted = 'Hospital deleted successfully';
+  static const String hospitalRestored = 'Hospital restored successfully';
+
+  // Patients CRUD (admin)
+  static const String patientsLabel = 'Patients';
+  static const String addPatientAdmin = 'Add Patient';
+  static const String editPatientAdmin = 'Edit Patient';
+  static const String deletePatientAdmin = 'Delete Patient';
+  static const String deletePatientConfirmation =
+      'Are you sure you want to delete this patient?';
+  static const String patientCreated = 'Patient created successfully';
+  static const String patientUpdated = 'Patient updated successfully';
+  static const String patientDeleted = 'Patient deleted successfully';
+  static const String nationalId = 'National ID';
+  static const String gender = 'Gender';
+  static const String bloodGroup = 'Blood Group';
+  static const String notes = 'Notes';
+  static const String male = 'Male';
+  static const String female = 'Female';
+  static const String other = 'Other';
+
+  // Labs titles CRUD
+  static const String labsLabel = 'Labs';
+  static const String labsTitlesLabel = 'Labs Titles';
+  static const String addLabTitle = 'Add Lab Title';
+  static const String editLabTitle = 'Edit Lab Title';
+  static const String deleteLabTitle = 'Delete Lab Title';
+  static const String deleteLabTitleConfirmation =
+      'Are you sure you want to delete this lab title?';
+  static const String labTitleCreated = 'Lab title created successfully';
+  static const String labTitleUpdated = 'Lab title updated successfully';
+  static const String labTitleDeleted = 'Lab title deleted successfully';
+  static const String unit = 'Unit';
+  static const String normalRangeMin = 'Normal Range Min';
+  static const String normalRangeMax = 'Normal Range Max';
+
+  // Vitals titles CRUD
+  static const String vitalsLabel = 'Vitals';
+  static const String vitalsTitlesLabel = 'Vitals Titles';
+  static const String addVitalTitle = 'Add Vital Title';
+  static const String editVitalTitle = 'Edit Vital Title';
+  static const String deleteVitalTitle = 'Delete Vital Title';
+  static const String deleteVitalTitleConfirmation =
+      'Are you sure you want to delete this vital title?';
+  static const String vitalTitleCreated = 'Vital title created successfully';
+  static const String vitalTitleUpdated = 'Vital title updated successfully';
+  static const String vitalTitleDeleted = 'Vital title deleted successfully';
+
+  // Super admins CRUD
+  static const String superAdmins = 'Super Admins';
+  static const String addAdmin = 'Add Admin';
+  static const String editAdmin = 'Edit Admin';
+  static const String deleteAdmin = 'Delete Admin';
+  static const String deleteAdminConfirmation =
+      'Are you sure you want to delete this admin?';
+  static const String confirmPassword = 'Confirm Password';
+  static const String passwordLeaveBlank =
+      'Password (leave blank to keep current)';
+  static const String confirmPasswordLeaveBlank =
+      'Confirm password (leave blank)';
+  static const String adminCreated = 'Admin created successfully';
+  static const String adminUpdated = 'Admin updated successfully';
+  static const String adminDeleted = 'Admin deleted successfully';
+
   // Home
   static const String search = 'SEARCH';
   static const String addPatient = '+ ADD PATIENT';
