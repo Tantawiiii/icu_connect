@@ -71,16 +71,17 @@ class QuickActions extends StatelessWidget {
             MaterialPageRoute(builder: (_) => const VitalsTitlesListScreen()),
           ),
         ),
-        _ActionTile(
-          icon: Icons.bar_chart_outlined,
-          label: AppTexts.statistics,
-          color: Colors.teal,
-        ),
-        _ActionTile(
-          icon: Icons.dashboard_outlined,
-          label: AppTexts.dashboardLabel,
-          color: Colors.deepOrange,
-        ),
+
+        // _ActionTile(
+        //   icon: Icons.bar_chart_outlined,
+        //   label: AppTexts.statistics,
+        //   color: Colors.teal,
+        // ),
+        // _ActionTile(
+        //   icon: Icons.dashboard_outlined,
+        //   label: AppTexts.dashboardLabel,
+        //   color: Colors.deepOrange,
+        // ),
       ],
     );
   }

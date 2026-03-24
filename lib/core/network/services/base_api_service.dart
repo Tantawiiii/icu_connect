@@ -146,6 +146,27 @@ abstract class BaseApiService {
     }
   }
 
+  /// Multipart PUT (e.g. admissions with new radiology files).
+  Future<T> uploadPut<T>(
+    String path,
+    FormData formData, {
+    String? cancelTag,
+    void Function(int, int)? onSendProgress,
+  }) async {
+    try {
+      final response = await _dio.put<T>(
+        path,
+        data: formData,
+        cancelToken: _token(cancelTag),
+        onSendProgress: onSendProgress,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+      return _unwrap(response);
+    } on DioException catch (e) {
+      throw _toNetworkException(e);
+    }
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
   CancelToken? _token(String? tag) =>
       tag != null ? CancelTokenManager.instance.getToken(tag) : null;
