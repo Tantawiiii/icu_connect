@@ -18,6 +18,38 @@ class AppTexts {
   static const String emailRequired = 'Email is required';
   static const String emailInvalid = 'Enter a valid email';
   static const String passwordRequired = 'Password is required';
+  static const String nameRequired = 'Name is required';
+  static const String phoneRequired = 'Phone is required';
+  static const String createNewAccount = 'Create new account';
+  static const String registerTitle = 'Create account';
+  static const String confirmPasswordLabel = 'Confirm password';
+  static const String confirmPasswordRequired = 'Please confirm your password';
+  static const String passwordsDoNotMatch = 'Passwords do not match';
+  static const String hospitalLabel = 'Hospital';
+  static const String selectHospital = 'Select a hospital';
+  static const String hospitalRequired = 'Please select a hospital';
+  static const String noHospitalsAvailable = 'No hospitals available.';
+  static const String register = 'REGISTER';
+  static const String registrationPendingTitle = 'Registration submitted';
+  static const String registrationPendingExplanation =
+      'Your account is pending approval by the hospital administrator. '
+      'When your request is approved, we will notify you by email. '
+      'Please check your inbox (and spam folder) for updates.';
+  static const String backToLogin = 'Back to login';
+
+  // Password reset (doctor)
+  static const String forgotPassword = 'Forgot password?';
+  static const String forgotPasswordTitle = 'Forgot password';
+  static const String sendOtp = 'Send code';
+  static const String verifyOtpTitle = 'Verify code';
+  static const String otpLabel = 'Verification code';
+  static const String otpHint = 'Enter 6-digit code';
+  static const String otpRequired = 'Please enter the verification code';
+  static const String otpInvalidLength = 'Code must be 6 digits';
+  static const String verifyOtpButton = 'VERIFY';
+  static const String resetPasswordTitle = 'New password';
+  static const String resetPasswordButton = 'RESET PASSWORD';
+  static const String passwordResetSuccess = 'Password reset successfully';
 
   // Super Admin dialog
   static const String superAdmin = 'Super Admin';

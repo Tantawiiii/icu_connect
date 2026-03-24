@@ -3,10 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
-import '../../../doctor/auth/screens/login_screen.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/network/token_storage.dart';
+import '../../../doctor/auth/login/screens/login_screen.dart';
 import '../../login/cubit/admin_login_cubit.dart';
 import '../../login/models/admin_model.dart';
-import '../widgets/admin_info_card.dart';
 import '../widgets/quick_actions.dart';
 import '../widgets/welcome_banner.dart';
 
@@ -70,7 +71,11 @@ class SuperAdminHomeScreen extends StatelessWidget {
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
-            onPressed: () {
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await TokenStorage.instance.clearAll();
+              ApiClient.reset();
+              if (!context.mounted) return;
               context.read<AdminLoginCubit>().reset();
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),

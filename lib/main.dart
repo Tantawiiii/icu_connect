@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:icu_connect/core/theme/app_theme.dart';
-import 'features/doctor/auth/screens/splash_screen.dart';
+import 'features/splash_screen.dart';
 
 void main() {
   runApp(const ICUConnectApp());
