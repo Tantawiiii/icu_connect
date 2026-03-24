@@ -21,6 +21,7 @@ class AppTextField extends StatefulWidget {
     this.onFieldSubmitted,
     this.onChanged,
     this.autofillHints,
+    this.maxLines = 1,
   });
 
   final TextEditingController? controller;
@@ -45,6 +46,9 @@ class AppTextField extends StatefulWidget {
   final void Function(String)? onChanged;
   final Iterable<String>? autofillHints;
 
+  /// When greater than 1, the field grows vertically (e.g. notes).
+  final int maxLines;
+
   @override
   State<AppTextField> createState() => _AppTextFieldState();
 }
@@ -63,6 +67,8 @@ class _AppTextFieldState extends State<AppTextField> {
       textInputAction: widget.textInputAction,
       obscureText: widget.isPassword ? _obscure : false,
       enabled: widget.enabled,
+      maxLines: widget.maxLines,
+      minLines: widget.maxLines > 1 ? 2 : 1,
       validator: widget.validator,
       onFieldSubmitted: widget.onFieldSubmitted,
       onChanged: widget.onChanged,

@@ -27,6 +27,8 @@ class ApiConstants {
   // ── Hospital – patient endpoints ─────────────────────────────────────────
   static const String patients = '/patients';
   static String patientById(String id) => '/patients/$id';
+  static const String admissions = '/admissions';
+  static String admissionById(int id) => '/admissions/$id';
   static const String patientVitalSigns = '/vital-signs';
   static String patientVitalSignsById(String patientId) =>
       '/patients/$patientId/vital-signs';

@@ -92,6 +92,41 @@ class AppTexts {
   static const String patientCreated = 'Patient created successfully';
   static const String patientUpdated = 'Patient updated successfully';
   static const String patientDeleted = 'Patient deleted successfully';
+  static const String addAdmission = 'Add admission';
+  static const String editAdmission = 'Edit admission';
+  static const String createAdmission = 'Create admission';
+  static const String deleteAdmission = 'Delete admission';
+  static const String deleteAdmissionConfirmation =
+      'Delete this admission? Related records may be removed.';
+  static const String admissionCreated = 'Admission created successfully';
+  static const String admissionUpdated = 'Admission updated successfully';
+  static const String admissionDeleted = 'Admission deleted successfully';
+  static const String retry = 'Retry';
+
+  /// Super admin patient details screen
+  static const String patientDetailsTitle = 'Patient Details';
+  static const String identifiersSection = 'Identifiers';
+  static const String recordSection = 'Record';
+  static const String createdLabel = 'Created';
+  static const String updatedLabel = 'Updated';
+  static const String admissionsSection = 'Admissions';
+  static const String noAdmissionsYetPrefix = 'No admissions yet. Tap ';
+  static const String noAdmissionsYetSuffix = ' to create one.';
+  static const String patientDetailsHospital = 'Hospital';
+  static const String patientDetailsDoctor = 'Doctor';
+  static const String dischargedLabel = 'Discharged';
+  static const String dateOfDeathLabel = 'Date of death';
+  static const String admissionNotesSection = 'Admission notes';
+  static const String clinicalNotesSection = 'Clinical notes';
+  static const String treatmentPlansSection = 'Treatment plans';
+  static const String defaultVitalMeasurementTitle = 'Vital';
+  static const String defaultLabMeasurementTitle = 'Lab';
+  static const String normalRangePrefix = 'Normal:';
+  static const String utcTimeZoneSuffix = ' UTC';
+
+  static String admissionCardTitle(int id, String bedOrStatus) =>
+      'Admission #$id · $bedOrStatus';
+
   static const String nationalId = 'National ID';
   static const String gender = 'Gender';
   static const String bloodGroup = 'Blood Group';

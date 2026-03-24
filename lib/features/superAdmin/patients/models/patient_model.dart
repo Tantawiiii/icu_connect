@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import 'patient_admission_models.dart';
+
 class PatientModel extends Equatable {
   const PatientModel({
     required this.id,
@@ -13,6 +15,7 @@ class PatientModel extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
+    this.admissions = const [],
   });
 
   final int id;
@@ -26,6 +29,7 @@ class PatientModel extends Equatable {
   final String createdAt;
   final String updatedAt;
   final String? deletedAt;
+  final List<PatientAdmissionModel> admissions;
 
   bool get isDeleted => deletedAt != null;
 
@@ -41,6 +45,10 @@ class PatientModel extends Equatable {
         createdAt: json['created_at'] as String,
         updatedAt: json['updated_at'] as String,
         deletedAt: json['deleted_at'] as String?,
+        admissions: (json['admissions'] as List<dynamic>? ?? [])
+            .map((e) =>
+                PatientAdmissionModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
       );
 
   @override
@@ -56,6 +64,7 @@ class PatientModel extends Equatable {
         createdAt,
         updatedAt,
         deletedAt,
+        admissions,
       ];
 }
 
