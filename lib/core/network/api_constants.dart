@@ -12,6 +12,14 @@ class ApiConstants {
   static const String adminBaseUrl = '$_scheme://$_host$_version/admin';
   static const String hospitalBaseUrl = '$_scheme://$_host$_version/hospital';
 
+  /// Global password reset flow (not under admin/hospital prefixes).
+  /// e.g. `https://api.icuconnect.org/api/v1/password/forgot`
+  static const String passwordBaseUrl = '$_scheme://$_host$_version/password/';
+
+  static const String passwordForgot = 'forgot';
+  static const String passwordVerifyOtp = 'verify-otp';
+  static const String passwordReset = 'reset';
+
   // ── Timeouts ─────────────────────────────────────────────────────────────
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
@@ -23,6 +31,8 @@ class ApiConstants {
   static const String refreshToken = '/auth/refresh';
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';
+  static const String signup = '/auth/signup';
+  static const String authListHospitals = '/auth/list-hospitals';
 
   // ── Hospital – patient endpoints ─────────────────────────────────────────
   static const String patients = '/patients';

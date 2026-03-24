@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_texts.dart';
 import '../../../../core/utils/app_preferences.dart';
 import '../../../../core/widgets/app_button.dart';
+import '../../auth/login/screens/login_screen.dart';
 import '../data/onboarding_data.dart';
 import '../models/onboarding_page_model.dart';
-import '../../auth/screens/login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});

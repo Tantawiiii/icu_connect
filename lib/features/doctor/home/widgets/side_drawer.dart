@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
+import 'package:icu_connect/core/network/api_client.dart';
+import 'package:icu_connect/core/network/token_storage.dart';
 
 
-import '../../auth/screens/login_screen.dart';
+
+import '../../auth/login/screens/login_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 
 class SideDrawer extends StatelessWidget {
@@ -43,15 +46,55 @@ class SideDrawer extends StatelessWidget {
             const Spacer(),
             
             // Logout
-            _buildDrawerItem(context, AppTexts.logOut, Icons.logout, onTap: () {
-               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-              );
-            }),
+            _buildDrawerItem(
+              context,
+              AppTexts.logOut,
+              Icons.logout,
+              onTap: () => _logout(context),
+            ),
             const SizedBox(height: 20),
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    final accessToken = await TokenStorage.instance.getAccessToken();
+    final refreshToken = await TokenStorage.instance.getRefreshToken();
+
+    debugPrint(
+      '[Auth] before logout - access token exists: '
+      '${accessToken != null && accessToken.isNotEmpty}',
+    );
+    debugPrint(
+      '[Auth] before logout - refresh token exists: '
+      '${refreshToken != null && refreshToken.isNotEmpty}',
+    );
+    if (accessToken != null && accessToken.isNotEmpty) {
+      debugPrint('[Auth] access token: $accessToken');
+    }
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      debugPrint('[Auth] refresh token: $refreshToken');
+    }
+
+    await TokenStorage.instance.clearAll();
+    ApiClient.reset();
+
+    final accessAfter = await TokenStorage.instance.getAccessToken();
+    final refreshAfter = await TokenStorage.instance.getRefreshToken();
+    debugPrint(
+      '[Auth] after logout - access token exists: '
+      '${accessAfter != null && accessAfter.isNotEmpty}',
+    );
+    debugPrint(
+      '[Auth] after logout - refresh token exists: '
+      '${refreshAfter != null && refreshAfter.isNotEmpty}',
+    );
+
+    if (!context.mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
     );
   }
 

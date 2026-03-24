@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../api_client.dart';
 import '../api_constants.dart';
 import '../token_storage.dart';
 
@@ -58,10 +59,9 @@ class AuthInterceptor extends Interceptor {
     final storedRefreshToken = await TokenStorage.instance.getRefreshToken();
     if (storedRefreshToken == null) return null;
 
-    final role = await TokenStorage.instance.getUserRole();
-    final baseUrl = role == 'admin'
-        ? ApiConstants.adminBaseUrl
-        : ApiConstants.hospitalBaseUrl;
+    final storedRole = await TokenStorage.instance.getUserRole();
+    final role = ApiClient.roleFromStoredValue(storedRole);
+    final baseUrl = role.baseUrl;
 
     final response = await Dio().post(
       '$baseUrl${ApiConstants.refreshToken}',
