@@ -33,6 +33,8 @@ class ApiConstants {
   static const String resetPassword = '/auth/reset-password';
   static const String signup = '/auth/signup';
   static const String authListHospitals = '/auth/list-hospitals';
+  /// Authenticated doctor/hospital user — includes [user_status] per hospital.
+  static const String authHospitals = '/auth/hospitals';
 
   // ── Hospital – patient endpoints ─────────────────────────────────────────
   static const String patients = '/patients';
@@ -44,6 +46,10 @@ class ApiConstants {
       '/patients/$patientId/vital-signs';
   static const String labs = '/labs';
   static String labsByPatientId(String patientId) => '/patients/$patientId/labs';
+  static String hospitalDoctors(int hospitalId) => '/hospitals/$hospitalId/doctors';
+  static String hospitalAcceptDoctor(int hospitalId) =>
+      '/hospitals/$hospitalId/doctors/accept';
+  static String doctorActivate(int doctorId) => '/doctors/$doctorId/activate';
 
   // ── Admin – management endpoints ─────────────────────────────────────────
   static const String hospitals = '/hospitals';

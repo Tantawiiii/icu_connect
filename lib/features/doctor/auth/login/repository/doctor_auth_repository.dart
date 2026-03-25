@@ -4,6 +4,7 @@ import '../../../../../core/network/network_exceptions.dart';
 import '../../../../../core/network/services/base_api_service.dart';
 import '../../../../../core/network/token_storage.dart';
 
+import '../../../session/doctor_session_display.dart';
 import '../models/doctor_login_response.dart';
 
 class DoctorAuthRepository extends BaseApiService {
@@ -25,6 +26,12 @@ class DoctorAuthRepository extends BaseApiService {
       await TokenStorage.instance.saveAccessToken(response.data.accessToken);
       await TokenStorage.instance.saveRefreshToken(response.data.refreshToken);
       await TokenStorage.instance.saveUserRole(UserRole.hospital.name);
+
+      final u = response.data.user;
+      await DoctorSessionDisplay.apply(
+        name: u['name']?.toString() ?? '',
+        role: u['role']?.toString() ?? '',
+      );
 
       return response;
     } on NetworkException {

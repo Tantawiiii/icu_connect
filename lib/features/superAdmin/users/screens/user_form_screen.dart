@@ -9,24 +9,11 @@ import '../../hospitals/models/hospital_model.dart';
 import '../../hospitals/repository/hospitals_repository.dart';
 import '../cubit/user_form_cubit.dart';
 import '../cubit/user_form_state.dart';
+import '../models/hospital_entry.dart';
 import '../models/user_model.dart';
 import '../models/user_request_model.dart';
-
-// ── Entry class for a single hospital assignment in the form ──────────────────
-
-class _HospitalEntry {
-  _HospitalEntry({
-    required this.hospitalId,
-    required this.hospitalName,
-    required this.role,
-    this.status,
-  });
-
-  int hospitalId;
-  String hospitalName;
-  String role;
-  String? status;
-}
+import '../widgets/hospital_assignment_row.dart';
+import '../widgets/section_header.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -65,12 +52,13 @@ class _UserFormViewState extends State<_UserFormView> {
 
   String _selectedRole = 'doctor';
   bool _isActive = true;
-  List<_HospitalEntry> _assignments = [];
+  List<HospitalEntry> _assignments = [];
   List<HospitalModel> _availableHospitals = [];
   bool _hospitalsLoading = true;
 
   static const _userRoles = ['admin', 'doctor', 'nurse', 'staff'];
   static const _hospitalRoles = ['admin', 'doctor', 'nurse', 'staff'];
+  static const _hospitalStatuses = ['pending', 'accepted', 'rejected'];
 
   bool get _isEdit => widget.user != null;
 
@@ -88,7 +76,7 @@ class _UserFormViewState extends State<_UserFormView> {
 
     if (u != null) {
       _assignments = u.hospitals
-          .map((h) => _HospitalEntry(
+          .map((h) => HospitalEntry(
                 hospitalId: h.id,
                 hospitalName: h.name,
                 role: h.pivot.roleInHospital,
@@ -163,7 +151,7 @@ class _UserFormViewState extends State<_UserFormView> {
     if (unassigned.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('All available hospitals are already assigned'),
+          content: Text(AppTexts.allHospitalsAlreadyAssigned),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -172,6 +160,7 @@ class _UserFormViewState extends State<_UserFormView> {
 
     int selectedId = unassigned.first.id;
     String selectedRole = 'doctor';
+    String selectedStatus = 'pending';
 
     showDialog<void>(
       context: context,
@@ -224,6 +213,28 @@ class _UserFormViewState extends State<_UserFormView> {
                 onChanged: (v) =>
                     setDialogState(() => selectedRole = v ?? selectedRole),
               ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: selectedStatus,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: AppTexts.status,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                ),
+                items: _hospitalStatuses
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(s[0].toUpperCase() + s.substring(1)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) =>
+                    setDialogState(() => selectedStatus = v ?? selectedStatus),
+              ),
             ],
           ),
           actions: [
@@ -242,15 +253,16 @@ class _UserFormViewState extends State<_UserFormView> {
                 final hospital = unassigned
                     .firstWhere((h) => h.id == selectedId);
                 setState(() {
-                  _assignments.add(_HospitalEntry(
+                  _assignments.add(HospitalEntry(
                     hospitalId: hospital.id,
                     hospitalName: hospital.name,
                     role: selectedRole,
+                    status: selectedStatus,
                   ));
                 });
                 Navigator.of(ctx).pop();
               },
-              child: const Text('Add'),
+              child: const Text(AppTexts.add),
             ),
           ],
         ),
@@ -264,6 +276,10 @@ class _UserFormViewState extends State<_UserFormView> {
 
   void _changeAssignmentRole(int index, String newRole) {
     setState(() => _assignments[index].role = newRole);
+  }
+
+  void _changeAssignmentStatus(int index, String newStatus) {
+    setState(() => _assignments[index].status = newStatus);
   }
 
   @override
@@ -313,7 +329,7 @@ class _UserFormViewState extends State<_UserFormView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Basic info ──────────────────────────────────────────
-                  _SectionHeader('Basic Information'),
+                  SectionHeader(AppTexts.basicInformation),
                   const SizedBox(height: 12),
                   Card(
                     elevation: 1,
@@ -332,7 +348,7 @@ class _UserFormViewState extends State<_UserFormView> {
                             enabled: !isLoading,
                             validator: (v) {
                               if (v == null || v.trim().isEmpty) {
-                                return 'Name is required';
+                                return AppTexts.nameRequired;
                               }
                               return null;
                             },
@@ -375,7 +391,7 @@ class _UserFormViewState extends State<_UserFormView> {
                   const SizedBox(height: 20),
 
                   // ── Account settings ────────────────────────────────────
-                  _SectionHeader('Account Settings'),
+                  SectionHeader(AppTexts.accountSettings),
                   const SizedBox(height: 12),
                   Card(
                     elevation: 1,
@@ -426,7 +442,7 @@ class _UserFormViewState extends State<_UserFormView> {
                             ),
                           ),
                           subtitle: const Text(
-                            'Enable or disable this account',
+                            AppTexts.enableOrDisableThisAccount,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary),
@@ -444,8 +460,9 @@ class _UserFormViewState extends State<_UserFormView> {
                   const SizedBox(height: 20),
 
                   // ── Password ────────────────────────────────────────────
-                  _SectionHeader(
-                      _isEdit ? 'Change Password' : 'Password'),
+                  SectionHeader(
+                    _isEdit ? AppTexts.changePassword : AppTexts.passwordLabel,
+                  ),
                   const SizedBox(height: 12),
                   Card(
                     elevation: 1,
@@ -476,7 +493,7 @@ class _UserFormViewState extends State<_UserFormView> {
                               if (v != null &&
                                   v.isNotEmpty &&
                                   v.length < 8) {
-                                return 'Password must be at least 8 characters';
+                                return AppTexts.passwordMustBeAtLeast8Characters;
                               }
                               return null;
                             },
@@ -495,7 +512,7 @@ class _UserFormViewState extends State<_UserFormView> {
                             validator: (v) {
                               if (_passwordCtrl.text.isNotEmpty &&
                                   v != _passwordCtrl.text) {
-                                return 'Passwords do not match';
+                                return AppTexts.passwordsDoNotMatch;
                               }
                               return null;
                             },
@@ -511,7 +528,7 @@ class _UserFormViewState extends State<_UserFormView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _SectionHeader(AppTexts.assignedHospitals),
+                      SectionHeader(AppTexts.assignedHospitals),
                       if (!isLoading)
                         TextButton.icon(
                           onPressed: _hospitalsLoading
@@ -561,11 +578,14 @@ class _UserFormViewState extends State<_UserFormView> {
                                   for (int i = 0;
                                       i < _assignments.length;
                                       i++)
-                                    _AssignmentRow(
+                                    HospitalAssignmentRow(
                                       entry: _assignments[i],
                                       roles: _hospitalRoles,
+                                      statuses: _hospitalStatuses,
                                       onRoleChanged: (r) =>
                                           _changeAssignmentRole(i, r),
+                                      onStatusChanged: (s) =>
+                                          _changeAssignmentStatus(i, s),
                                       onRemove: () =>
                                           _removeAssignment(i),
                                       isLast: i ==
@@ -602,131 +622,4 @@ class _UserFormViewState extends State<_UserFormView> {
   }
 }
 
-// ── Assignment row inside the card ────────────────────────────────────────────
-
-class _AssignmentRow extends StatelessWidget {
-  const _AssignmentRow({
-    required this.entry,
-    required this.roles,
-    required this.onRoleChanged,
-    required this.onRemove,
-    required this.isLast,
-  });
-
-  final _HospitalEntry entry;
-  final List<String> roles;
-  final ValueChanged<String> onRoleChanged;
-  final VoidCallback onRemove;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            children: [
-              // Hospital icon
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withAlpha(15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.local_hospital_outlined,
-                    size: 18, color: AppColors.primary),
-              ),
-              const SizedBox(width: 10),
-
-              // Hospital name + role picker
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      entry.hospitalName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: AppColors.textPrimary,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    DropdownButtonHideUnderline(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent.withAlpha(15),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                              color: AppColors.accent.withAlpha(50)),
-                        ),
-                        child: DropdownButton<String>(
-                          value: roles.contains(entry.role)
-                              ? entry.role
-                              : roles.first,
-                          isDense: true,
-                          style: const TextStyle(
-                            color: AppColors.accent,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          items: roles
-                              .map((r) => DropdownMenuItem(
-                                    value: r,
-                                    child: Text(r[0].toUpperCase() +
-                                        r.substring(1)),
-                                  ))
-                              .toList(),
-                          onChanged: (v) {
-                            if (v != null) onRoleChanged(v);
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Remove button
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline,
-                    color: AppColors.error, size: 20),
-                onPressed: onRemove,
-                tooltip: 'Remove',
-              ),
-            ],
-          ),
-        ),
-        if (!isLast)
-          const Divider(height: 1, indent: 14, endIndent: 14,
-              color: Color(0xFFEEEEEE)),
-      ],
-    );
-  }
-}
-
-// ── Section header ─────────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: AppColors.textSecondary,
-        letterSpacing: 0.3,
-      ),
-    );
-  }
-}
+// Widgets moved to `lib/features/superAdmin/users/widgets/`.
