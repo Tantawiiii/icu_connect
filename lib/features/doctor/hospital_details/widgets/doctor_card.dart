@@ -72,7 +72,9 @@ class DoctorCard extends StatelessWidget {
                   ),
                 ),
                 Chip(
-                  label: Text(doctor.isActive ? AppTexts.active : AppTexts.inactive),
+                  label: Text(
+                    doctor.isActive ? AppTexts.active : AppTexts.inactive,
+                  ),
                 ),
               ],
             ),
@@ -108,4 +110,3 @@ class DoctorCard extends StatelessWidget {
     );
   }
 }
-

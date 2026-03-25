@@ -1,7 +1,4 @@
-/// Defines all base URLs and API endpoint paths for both roles.
-///
-/// Admin role  → https://api.icuconnect.org/api/v1/admin/...
-/// Hospital role → https://api.icuconnect.org/api/v1/hospital/...
+
 class ApiConstants {
   ApiConstants._();
 
@@ -12,9 +9,9 @@ class ApiConstants {
   static const String adminBaseUrl = '$_scheme://$_host$_version/admin';
   static const String hospitalBaseUrl = '$_scheme://$_host$_version/hospital';
 
-  /// Global password reset flow (not under admin/hospital prefixes).
-  /// e.g. `https://api.icuconnect.org/api/v1/password/forgot`
+
   static const String passwordBaseUrl = '$_scheme://$_host$_version/password/';
+  static const String imageBaseUrl = '$_scheme://$_host/storage/';
 
   static const String passwordForgot = 'forgot';
   static const String passwordVerifyOtp = 'verify-otp';
@@ -25,7 +22,7 @@ class ApiConstants {
   static const Duration receiveTimeout = Duration(seconds: 30);
   static const Duration sendTimeout = Duration(seconds: 30);
 
-  // ── Shared auth endpoints (appended to whichever base URL is active) ─────
+  // ── Shared auth endpoints
   static const String login = '/auth/login';
   static const String logout = '/auth/logout';
   static const String refreshToken = '/auth/refresh';

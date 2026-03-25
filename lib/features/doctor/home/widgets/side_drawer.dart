@@ -6,6 +6,7 @@ import 'package:icu_connect/core/network/network_exceptions.dart';
 import 'package:icu_connect/core/network/token_storage.dart';
 
 import '../../auth/login/screens/login_screen.dart';
+import '../../patients/screens/patient_list_screen.dart';
 import '../../profile/repository/doctor_profile_repository.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../session/doctor_session_display.dart';
@@ -85,32 +86,41 @@ class SideDrawer extends StatelessWidget {
               },
             ),
             const Divider(),
-
-            // Menu Items
             _buildDrawerItem(
               context,
               AppTexts.profile,
               Icons.person_outline,
               onTap: () {
-                Navigator.pop(context); // Close drawer first
+                Navigator.pop(context);
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ProfileScreen()),
                 );
               },
             ),
-            _buildDrawerItem(context, AppTexts.statistics, Icons.bar_chart),
-            _buildDrawerItem(context, AppTexts.aboutUs, Icons.info_outline),
             _buildDrawerItem(
               context,
-              AppTexts.reportProblem,
-              Icons.report_problem_outlined,
+              AppTexts.patientsLabel,
+              Icons.people_outline,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PatientListScreen()),
+                );
+              },
             ),
-            _buildDrawerItem(
-              context,
-              AppTexts.setting,
-              Icons.settings_outlined,
-            ),
-            _buildDrawerItem(context, AppTexts.trash, Icons.delete_outline),
+            // _buildDrawerItem(context, AppTexts.statistics, Icons.bar_chart),
+            // _buildDrawerItem(context, AppTexts.aboutUs, Icons.info_outline),
+            // _buildDrawerItem(
+            //   context,
+            //   AppTexts.reportProblem,
+            //   Icons.report_problem_outlined,
+            // ),
+            // _buildDrawerItem(
+            //   context,
+            //   AppTexts.setting,
+            //   Icons.settings_outlined,
+            // ),
+            // _buildDrawerItem(context, AppTexts.trash, Icons.delete_outline),
 
             const Spacer(),
 
