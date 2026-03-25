@@ -95,6 +95,19 @@ class AppTexts {
   static const String addHospitalAssignment = 'Add Hospital';
   static const String noHospitalsAssigned = 'No hospitals assigned';
 
+  // Super admin - user form
+  static const String basicInformation = 'Basic Information';
+  static const String accountSettings = 'Account Settings';
+  static const String enableOrDisableThisAccount =
+      'Enable or disable this account';
+  static const String changePassword = 'Change Password';
+  static const String passwordMustBeAtLeast8Characters =
+      'Password must be at least 8 characters';
+  static const String allHospitalsAlreadyAssigned =
+      'All available hospitals are already assigned';
+  static const String add = 'Add';
+  static const String remove = 'Remove';
+
   // Hospitals CRUD
   static const String addHospital = 'Add Hospital';
   static const String editHospital = 'Edit Hospital';
@@ -212,13 +225,45 @@ class AppTexts {
 
   // Home
   static const String search = 'SEARCH';
+  static const String searchHospitalsHint =
+      'Search by hospital name or location';
+  static const String hospitalsSearchEmpty = 'No hospitals match your search.';
   static const String addPatient = '+ ADD PATIENT';
+  static const String yourHospitals = 'Hospitals';
+  static const String hospitalBedsSummary = 'Beds';
+  static const String hospitalStatusPending = 'Pending approval';
+  static const String hospitalStatusRejected = 'Rejected';
+  static const String hospitalStatusNotMember = 'Not assigned';
+  static const String hospitalStatusRequestAccess = 'Request access';
+  static const String hospitalAccessGranted = 'Active';
+  static const String hospitalLockedHint =
+      'You need an approved assignment to open this hospital.';
+  static const String viewHospitalDoctors = 'View hospital doctors';
+  static const String doctorsInHospital = 'Doctors in hospital';
+  static const String acceptDoctor = 'Accept';
+  static const String activateDoctor = 'Activate';
+  static const String addDoctor = 'Add doctor';
+  static const String createDoctor = 'Create doctor';
+  static const String doctorName = 'Doctor name';
+  static const String doctorCreatedSuccessfully = 'Doctor created successfully';
 
   // Drawer
   static const String profile = 'Profile';
+  static const String profileScreenTitle = 'My profile';
+  static const String profileUpdateSuccess = 'Profile updated successfully';
+  static const String profileJoinHospitalHint =
+      'Request to join another hospital';
+  static const String passwordOptionalHint =
+      'New password (leave blank to keep current)';
+  static const String profileMinOneHospital =
+      'Add at least one hospital to your profile.';
+  static const String profileAccountSection = 'Account';
+  static const String profileHospitalsSection = 'Hospitals & requests';
+  static const String profileAllHospitalsInList =
+      'All available hospitals are already in your list.';
   static const String statistics = 'Statistics';
   static const String aboutUs = 'About Us';
-  static const String reportProblem = 'Report Proplem'; // Keeping typo from wireframe? Correcting it to Problem
+  static const String reportProblem = 'Report Proplem';
   static const String setting = 'Setting';
   static const String trash = 'Trash';
   static const String logOut = 'Log Out';
@@ -239,7 +284,7 @@ class AppTexts {
   static const String historyAndComplaint = 'History and Complaint';
   static const String radiology = 'Radiology';
   static const String progressNote = 'Progress Note';
-  static const String cultures = 'Clutures'; // Keeping typo? Correcting to Cultures
+  static const String cultures = 'Clutures';
   static const String medication = 'Medication';
   static const String plans = 'Plans';
   static const String vitalSigns = 'Vital Signs';

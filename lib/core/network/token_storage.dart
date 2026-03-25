@@ -19,6 +19,8 @@ class TokenStorage {
   static const _keyAccessToken = 'icu_access_token';
   static const _keyRefreshToken = 'icu_refresh_token';
   static const _keyUserRole = 'icu_user_role';
+  static const _keyDoctorDrawerName = 'icu_doctor_drawer_name';
+  static const _keyDoctorDrawerRole = 'icu_doctor_drawer_role';
 
   // ── Access token ──────────────────────────────────────────────────────────
   Future<void> saveAccessToken(String token) =>
@@ -36,6 +38,19 @@ class TokenStorage {
   Future<void> saveUserRole(String role) => _write(_keyUserRole, role);
 
   Future<String?> getUserRole() => _read(_keyUserRole);
+
+  /// Doctor app drawer header (name + role from login / profile).
+  Future<void> saveDoctorDrawerInfo({
+    required String name,
+    required String role,
+  }) async {
+    await _write(_keyDoctorDrawerName, name);
+    await _write(_keyDoctorDrawerRole, role);
+  }
+
+  Future<String?> getDoctorDrawerName() => _read(_keyDoctorDrawerName);
+
+  Future<String?> getDoctorDrawerRole() => _read(_keyDoctorDrawerRole);
 
   // ── Clear all (logout) ────────────────────────────────────────────────────
   Future<void> clearAll() async {

@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// A shared text field component used across the app.
-///
-/// Handles password visibility toggle internally when [isPassword] is true.
-/// Always renders as a [TextFormField] so it works inside [Form] widgets
-/// (validator is simply ignored when used outside a Form).
 class AppTextField extends StatefulWidget {
   const AppTextField({
     super.key,
@@ -27,26 +22,19 @@ class AppTextField extends StatefulWidget {
   final TextEditingController? controller;
   final String? hintText;
   final String? labelText;
-
-  /// Leading icon inside the field border.
   final Widget? prefixIcon;
-
-  /// Custom trailing icon — overrides the built-in password toggle.
   final Widget? suffixIcon;
 
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final bool enabled;
 
-  /// When true, text is obscured and a show/hide toggle is shown.
   final bool isPassword;
 
   final String? Function(String?)? validator;
   final void Function(String)? onFieldSubmitted;
   final void Function(String)? onChanged;
   final Iterable<String>? autofillHints;
-
-  /// When greater than 1, the field grows vertically (e.g. notes).
   final int maxLines;
 
   @override
