@@ -34,16 +34,16 @@ class PatientModel extends Equatable {
   bool get isDeleted => deletedAt != null;
 
   factory PatientModel.fromJson(Map<String, dynamic> json) => PatientModel(
-        id: json['id'] as int,
-        name: json['name'] as String,
+        id: (json['id'] as num).toInt(),
+        name: json['name'] as String? ?? '',
         nationalId: json['national_id']?.toString() ?? '',
-        age: json['age'] as int,
-        gender: json['gender'] as String,
+        age: (json['age'] as num?)?.toInt() ?? 0,
+        gender: json['gender'] as String? ?? '',
         phone: json['phone'] as String? ?? '',
         bloodGroup: json['blood_group'] as String? ?? '',
         notes: json['notes'] as String? ?? '',
-        createdAt: json['created_at'] as String,
-        updatedAt: json['updated_at'] as String,
+        createdAt: json['created_at'] as String? ?? '',
+        updatedAt: json['updated_at'] as String? ?? '',
         deletedAt: json['deleted_at'] as String?,
         admissions: (json['admissions'] as List<dynamic>? ?? [])
             .map((e) =>

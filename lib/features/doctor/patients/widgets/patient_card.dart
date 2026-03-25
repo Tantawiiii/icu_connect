@@ -9,6 +9,8 @@ class PatientCardWidget extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  /// When true, [admittedDate] is shown without an "Admitted :" prefix (e.g. age · phone).
+  final bool plainDetailLine;
 
   const PatientCardWidget({
     super.key,
@@ -18,6 +20,7 @@ class PatientCardWidget extends StatelessWidget {
     required this.onTap,
     this.onEdit,
     this.onDelete,
+    this.plainDetailLine = false,
   });
 
   @override
@@ -69,9 +72,10 @@ class PatientCardWidget extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               
-              // Admitted Date
               Text(
-                '${AppTexts.admitted} : $admittedDate',
+                plainDetailLine
+                    ? admittedDate
+                    : '${AppTexts.admitted} : $admittedDate',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 8),

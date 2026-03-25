@@ -2,17 +2,58 @@ import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
+import 'package:icu_connect/core/network/network_exceptions.dart';
 
 import '../../home/models/doctor_hospital.dart';
+import '../../../superAdmin/patients/models/patient_admission_models.dart';
+import '../enums/admission_status.dart';
+import '../repository/hospital_admissions_repository.dart';
+import '../widgets/admission_status_filter_row.dart';
+import '../widgets/admission_tile.dart';
+import '../widgets/stat_pill.dart';
+import 'admission_details_screen.dart';
+import 'admission_form_screen.dart';
 import 'hospital_doctors_screen.dart';
 
-class HospitalDetailsScreen extends StatelessWidget {
+class HospitalDetailsScreen extends StatefulWidget {
   const HospitalDetailsScreen({super.key, required this.hospital});
 
   final DoctorHospital hospital;
 
+  @override
+  State<HospitalDetailsScreen> createState() => _HospitalDetailsScreenState();
+}
+
+class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
+  static const List<AdmissionStatus> _statuses = AdmissionStatus.values;
+
+  AdmissionStatus _statusFilter = AdmissionStatus.admitted;
+  late Future<List<PatientAdmissionModel>> _admissionsFuture;
+
   bool get _isAdminInHospital =>
-      (hospital.userStatus.roleInHospital ?? '').toLowerCase().trim() == 'admin';
+      (widget.hospital.userStatus.roleInHospital ?? '').toLowerCase().trim() ==
+      'admin';
+
+  @override
+  void initState() {
+    super.initState();
+    _admissionsFuture = _fetchAdmissions();
+  }
+
+  Future<List<PatientAdmissionModel>> _fetchAdmissions() {
+    return const HospitalAdmissionsRepository().listAdmissions(
+      hospitalId: widget.hospital.id,
+      status: _statusFilter.apiValue,
+    );
+  }
+
+  void _setStatus(AdmissionStatus status) {
+    if (status == _statusFilter) return;
+    setState(() {
+      _statusFilter = status;
+      _admissionsFuture = _fetchAdmissions();
+    });
+  }
 
   Widget _infoRow(String label, String value) {
     return Padding(
@@ -46,9 +87,9 @@ class HospitalDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = hospital.userStatus.status ?? AppTexts.notAvailable;
+    final status = widget.hospital.userStatus.status ?? AppTexts.notAvailable;
     final roleInHospital =
-        hospital.userStatus.roleInHospital ?? AppTexts.notAvailable;
+        widget.hospital.userStatus.roleInHospital ?? AppTexts.notAvailable;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -57,7 +98,7 @@ class HospitalDetailsScreen extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
         title: Text(
-          hospital.name,
+          widget.hospital.name,
           style: const TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
@@ -67,8 +108,7 @@ class HospitalDetailsScreen extends StatelessWidget {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: ListView(
             children: [
               Card(
                 elevation: 0,
@@ -82,18 +122,18 @@ class HospitalDetailsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        hospital.name,
+                        widget.hospital.name,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      if (hospital.location != null &&
-                          hospital.location!.trim().isNotEmpty) ...[
+                      if (widget.hospital.location != null &&
+                          widget.hospital.location!.trim().isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(
-                          hospital.location!,
+                          widget.hospital.location!,
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             height: 1.3,
@@ -103,14 +143,14 @@ class HospitalDetailsScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          _StatPill(
+                          StatPill(
                             label: AppTexts.totalBeds,
-                            value: '${hospital.totalBeds}',
+                            value: '${widget.hospital.totalBeds}',
                           ),
                           const SizedBox(width: 10),
-                          _StatPill(
+                          StatPill(
                             label: AppTexts.availableBeds,
-                            value: '${hospital.availableBeds}',
+                            value: '${widget.hospital.availableBeds}',
                           ),
                         ],
                       ),
@@ -119,6 +159,8 @@ class HospitalDetailsScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
+
+
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -142,12 +184,13 @@ class HospitalDetailsScreen extends StatelessWidget {
                       _infoRow(AppTexts.status, status),
                       _infoRow(
                         'Assigned',
-                        hospital.userStatus.isAssigned ? 'Yes' : 'No',
+                        widget.hospital.userStatus.isAssigned ? 'Yes' : 'No',
                       ),
                     ],
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
               if (_isAdminInHospital) ...[
                 const SizedBox(height: 12),
                 AppButton(
@@ -155,7 +198,8 @@ class HospitalDetailsScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => HospitalDoctorsScreen(hospital: hospital),
+                        builder: (_) =>
+                            HospitalDoctorsScreen(hospital: widget.hospital),
                       ),
                     );
                   },
@@ -166,54 +210,144 @@ class HospitalDetailsScreen extends StatelessWidget {
                   ),
                 ),
               ],
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppTexts.admissionsSection,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    AdmissionStatusFilterRow(
+                      statuses: _statuses,
+                      selected: _statusFilter,
+                      onSelected: _setStatus,
+                    ),
+                    const SizedBox(height: 12),
+                    FutureBuilder<List<PatientAdmissionModel>>(
+                      future: _admissionsFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (snapshot.hasError) {
+                          final message = snapshot.error is NetworkException
+                              ? (snapshot.error as NetworkException).message
+                              : 'Failed to load admissions.';
+                          return Column(
+                            children: [
+                              Text(
+                                message,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              AppButton(
+                                label: AppTexts.retry,
+                                height: 42,
+                                onPressed: () {
+                                  setState(() {
+                                    _admissionsFuture = _fetchAdmissions();
+                                  });
+                                },
+                              ),
+                            ],
+                          );
+                        }
+
+                        final admissions = snapshot.data ?? const [];
+                        if (admissions.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'No admissions found.',
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
+                          );
+                        }
+
+                        return Column(
+                          children: admissions
+                              .map(
+                                (a) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: AdmissionTile(
+                                    admission: a,
+                                    formatIsoDateTime: _formatIsoDateTime,
+                                    onTap: () async {
+                                      final refresh = await Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => AdmissionDetailsScreen(
+                                            admissionId: a.id,
+                                          ),
+                                        ),
+                                      );
+                                      if (refresh == true) {
+                                        setState(() {
+                                          _admissionsFuture = _fetchAdmissions();
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _StatPill extends StatelessWidget {
-  const _StatPill({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primary,
+        onPressed: () async {
+          final created = await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => AdmissionFormScreen(hospitalId: widget.hospital.id),
             ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
+          );
+          if (created == true) {
+            setState(() {
+              _admissionsFuture = _fetchAdmissions();
+            });
+          }
+        },
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 }
 
+String _formatIsoDateTime(String raw) {
+  if (raw.isEmpty) return AppTexts.notAvailable;
+  final t = raw.indexOf('T');
+  if (t <= 0) return raw;
+  final date = raw.substring(0, t);
+  final time = raw.length > t + 1
+      ? raw.substring(t + 1, raw.length > t + 9 ? t + 9 : raw.length)
+      : '';
+  return time.isEmpty ? date : '$date $time${AppTexts.utcTimeZoneSuffix}';
+}
