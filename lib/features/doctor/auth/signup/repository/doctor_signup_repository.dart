@@ -30,9 +30,15 @@ class DoctorSignupRepository extends BaseApiService {
     required String phone,
     required String password,
     required String passwordConfirmation,
-    required int hospitalId,
+    int? hospitalId,
   }) async {
     try {
+      final hospitalsPayload = hospitalId != null
+          ? <Map<String, dynamic>>[
+              {'hospital_id': hospitalId},
+            ]
+          : <Map<String, dynamic>>[];
+
       final data = await post<Map<String, dynamic>>(
         ApiConstants.signup,
         data: {
@@ -41,9 +47,7 @@ class DoctorSignupRepository extends BaseApiService {
           'phone': phone,
           'password': password,
           'password_confirmation': passwordConfirmation,
-          'hospitals': [
-            {'hospital_id': hospitalId},
-          ],
+          'hospitals': hospitalsPayload,
         },
         cancelTag: 'doctor_signup',
       );
