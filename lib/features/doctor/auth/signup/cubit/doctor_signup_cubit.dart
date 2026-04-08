@@ -1,6 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../../core/constants/app_texts.dart';
 import '../../../../../core/network/network_exceptions.dart';
 import '../repository/doctor_signup_repository.dart';
 import 'doctor_signup_state.dart';
@@ -19,7 +18,7 @@ class DoctorSignupCubit extends Cubit<DoctorSignupState> {
       emit(
         DoctorSignupReady(
           hospitals: hospitals,
-          selectedHospitalId: hospitals.isNotEmpty ? hospitals.first.id : null,
+          selectedHospitalId: null,
         ),
       );
     } on NetworkException catch (e) {
@@ -60,15 +59,6 @@ class DoctorSignupCubit extends Cubit<DoctorSignupState> {
     if (ready == null) return;
 
     final hospitalId = ready.selectedHospitalId;
-    if (hospitalId == null) {
-      emit(
-        DoctorSignupSignupFailure(
-          recover: ready,
-          message: AppTexts.hospitalRequired,
-        ),
-      );
-      return;
-    }
 
     emit(
       DoctorSignupSubmitting(

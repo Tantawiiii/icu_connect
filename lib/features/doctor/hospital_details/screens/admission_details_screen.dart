@@ -195,18 +195,23 @@ class _AdmissionBody extends StatelessWidget {
           const Divider(height: 24),
 
           // ── History & Complaint ─────────────────────────────────────────
-          _SectionContainer(
-            title: AppTexts.historyAndComplaint,
-            child: historyNotes.isEmpty
-                ? const _EmptyHint('No history or complaint recorded.')
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: historyNotes
-                        .map((n) => _NoteCard(note: n))
-                        .toList(),
-                  ),
+          Text(
+            AppTexts.historyAndComplaint,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+            ),
           ),
-
+          SizedBox(height: 8,),
+          historyNotes.isEmpty
+              ? const _EmptyHint('No history or complaint recorded.')
+              : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: historyNotes
+                .map((n) => _NoteCard(note: n))
+                .toList(),
+          ),
           // ── Progress Notes ─────────────────────────────────────────────
           _SectionContainer(
             title: AppTexts.progressNote,
@@ -297,47 +302,47 @@ class _AdmissionBody extends StatelessWidget {
             ),
           ),
 
-          // ── Doctor & Hospital Info ─────────────────────────────────────
-          if (admission.doctor != null || admission.hospital != null)
-            const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (admission.doctor != null)
-                Expanded(
-                  child: _InfoCard(
-                    icon: Icons.medical_services_rounded,
-                    title: 'Doctor',
-                    rows: [
-                      _KV(AppTexts.name, admission.doctor!.name),
-                      _KV(AppTexts.emailLabel, admission.doctor!.email),
-                      _KV(
-                          AppTexts.phone,
-                          admission.doctor!.phone.isEmpty
-                              ? AppTexts.notAvailable
-                              : admission.doctor!.phone),
-                    ],
-                  ),
-                ),
-              if (admission.doctor != null && admission.hospital != null)
-                const SizedBox(width: 12),
-              if (admission.hospital != null)
-                Expanded(
-                  child: _InfoCard(
-                    icon: Icons.local_hospital_rounded,
-                    title: 'Hospital',
-                    rows: [
-                      _KV(AppTexts.name, admission.hospital!.name),
-                      _KV(AppTexts.location, admission.hospital!.location),
-                      _KV(AppTexts.totalBeds,
-                          '${admission.hospital!.totalBeds}'),
-                      _KV(AppTexts.availableBeds,
-                          '${admission.hospital!.availableBeds}'),
-                    ],
-                  ),
-                ),
-            ],
-          ),
+          // // ── Doctor & Hospital Info ─────────────────────────────────────
+          // if (admission.doctor != null || admission.hospital != null)
+          //   const SizedBox(height: 8),
+          // Row(
+          //   crossAxisAlignment: CrossAxisAlignment.start,
+          //   children: [
+          //     if (admission.doctor != null)
+          //       Expanded(
+          //         child: _InfoCard(
+          //           icon: Icons.medical_services_rounded,
+          //           title: 'Doctor',
+          //           rows: [
+          //             _KV(AppTexts.name, admission.doctor!.name),
+          //             _KV(AppTexts.emailLabel, admission.doctor!.email),
+          //             _KV(
+          //                 AppTexts.phone,
+          //                 admission.doctor!.phone.isEmpty
+          //                     ? AppTexts.notAvailable
+          //                     : admission.doctor!.phone),
+          //           ],
+          //         ),
+          //       ),
+          //     if (admission.doctor != null && admission.hospital != null)
+          //       const SizedBox(width: 12),
+          //     if (admission.hospital != null)
+          //       Expanded(
+          //         child: _InfoCard(
+          //           icon: Icons.local_hospital_rounded,
+          //           title: 'Hospital',
+          //           rows: [
+          //             _KV(AppTexts.name, admission.hospital!.name),
+          //             _KV(AppTexts.location, admission.hospital!.location),
+          //             _KV(AppTexts.totalBeds,
+          //                 '${admission.hospital!.totalBeds}'),
+          //             _KV(AppTexts.availableBeds,
+          //                 '${admission.hospital!.availableBeds}'),
+          //           ],
+          //         ),
+          //       ),
+          //   ],
+          // ),
 
           const SizedBox(height: 24),
         ],
