@@ -2,25 +2,35 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_constants.dart';
 import '../../../../core/network/network_exceptions.dart';
 import '../../../../core/network/services/base_api_service.dart';
+import '../../admins/models/pagination_model.dart';
 import '../models/vital_title_model.dart';
 import '../models/vital_title_request.dart';
+import '../models/vitals_titles_page_result.dart';
 
 class VitalsTitlesRepository extends BaseApiService {
   const VitalsTitlesRepository() : super(UserRole.admin);
 
-  /// GET /vitals-titles?per_page=10
-  Future<List<VitalTitleModel>> fetchVitalsTitles({int perPage = 10}) async {
+  /// GET /vitals-titles?per_page=10&page=1
+  Future<VitalsTitlesPageResult> fetchVitalsTitles({
+    int perPage = 10,
+    int page = 1,
+  }) async {
     try {
       final data = await get<Map<String, dynamic>>(
         ApiConstants.vitalsTitles,
-        queryParameters: {'per_page': perPage},
-        cancelTag: 'vitals_titles_list',
+        queryParameters: {
+          'per_page': perPage,
+          'page': page,
+        },
+        cancelTag: 'vitals_titles_list_$page',
       );
       final inner = data['data'] as Map<String, dynamic>;
       final list = inner['data'] as List<dynamic>;
-      return list
+      final items = list
           .map((e) => VitalTitleModel.fromJson(e as Map<String, dynamic>))
           .toList();
+      final pagination = PaginationModel.fromJson(inner);
+      return VitalsTitlesPageResult(items: items, pagination: pagination);
     } on NetworkException {
       rethrow;
     }

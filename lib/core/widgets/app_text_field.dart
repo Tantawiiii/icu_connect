@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppTextField extends StatefulWidget {
   const AppTextField({
@@ -17,6 +18,7 @@ class AppTextField extends StatefulWidget {
     this.onChanged,
     this.autofillHints,
     this.maxLines = 1,
+    this.inputFormatters,
   });
 
   final TextEditingController? controller;
@@ -36,6 +38,7 @@ class AppTextField extends StatefulWidget {
   final void Function(String)? onChanged;
   final Iterable<String>? autofillHints;
   final int maxLines;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -61,6 +64,7 @@ class _AppTextFieldState extends State<AppTextField> {
       onFieldSubmitted: widget.onFieldSubmitted,
       onChanged: widget.onChanged,
       autofillHints: widget.autofillHints,
+      inputFormatters: widget.inputFormatters,
       decoration: InputDecoration(
         hintText: widget.hintText,
         labelText: widget.labelText,

@@ -9,7 +9,6 @@ class ApiConstants {
   static const String adminBaseUrl = '$_scheme://$_host$_version/admin';
   static const String hospitalBaseUrl = '$_scheme://$_host$_version/hospital';
 
-
   static const String passwordBaseUrl = '$_scheme://$_host$_version/password/';
   static const String imageBaseUrl = '$_scheme://$_host/storage/';
 
@@ -41,9 +40,12 @@ class ApiConstants {
   static const String patientVitalSigns = '/vital-signs';
   static String patientVitalSignsById(String patientId) =>
       '/patients/$patientId/vital-signs';
+  static const String vitals = '/vitals';
   static const String labs = '/labs';
   static String labsByPatientId(String patientId) => '/patients/$patientId/labs';
   static String hospitalDoctors(int hospitalId) => '/hospitals/$hospitalId/doctors';
+  static String hospitalDoctorsAdd(int hospitalId) =>
+      '/hospitals/$hospitalId/doctors/add';
   static String hospitalAcceptDoctor(int hospitalId) =>
       '/hospitals/$hospitalId/doctors/accept';
   static String doctorActivate(int doctorId) => '/doctors/$doctorId/activate';

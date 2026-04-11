@@ -14,10 +14,10 @@ class AdminsCubit extends Cubit<AdminsState> {
   List<AdminModel> _admins = [];
   PaginationModel? _pagination;
 
-  Future<void> fetchAdmins() async {
+  Future<void> fetchAdmins({int page = 1}) async {
     emit(const AdminsLoading());
     try {
-      final response = await _repository.fetchAdmins();
+      final response = await _repository.fetchAdmins(page: page);
       _admins = response.data;
       _pagination = response.pagination;
       emit(AdminsLoaded(admins: _admins, pagination: _pagination!));
@@ -36,7 +36,8 @@ class AdminsCubit extends Cubit<AdminsState> {
       _admins = _admins.where((a) => a.id != id).toList();
       emit(const AdminsActionSuccess('Admin deleted successfully'));
       // Re-fetch to get accurate list from server
-      await fetchAdmins();
+      final currentPage = _pagination?.currentPage ?? 1;
+      await fetchAdmins(page: currentPage);
     } on NetworkException catch (e) {
       emit(AdminsActionFailure(e.message));
       // Restore previous list state

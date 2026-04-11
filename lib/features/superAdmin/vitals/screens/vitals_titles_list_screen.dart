@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../admins/models/pagination_model.dart';
 import '../cubit/vitals_titles_cubit.dart';
 import '../cubit/vitals_titles_state.dart';
 import '../models/vital_title_model.dart';
@@ -20,8 +21,64 @@ class VitalsTitlesListScreen extends StatelessWidget {
   }
 }
 
-class _VitalsTitlesListView extends StatelessWidget {
+List<VitalTitleModel> _filterVitalsTitles(
+  List<VitalTitleModel> items,
+  String query,
+) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return items;
+  return items.where((e) {
+    return e.title.toLowerCase().contains(q) ||
+        e.unit.toLowerCase().contains(q) ||
+        e.normalRangeMin.toLowerCase().contains(q) ||
+        e.normalRangeMax.toLowerCase().contains(q);
+  }).toList();
+}
+
+class _VitalsTitlesListView extends StatefulWidget {
   const _VitalsTitlesListView();
+
+  @override
+  State<_VitalsTitlesListView> createState() => _VitalsTitlesListViewState();
+}
+
+class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
+  final _searchController = TextEditingController();
+
+  void _onSearchChanged() => setState(() {});
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController
+      ..removeListener(_onSearchChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _openForm(BuildContext context, {required VitalTitleModel? vital}) {
+    final cubit = context.read<VitalsTitlesCubit>();
+    Navigator.of(context)
+        .push(
+      MaterialPageRoute<void>(
+        builder: (_) => BlocProvider.value(
+          value: cubit,
+          child: VitalTitleFormScreen(vital: vital),
+        ),
+      ),
+    )
+        .then((_) {
+      if (!context.mounted) return;
+      final state = cubit.state;
+      final page = state is VitalsTitlesLoaded ? state.pagination.currentPage : 1;
+      cubit.fetchVitalsTitles(page: page);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,8 +95,13 @@ class _VitalsTitlesListView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_outlined, color: Colors.white),
-            onPressed: () =>
-                context.read<VitalsTitlesCubit>().fetchVitalsTitles(),
+            onPressed: () {
+              final cubit = context.read<VitalsTitlesCubit>();
+              final state = cubit.state;
+              final page =
+                  state is VitalsTitlesLoaded ? state.pagination.currentPage : 1;
+              cubit.fetchVitalsTitles(page: page);
+            },
           ),
         ],
       ),
@@ -50,92 +112,159 @@ class _VitalsTitlesListView extends StatelessWidget {
         label: const Text(AppTexts.addVitalTitle),
         onPressed: () => _openForm(context, vital: null),
       ),
-      body: BlocConsumer<VitalsTitlesCubit, VitalsTitlesState>(
-        listener: (context, state) {
-          if (state is VitalsTitlesActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-          if (state is VitalsTitlesActionFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is VitalsTitlesLoading || state is VitalsTitlesInitial) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            );
-          }
-          if (state is VitalsTitlesFailure) {
-            return _ErrorView(
-              message: state.message,
-              onRetry: () =>
-                  context.read<VitalsTitlesCubit>().fetchVitalsTitles(),
-            );
-          }
-          if (state is VitalsTitlesActionLoading) {
-            return Stack(
-              children: [
-                _VitalsList(items: state.items),
-                const ColoredBox(
-                  color: Color(0x55000000),
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: AppTexts.searchVitalsTitlesHint,
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: AppColors.textSecondary,
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => _searchController.clear(),
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
                   ),
                 ),
-              ],
-            );
-          }
-          if (state is VitalsTitlesLoaded) {
-            return _VitalsList(items: state.items);
-          }
-          return const SizedBox.shrink();
-        },
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: BlocConsumer<VitalsTitlesCubit, VitalsTitlesState>(
+              listener: (context, state) {
+                if (state is VitalsTitlesActionSuccess) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+                if (state is VitalsTitlesActionFailure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                if (state is VitalsTitlesLoading || state is VitalsTitlesInitial) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  );
+                }
+                if (state is VitalsTitlesFailure) {
+                  return _ErrorView(
+                    message: state.message,
+                    onRetry: () =>
+                        context.read<VitalsTitlesCubit>().fetchVitalsTitles(page: 1),
+                  );
+                }
+                if (state is VitalsTitlesLoaded) {
+                  final filtered = _filterVitalsTitles(
+                    state.items,
+                    _searchController.text,
+                  );
+                  final searchActive = _searchController.text.trim().isNotEmpty;
+                  final list = _VitalsList(
+                    items: filtered,
+                    allItemsCount: state.items.length,
+                    pagination: state.pagination,
+                    emptyFromSearch: searchActive && state.items.isNotEmpty,
+                  );
+                  if (state is VitalsTitlesActionLoading) {
+                    return Stack(
+                      children: [
+                        list,
+                        const ColoredBox(
+                          color: Color(0x55000000),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return list;
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ],
       ),
     );
-  }
-
-  void _openForm(BuildContext context, {required VitalTitleModel? vital}) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(
-          builder: (_) => VitalTitleFormScreen(vital: vital),
-        ))
-        .then((_) {
-      if (context.mounted) {
-        context.read<VitalsTitlesCubit>().fetchVitalsTitles();
-      }
-    });
   }
 }
 
 class _VitalsList extends StatelessWidget {
-  const _VitalsList({required this.items});
+  const _VitalsList({
+    required this.items,
+    required this.allItemsCount,
+    required this.pagination,
+    this.emptyFromSearch = false,
+  });
 
   final List<VitalTitleModel> items;
+  final int allItemsCount;
+  final PaginationModel pagination;
+  final bool emptyFromSearch;
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.monitor_heart_outlined,
-                size: 56, color: AppColors.secondary),
-            SizedBox(height: 12),
-            Text('No vitals titles found',
-                style: TextStyle(color: AppColors.textSecondary)),
+            Icon(
+              emptyFromSearch
+                  ? Icons.search_off_outlined
+                  : Icons.monitor_heart_outlined,
+              size: 56,
+              color: AppColors.secondary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              emptyFromSearch
+                  ? AppTexts.vitalsTitlesSearchEmpty
+                  : 'No vitals titles found',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
           ],
         ),
       );
@@ -143,12 +272,87 @@ class _VitalsList extends StatelessWidget {
 
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: () => context.read<VitalsTitlesCubit>().fetchVitalsTitles(),
-      child: ListView.builder(
+      onRefresh: () => context
+          .read<VitalsTitlesCubit>()
+          .fetchVitalsTitles(page: pagination.currentPage),
+      child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        itemCount: items.length,
-        itemBuilder: (context, index) =>
-            _VitalCard(vital: items[index]),
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Showing ${pagination.from}-${pagination.to} '
+              'of ${pagination.total} vitals titles',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          ...items.map((e) => _VitalCard(vital: e)),
+          if (!emptyFromSearch || allItemsCount == 0) ...[
+            const SizedBox(height: 6),
+            _PaginationControls(pagination: pagination),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PaginationControls extends StatelessWidget {
+  const _PaginationControls({required this.pagination});
+
+  final PaginationModel pagination;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFirst = pagination.currentPage <= 1;
+    final isLast = pagination.currentPage >= pagination.lastPage;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE9E9E9)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isFirst
+                  ? null
+                  : () => context
+                      .read<VitalsTitlesCubit>()
+                      .fetchVitalsTitles(page: pagination.currentPage - 1),
+              icon: const Icon(Icons.chevron_left),
+              label: const Text('Previous'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '${pagination.currentPage}/${pagination.lastPage}',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isLast
+                  ? null
+                  : () => context
+                      .read<VitalsTitlesCubit>()
+                      .fetchVitalsTitles(page: pagination.currentPage + 1),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.chevron_right),
+              label: const Text('Next'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -240,14 +444,21 @@ class _VitalCard extends StatelessWidget {
   }
 
   void _openEdit(BuildContext context) {
+    final cubit = context.read<VitalsTitlesCubit>();
     Navigator.of(context)
-        .push(MaterialPageRoute(
-          builder: (_) => VitalTitleFormScreen(vital: vital),
-        ))
+        .push(
+      MaterialPageRoute<void>(
+        builder: (_) => BlocProvider.value(
+          value: cubit,
+          child: VitalTitleFormScreen(vital: vital),
+        ),
+      ),
+    )
         .then((_) {
-      if (context.mounted) {
-        context.read<VitalsTitlesCubit>().fetchVitalsTitles();
-      }
+      if (!context.mounted) return;
+      final state = cubit.state;
+      final page = state is VitalsTitlesLoaded ? state.pagination.currentPage : 1;
+      cubit.fetchVitalsTitles(page: page);
     });
   }
 
@@ -310,4 +521,3 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
-

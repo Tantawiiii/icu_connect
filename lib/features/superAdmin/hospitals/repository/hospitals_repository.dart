@@ -9,13 +9,16 @@ import '../models/hospitals_list_response.dart';
 class HospitalsRepository extends BaseApiService {
   const HospitalsRepository() : super(UserRole.admin);
 
-  /// GET /hospitals?per_page=10
-  Future<HospitalsListResponse> fetchHospitals({int perPage = 10}) async {
+  /// GET /hospitals?per_page=10&page=1
+  Future<HospitalsListResponse> fetchHospitals({
+    int perPage = 10,
+    int page = 1,
+  }) async {
     try {
       final data = await get<Map<String, dynamic>>(
         ApiConstants.hospitals,
-        queryParameters: {'per_page': perPage},
-        cancelTag: 'hospitals_list',
+        queryParameters: {'per_page': perPage, 'page': page},
+        cancelTag: 'hospitals_list_$page',
       );
       return HospitalsListResponse.fromJson(data);
     } on NetworkException {
@@ -28,7 +31,7 @@ class HospitalsRepository extends BaseApiService {
     try {
       final data = await post<Map<String, dynamic>>(
         ApiConstants.hospitals,
-        data: request.toJson(),
+        data: request.toCreateJson(),
         cancelTag: 'hospital_create',
       );
       return HospitalModel.fromJson(data['data'] as Map<String, dynamic>);
@@ -42,7 +45,7 @@ class HospitalsRepository extends BaseApiService {
     try {
       final data = await put<Map<String, dynamic>>(
         ApiConstants.hospitalById(id),
-        data: request.toJson(),
+        data: request.toUpdateJson(),
         cancelTag: 'hospital_update_$id',
       );
       return HospitalModel.fromJson(data['data'] as Map<String, dynamic>);

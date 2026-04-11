@@ -1,20 +1,35 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
-import 'package:icu_connect/core/network/api_constants.dart';
 import 'package:icu_connect/core/network/network_exceptions.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
 
+import '../../../superAdmin/patients/models/admission_request_model.dart';
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
+import '../enums/admission_status.dart';
 import '../repository/hospital_admissions_repository.dart';
-import 'admission_form_screen.dart';
-
-
-const String _storageBaseUrl = ApiConstants.imageBaseUrl;
+import '../widgets/admission_details_culture_card.dart';
+import '../widgets/admission_details_empty_hint.dart';
+import '../widgets/admission_details_formatters.dart';
+import '../widgets/admission_details_generic_add_form.dart';
+import '../widgets/admission_details_info_section.dart';
+import '../widgets/admission_details_medication_card.dart';
+import '../widgets/admission_details_measurement_section.dart';
+import '../widgets/admission_details_meta_chip.dart';
+import '../widgets/admission_details_note_card.dart';
+import '../widgets/admission_details_patient_header_section.dart';
+import '../widgets/admission_details_radiology_card.dart';
+import '../widgets/admission_details_section_container.dart';
+import '../widgets/admission_details_simple_text_card.dart';
+import '../widgets/admission_details_treatment_plan_card.dart';
+import '../widgets/pending_measurement_entry.dart';
 
 class AdmissionDetailsScreen extends StatefulWidget {
   const AdmissionDetailsScreen({super.key, required this.admissionId});
-
   final int admissionId;
 
   @override
@@ -23,51 +38,535 @@ class AdmissionDetailsScreen extends StatefulWidget {
 
 class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
   late Future<PatientAdmissionModel> _admissionFuture;
+  final _repo = const HospitalAdmissionsRepository();
+
+
+  final _patientEditFormKey = GlobalKey<FormState>();
+  TextEditingController? _patientNameCtrl;
+  TextEditingController? _patientNationalIdCtrl;
+  TextEditingController? _patientAgeCtrl;
+  TextEditingController? _patientPhoneCtrl;
+  TextEditingController? _patientNotesCtrl;
+  String _patientEditGender = 'male';
+  String? _patientEditBloodGroup;
+  bool _editingPatient = false;
+  bool _savingPatient = false;
+
+  final _admissionEditFormKey = GlobalKey<FormState>();
+  TextEditingController? _bedCtrl;
+  TextEditingController? _admissionNotesCtrl;
+  AdmissionStatus _editStatus = AdmissionStatus.admitted;
+  DateTime? _editDateComes;
+  DateTime? _editDateLeave;
+  DateTime? _editDateOfDeath;
+  bool _editingAdmission = false;
+  bool _savingAdmission = false;
+
+
+  bool _addingVital = false;
+  bool _savingVital = false;
+  PendingMeasurementEntry? _pendingVital;
+  List<MeasurementTitleModel> _vitalsTitles = [];
+
+
+  bool _addingLab = false;
+  bool _savingLab = false;
+  PendingMeasurementEntry? _pendingLab;
+  List<MeasurementTitleModel> _labsTitles = [];
+
+
+  String? _addingSection;
+  bool _savingGeneric = false;
+  final Map<String, TextEditingController> _genericCtrls = {};
+  String? _pendingType;
+  final List<String> _radiologyLocalPaths = [];
+  final ImagePicker _imagePicker = ImagePicker();
+
+  static const _genders = ['male', 'female'];
+  static const _bloodGroups = [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-',
+  ];
 
   @override
   void initState() {
     super.initState();
     _loadAdmission();
+    _loadTitles();
+  }
+
+  @override
+  void dispose() {
+    _disposePatientCtrls();
+    _disposeAdmissionCtrls();
+    _pendingVital?.valueCtrl.dispose();
+    _pendingLab?.valueCtrl.dispose();
+    for (var c in _genericCtrls.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _disposePatientCtrls() {
+    _patientNameCtrl?.dispose();
+    _patientNationalIdCtrl?.dispose();
+    _patientAgeCtrl?.dispose();
+    _patientPhoneCtrl?.dispose();
+    _patientNotesCtrl?.dispose();
+    _patientNameCtrl = _patientNationalIdCtrl = _patientAgeCtrl =
+        _patientPhoneCtrl = _patientNotesCtrl = null;
+  }
+
+  void _disposeAdmissionCtrls() {
+    _bedCtrl?.dispose();
+    _admissionNotesCtrl?.dispose();
+    _bedCtrl = _admissionNotesCtrl = null;
   }
 
   void _loadAdmission() {
     setState(() {
-      _admissionFuture = const HospitalAdmissionsRepository().getAdmission(widget.admissionId);
+      _admissionFuture = _repo.getAdmission(widget.admissionId);
     });
   }
 
-  void _deleteAdmission(BuildContext context) async {
+  Future<void> _refreshAdmission() async {
+    if (_editingPatient) _cancelPatientEdit();
+    if (_editingAdmission) _cancelAdmissionEdit();
+    final f = _repo.getAdmission(widget.admissionId);
+    setState(() => _admissionFuture = f);
+    await f;
+  }
+
+  Future<void> _loadTitles() async {
+    try {
+      final v = await _repo.listVitalsTitles();
+      final l = await _repo.listLabsTitles();
+      if (mounted) {
+        setState(() {
+          _vitalsTitles = v;
+          _labsTitles = l;
+        });
+      }
+    } catch (_) {}
+  }
+
+  // ── Generic Section Add ──────────────────────────────────────────────────
+  void _startAddGeneric(String section, {String? defaultType}) {
+    for (var c in _genericCtrls.values) {
+      c.dispose();
+    }
+    _genericCtrls.clear();
+    _radiologyLocalPaths.clear();
+    _pendingType = defaultType;
+    setState(() => _addingSection = section);
+  }
+
+  void _cancelAddGeneric() {
+    setState(() {
+      _addingSection = null;
+      _radiologyLocalPaths.clear();
+    });
+  }
+
+  Future<void> _pickRadiologyImages() async {
+    final files = await _imagePicker.pickMultiImage(imageQuality: 80);
+    if (files.isEmpty || !mounted) return;
+    setState(() => _radiologyLocalPaths.addAll(files.map((f) => f.path)));
+  }
+
+  Future<void> _pickRadiologyVideo() async {
+    final x = await _imagePicker.pickVideo(source: ImageSource.gallery);
+    if (x == null || !mounted) return;
+    setState(() => _radiologyLocalPaths.add(x.path));
+  }
+
+  TextEditingController _getCtrl(String key) {
+    return _genericCtrls.putIfAbsent(key, () => TextEditingController());
+  }
+
+  Future<void> _saveGenericAdd() async {
+    if (_addingSection == null) return;
+    setState(() => _savingGeneric = true);
+    try {
+      final body = <String, dynamic>{};
+      final section = _addingSection;
+
+      if (section == 'med') {
+        body['medications'] = [
+          {
+            'type': _pendingType ?? 'other',
+            'title': _getCtrl('title').text.trim(),
+            'value': _getCtrl('value').text.trim(),
+            'duration': _getCtrl('duration').text.trim(),
+          },
+        ];
+      } else if (section == 'clinical_note') {
+        body['clinical_notes'] = [
+          {
+            'type': _pendingType ?? 'progress_note',
+            'content': _getCtrl('content').text.trim(),
+          },
+        ];
+      } else if (section == 'radiology') {
+        final title = _getCtrl('title').text.trim();
+        final report = _getCtrl('report').text.trim();
+        if (title.isEmpty) {
+          _showSnack('Title is required', isError: true);
+          return;
+        }
+        if (_radiologyLocalPaths.isNotEmpty) {
+          final drafts = _radiologyLocalPaths
+              .map(
+                (path) => AdmissionRadiologyDraft(
+                  title: title,
+                  report: report.isEmpty ? null : report,
+                  localImagePath: path,
+                ),
+              )
+              .toList();
+          final fd = await AdmissionUpdateRequest(
+            radiologyImages: drafts,
+          ).toFormData();
+          await _repo.updateAdmission(widget.admissionId, fd);
+        } else {
+          await _repo.updateAdmissionRaw(widget.admissionId, {
+            'radiology_images': [
+              {
+                'title': title,
+                if (report.isNotEmpty) 'report': report,
+              },
+            ],
+          });
+        }
+      } else if (section == 'echo') {
+        body['echoes'] = [
+          {'text': _getCtrl('text').text.trim()},
+        ];
+      } else if (section == 'us') {
+        body['ultrasounds'] = [
+          {'text': _getCtrl('text').text.trim()},
+        ];
+      } else if (section == 'culture') {
+        body['cultures'] = [
+          {
+            'title': _getCtrl('title').text.trim(),
+            'note': _getCtrl('note').text.trim(),
+          },
+        ];
+      } else if (section == 'plan') {
+        body['treatment_plans'] = [
+          {'plan_content': _getCtrl('plan').text.trim()},
+        ];
+      }
+
+      await _repo.updateAdmissionRaw(widget.admissionId, body);
+      if (!mounted) return;
+      _showSnack('Entry added');
+      _cancelAddGeneric();
+      _loadAdmission();
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _savingGeneric = false);
+    }
+  }
+
+  Future<void> _deleteItem(String sectionKey, int itemId) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Admission'),
-        content: const Text('Are you sure you want to delete this admission? This action cannot be undone.'),
+        title: const Text('Delete Entry?'),
+        content: const Text('Are you sure you want to delete this record?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+    if (confirmed != true) return;
 
-    if (confirmed == true) {
+    try {
+      await _repo.updateAdmissionRaw(widget.admissionId, {
+        sectionKey: [
+          {'id': itemId, '_delete': true},
+        ],
+      });
       if (!mounted) return;
-      try {
-        await const HospitalAdmissionsRepository().deleteAdmission(widget.admissionId);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Admission deleted successfully'), backgroundColor: AppColors.success),
-        );
-        Navigator.pop(context, true); // Pop back to list and signal refresh
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete: $e'), backgroundColor: AppColors.error),
-        );
-      }
+      _showSnack('Entry deleted');
+      _loadAdmission();
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message, isError: true);
     }
+  }
+
+  void _beginPatientEdit(AdmissionPatientModel p) {
+    _disposePatientCtrls();
+    _patientNameCtrl = TextEditingController(text: p.name);
+    _patientNationalIdCtrl = TextEditingController(text: p.nationalId);
+    _patientAgeCtrl = TextEditingController(text: '${p.age}');
+    _patientPhoneCtrl = TextEditingController(text: p.phone);
+    _patientNotesCtrl = TextEditingController(text: p.notes);
+    final g = p.gender.toLowerCase().trim();
+    _patientEditGender = _genders.contains(g) ? g : 'male';
+    final bg = p.bloodGroup.trim();
+    _patientEditBloodGroup = bg.isNotEmpty && _bloodGroups.contains(bg)
+        ? bg
+        : null;
+    setState(() => _editingPatient = true);
+  }
+
+  void _cancelPatientEdit() {
+    setState(() {
+      _disposePatientCtrls();
+      _editingPatient = false;
+    });
+  }
+
+  Future<void> _savePatientEdit(int patientId) async {
+    if (!(_patientEditFormKey.currentState?.validate() ?? false)) return;
+    final age = int.tryParse(_patientAgeCtrl?.text.trim() ?? '');
+    if (age == null) {
+      _showSnack('Enter a valid age', isError: true);
+      return;
+    }
+    setState(() => _savingPatient = true);
+    try {
+      await _repo.updatePatient(
+        id: patientId,
+        name: _patientNameCtrl!.text.trim(),
+        nationalId: _patientNationalIdCtrl!.text.trim(),
+        age: age,
+        gender: _patientEditGender,
+        phone: _patientPhoneCtrl!.text.trim(),
+        bloodGroup: _patientEditBloodGroup ?? '',
+        notes: _patientNotesCtrl!.text.trim(),
+      );
+      if (!mounted) return;
+      _showSnack('Patient updated');
+      _cancelPatientEdit();
+      _loadAdmission();
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _savingPatient = false);
+    }
+  }
+
+
+  void _beginAdmissionEdit(PatientAdmissionModel a) {
+    _disposeAdmissionCtrls();
+    _bedCtrl = TextEditingController(text: a.bedNumber);
+    _admissionNotesCtrl = TextEditingController(text: a.notes);
+    _editStatus = AdmissionStatus.values.firstWhere(
+      (s) => s.apiValue == a.status,
+      orElse: () => AdmissionStatus.admitted,
+    );
+    _editDateComes = a.dateComes != null
+        ? DateTime.tryParse(a.dateComes!)
+        : null;
+    _editDateLeave = a.dateLeave != null
+        ? DateTime.tryParse(a.dateLeave!)
+        : null;
+    _editDateOfDeath = a.dateOfDeath != null
+        ? DateTime.tryParse(a.dateOfDeath!)
+        : null;
+    setState(() => _editingAdmission = true);
+  }
+
+  void _cancelAdmissionEdit() {
+    setState(() {
+      _disposeAdmissionCtrls();
+      _editingAdmission = false;
+    });
+  }
+
+  Future<void> _saveAdmissionEdit(PatientAdmissionModel a) async {
+    if (!(_admissionEditFormKey.currentState?.validate() ?? false)) return;
+    setState(() => _savingAdmission = true);
+    try {
+      final body = <String, dynamic>{
+        'bed_number': _bedCtrl!.text.trim(),
+        'status': _editStatus.apiValue,
+        'notes': _admissionNotesCtrl!.text.trim(),
+        if (_editDateLeave != null)
+          'date_leave': admissionDetailsSqlDateTime(_editDateLeave!),
+        if (_editDateOfDeath != null)
+          'date_of_death': admissionDetailsSqlDateTime(_editDateOfDeath!),
+      };
+
+      await _repo.updateAdmissionRaw(a.id, body);
+      if (!mounted) return;
+      _showSnack('Admission updated');
+      _cancelAdmissionEdit();
+      _loadAdmission();
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _savingAdmission = false);
+    }
+  }
+
+  void _startAddVital([int? titleId]) {
+    _pendingVital?.valueCtrl.dispose();
+    _pendingVital = PendingMeasurementEntry();
+    if (titleId != null) _pendingVital!.titleId = titleId;
+    setState(() => _addingVital = true);
+  }
+
+  void _cancelAddVital() {
+    _pendingVital?.valueCtrl.dispose();
+    _pendingVital = null;
+    setState(() => _addingVital = false);
+  }
+
+  Future<void> _saveVital() async {
+    final p = _pendingVital;
+    if (p == null || p.titleId == null || p.valueCtrl.text.trim().isEmpty) {
+      _showSnack('Select a vital and enter a value', isError: true);
+      return;
+    }
+    setState(() => _savingVital = true);
+    try {
+      await _repo.updateAdmissionRaw(widget.admissionId, {
+        'vitals': [
+          {
+            'vitals_title_id': p.titleId,
+            'value': double.tryParse(p.valueCtrl.text.trim()) ?? 0,
+            'date': admissionDetailsSqlDateTime(p.date),
+          },
+        ],
+      });
+      if (!mounted) return;
+      _showSnack('Vital added');
+      _cancelAddVital();
+      _loadAdmission();
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _savingVital = false);
+    }
+  }
+
+
+  void _startAddLab([int? titleId]) {
+    _pendingLab?.valueCtrl.dispose();
+    _pendingLab = PendingMeasurementEntry();
+    if (titleId != null) _pendingLab!.titleId = titleId;
+    setState(() => _addingLab = true);
+  }
+
+  void _cancelAddLab() {
+    _pendingLab?.valueCtrl.dispose();
+    _pendingLab = null;
+    setState(() => _addingLab = false);
+  }
+
+  Future<void> _saveLab() async {
+    final p = _pendingLab;
+    if (p == null || p.titleId == null || p.valueCtrl.text.trim().isEmpty) {
+      _showSnack('Select a lab and enter a value', isError: true);
+      return;
+    }
+    setState(() => _savingLab = true);
+    try {
+      await _repo.updateAdmissionRaw(widget.admissionId, {
+        'labs': [
+          {
+            'labs_title_id': p.titleId,
+            'value': double.tryParse(p.valueCtrl.text.trim()) ?? 0,
+            'date': admissionDetailsSqlDateTime(p.date),
+          },
+        ],
+      });
+      if (!mounted) return;
+      _showSnack('Lab result added');
+      _cancelAddLab();
+      _loadAdmission();
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _savingLab = false);
+    }
+  }
+
+  void _deleteAdmission() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Admission'),
+        content: const Text('Are you sure? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await _repo.deleteAdmission(widget.admissionId);
+      if (!mounted) return;
+      _showSnack('Admission deleted');
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('Failed to delete: $e', isError: true);
+    }
+  }
+
+  void _showSnack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? AppColors.error : AppColors.success,
+      ),
+    );
+  }
+
+  Future<void> _pickDateTime({
+    required DateTime? initial,
+    required void Function(DateTime) onPick,
+  }) async {
+    final base = initial ?? DateTime.now();
+    final d = await showDatePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      initialDate: DateTime(base.year, base.month, base.day),
+    );
+    if (d == null || !mounted) return;
+    final t = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(base),
+    );
+    if (t == null || !mounted) return;
+    onPick(DateTime(d.year, d.month, d.day, t.hour, t.minute));
   }
 
   @override
@@ -93,25 +592,33 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
               final admission = snapshot.data!;
               return PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: AppColors.textPrimary),
-                onSelected: (val) async {
-                  if (val == 'edit') {
-                    final updated = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => AdmissionFormScreen(
-                          hospitalId: admission.hospitalId,
-                          admission: admission,
-                        ),
-                      ),
-                    );
-                    if (updated == true) _loadAdmission();
+                onSelected: (val) {
+                  if (val == 'edit_patient') {
+                    final p = admission.patient;
+                    if (p != null) _beginPatientEdit(p);
+                  } else if (val == 'edit_admission') {
+                    _beginAdmissionEdit(admission);
                   } else if (val == 'delete') {
-                    _deleteAdmission(context);
+                    _deleteAdmission();
                   }
                 },
                 itemBuilder: (ctx) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                  const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+                  if (admission.patient != null)
+                    PopupMenuItem(
+                      value: 'edit_patient',
+                      child: Text(AppTexts.editPatientAdmin),
+                    ),
+                  PopupMenuItem(
+                    value: 'edit_admission',
+                    child: Text(AppTexts.editAdmission),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text(
+                      'Delete',
+                      style: TextStyle(color: AppColors.error),
+                    ),
+                  ),
                 ],
               );
             },
@@ -127,9 +634,8 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                 child: CircularProgressIndicator(color: AppColors.primary),
               );
             }
-
             if (snapshot.hasError) {
-              final message = snapshot.error is NetworkException
+              final msg = snapshot.error is NetworkException
                   ? (snapshot.error as NetworkException).message
                   : 'Failed to load admission.';
               return Center(
@@ -138,13 +644,17 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline,
-                          size: 42, color: AppColors.error),
+                      const Icon(
+                        Icons.error_outline,
+                        size: 42,
+                        color: AppColors.error,
+                      ),
                       const SizedBox(height: 10),
-                      Text(message,
-                          textAlign: TextAlign.center,
-                          style:
-                              const TextStyle(color: AppColors.textSecondary)),
+                      Text(
+                        msg,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
                       const SizedBox(height: 12),
                       AppButton(
                         label: AppTexts.retry,
@@ -159,772 +669,619 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
             final admission = snapshot.data;
             if (admission == null) return const SizedBox.shrink();
 
-            return _AdmissionBody(admission: admission);
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: _refreshAdmission,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Patient header ───────────────────────────────────────
+                    AdmissionDetailsPatientHeaderSection(
+                      admission: admission,
+                      editing: _editingPatient,
+                      saving: _savingPatient,
+                      formKey: _patientEditFormKey,
+                      nameCtrl: _patientNameCtrl,
+                      nationalIdCtrl: _patientNationalIdCtrl,
+                      ageCtrl: _patientAgeCtrl,
+                      phoneCtrl: _patientPhoneCtrl,
+                      notesCtrl: _patientNotesCtrl,
+                      gender: _patientEditGender,
+                      bloodGroup: _patientEditBloodGroup,
+                      genders: _genders,
+                      bloodGroups: _bloodGroups,
+                      onGenderChanged: (v) =>
+                          setState(() => _patientEditGender = v ?? 'male'),
+                      onBloodGroupChanged: (v) =>
+                          setState(() => _patientEditBloodGroup = v),
+                      onBeginEdit: admission.patient != null
+                          ? () => _beginPatientEdit(admission.patient!)
+                          : null,
+                      onCancel: _cancelPatientEdit,
+                      onSave: admission.patient != null
+                          ? () => _savePatientEdit(admission.patient!.id)
+                          : null,
+                    ),
+                    const Divider(height: 24),
+
+                    // ── Admission info (inline edit) ─────────────────────────
+                    AdmissionDetailsInfoSection(
+                      admission: admission,
+                      editing: _editingAdmission,
+                      saving: _savingAdmission,
+                      formKey: _admissionEditFormKey,
+                      bedCtrl: _bedCtrl,
+                      notesCtrl: _admissionNotesCtrl,
+                      editStatus: _editStatus,
+                      editDateComes: _editDateComes,
+                      editDateLeave: _editDateLeave,
+                      editDateOfDeath: _editDateOfDeath,
+                      onStatusChanged: (v) => setState(
+                        () => _editStatus = v ?? AdmissionStatus.admitted,
+                      ),
+                      onPickDateLeave: () => _pickDateTime(
+                        initial: _editDateLeave,
+                        onPick: (d) => setState(() => _editDateLeave = d),
+                      ),
+                      onClearDateLeave: () =>
+                          setState(() => _editDateLeave = null),
+                      onPickDateOfDeath: () => _pickDateTime(
+                        initial: _editDateOfDeath,
+                        onPick: (d) => setState(() => _editDateOfDeath = d),
+                      ),
+                      onClearDateOfDeath: () =>
+                          setState(() => _editDateOfDeath = null),
+                      onCancel: _cancelAdmissionEdit,
+                      onSave: () => _saveAdmissionEdit(admission),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // ── Clinical Notes ───────────────────────────────────────
+                    AdmissionDetailsSectionContainer(
+                      title: 'Clinical Notes',
+                      headerAction: _addingSection == 'clinical_note'
+                          ? null
+                          : IconButton(
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                              onPressed: () => _startAddGeneric(
+                                'clinical_note',
+                                defaultType: 'progress_note',
+                              ),
+                            ),
+                      child: Column(
+                        children: [
+                          if (_addingSection == 'clinical_note')
+                            AdmissionDetailsGenericAddForm(
+                              title: 'Add Clinical Note',
+                              saving: _savingGeneric,
+                              onCancel: _cancelAddGeneric,
+                              onSave: _saveGenericAdd,
+                              typeLabel: 'Note Type',
+                              typeValue: _pendingType,
+                              types: const [
+                                'history_complaint',
+                                'progress_note',
+                                'discharge_summary',
+                                'other',
+                              ],
+                              onTypeChanged: (v) =>
+                                  setState(() => _pendingType = v),
+                              fields: [
+                                AdmissionDetailsFormFieldSpec(
+                                  hint: 'Content',
+                                  controller: _getCtrl('content'),
+                                  maxLines: 5,
+                                  isRequired: true,
+                                ),
+                              ],
+                            ),
+                          if (admission.clinicalNotes.isEmpty &&
+                              _addingSection != 'clinical_note')
+                            const AdmissionDetailsEmptyHint(
+                              'No clinical notes recorded.',
+                            )
+                          else
+                            ...admission.clinicalNotes.map(
+                              (n) => AdmissionDetailsNoteCard(
+                                note: n,
+                                onDelete: () =>
+                                    _deleteItem('clinical_notes', n.id),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // ── Radiology ────────────────────────────────────────────
+                    AdmissionDetailsSectionContainer(
+                      title: 'Radiology',
+                      headerAction: _addingSection == 'radiology'
+                          ? null
+                          : IconButton(
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                              onPressed: () => _startAddGeneric('radiology'),
+                            ),
+                      child: Column(
+                        children: [
+                          if (_addingSection == 'radiology')
+                            AdmissionDetailsGenericAddForm(
+                              title: 'Add Radiology Record',
+                              saving: _savingGeneric,
+                              onCancel: _cancelAddGeneric,
+                              onSave: _saveGenericAdd,
+                              fields: [
+                                AdmissionDetailsFormFieldSpec(
+                                  hint: 'Title (e.g. Chest X-Ray)',
+                                  controller: _getCtrl('title'),
+                                  isRequired: true,
+                                ),
+                                AdmissionDetailsFormFieldSpec(
+                                  hint: 'Report text',
+                                  controller: _getCtrl('report'),
+                                  maxLines: 3,
+                                ),
+                              ],
+                              childrenAfterFields: [
+                                const Text(
+                                  'Images or video',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    TextButton.icon(
+                                      onPressed:
+                                          _savingGeneric ? null : _pickRadiologyImages,
+                                      icon: const Icon(
+                                        Icons.photo_library_outlined,
+                                        size: 20,
+                                        color: AppColors.primary,
+                                      ),
+                                      label: const Text('Photos'),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed:
+                                          _savingGeneric ? null : _pickRadiologyVideo,
+                                      icon: const Icon(
+                                        Icons.video_library_outlined,
+                                        size: 20,
+                                        color: AppColors.primary,
+                                      ),
+                                      label: const Text('Video'),
+                                    ),
+                                  ],
+                                ),
+                                if (_radiologyLocalPaths.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: _radiologyLocalPaths.map((path) {
+                                        final name =
+                                            path.split(Platform.pathSeparator).last;
+                                        return InputChip(
+                                          label: Text(
+                                            name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          onDeleted: _savingGeneric
+                                              ? null
+                                              : () => setState(
+                                                    () =>
+                                                        _radiologyLocalPaths.remove(path),
+                                                  ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          if (admission.radiologyImages.isEmpty &&
+                              _addingSection != 'radiology')
+                            const AdmissionDetailsEmptyHint(
+                              'No radiology images recorded.',
+                            )
+                          else
+                            ...admission.radiologyImages.map(
+                              (img) => AdmissionDetailsRadiologyCard(
+                                image: img,
+                                onDelete: () =>
+                                    _deleteItem('radiology_images', img.id),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // ── Treatment Plans ──────────────────────────────────────
+                    AdmissionDetailsSectionContainer(
+                      title: 'Treatment Plans',
+                      headerAction: _addingSection == 'plan'
+                          ? null
+                          : IconButton(
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                              onPressed: () => _startAddGeneric('plan'),
+                            ),
+                      child: Column(
+                        children: [
+                          if (_addingSection == 'plan')
+                            AdmissionDetailsGenericAddForm(
+                              title: 'Add Treatment Plan',
+                              saving: _savingGeneric,
+                              onCancel: _cancelAddGeneric,
+                              onSave: _saveGenericAdd,
+                              fields: [
+                                AdmissionDetailsFormFieldSpec(
+                                  hint: 'Plan content',
+                                  controller: _getCtrl('plan'),
+                                  maxLines: 4,
+                                  isRequired: true,
+                                ),
+                              ],
+                            ),
+                          if (admission.treatmentPlans.isEmpty &&
+                              _addingSection != 'plan')
+                            const AdmissionDetailsEmptyHint(
+                              'No treatment plans recorded.',
+                            )
+                          else
+                            ...admission.treatmentPlans.map(
+                              (p) => AdmissionDetailsTreatmentPlanCard(
+                                plan: p,
+                                onDelete: () =>
+                                    _deleteItem('treatment_plans', p.id),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // ── Vital Signs ──────────────────────────────────────────
+                    AdmissionDetailsMeasurementSection(
+                      title: AppTexts.vitalSigns,
+                      isLabs: false,
+                      records: admission.vitals,
+                      titles: _vitalsTitles,
+                      adding: _addingVital,
+                      saving: _savingVital,
+                      pending: _pendingVital,
+                      onStartAdd: _startAddVital,
+                      onCancelAdd: _cancelAddVital,
+                      onSaveAdd: _saveVital,
+                      onPickDate: () => _pickDateTime(
+                        initial: _pendingVital?.date,
+                        onPick: (d) => setState(() => _pendingVital?.date = d),
+                      ),
+                    ),
+
+                    // ── Labs ─────────────────────────────────────────────────
+                    AdmissionDetailsMeasurementSection(
+                      title: AppTexts.labs,
+                      isLabs: true,
+                      records: admission.labs,
+                      titles: _labsTitles,
+                      adding: _addingLab,
+                      saving: _savingLab,
+                      pending: _pendingLab,
+                      onStartAdd: _startAddLab,
+                      onCancelAdd: _cancelAddLab,
+                      onSaveAdd: _saveLab,
+                      onPickDate: () => _pickDateTime(
+                        initial: _pendingLab?.date,
+                        onPick: (d) => setState(() => _pendingLab?.date = d),
+                      ),
+                    ),
+
+                    // ── Medications ──────────────────────────────────────────
+                    AdmissionDetailsSectionContainer(
+                      title: 'Medications',
+                      headerAction: _addingSection == 'med'
+                          ? null
+                          : IconButton(
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                              onPressed: () =>
+                                  _startAddGeneric('med', defaultType: 'other'),
+                            ),
+                      child: Column(
+                        children: [
+                          if (_addingSection == 'med')
+                            AdmissionDetailsGenericAddForm(
+                              title: 'Add Medication',
+                              saving: _savingGeneric,
+                              onCancel: _cancelAddGeneric,
+                              onSave: _saveGenericAdd,
+                              fields: [
+                                AdmissionDetailsFormFieldSpec(
+                                  hint: 'Title',
+                                  controller: _getCtrl('title'),
+                                  isRequired: true,
+                                ),
+                                AdmissionDetailsFormFieldSpec(
+                                  hint: 'Value (e.g. 1g IV)',
+                                  controller: _getCtrl('value'),
+                                ),
+                                AdmissionDetailsFormFieldSpec(
+                                  hint: 'Duration (e.g. 5 days)',
+                                  controller: _getCtrl('duration'),
+                                ),
+                              ],
+                              typeLabel: 'Type',
+                              typeValue: _pendingType,
+                              types: const [
+                                'infusion',
+                                'syring_pump',
+                                'bolus',
+                                'other',
+                              ],
+                              onTypeChanged: (v) =>
+                                  setState(() => _pendingType = v),
+                            ),
+                          if (admission.medications.isEmpty &&
+                              _addingSection != 'med')
+                            const AdmissionDetailsEmptyHint(
+                              'No medications recorded.',
+                            )
+                          else
+                            ...admission.medications.map(
+                              (m) => AdmissionDetailsMedicationCard(
+                                med: m,
+                                onDelete: () =>
+                                    _deleteItem('medications', m.id),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // ── Echo ─────────────────────────────────────────────────
+                    AdmissionDetailsSectionContainer(
+                      title: 'Echo',
+                      headerAction: _addingSection == 'echo'
+                          ? null
+                          : IconButton(
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                              onPressed: () => _startAddGeneric('echo'),
+                            ),
+                      child: Column(
+                        children: [
+                          if (_addingSection == 'echo')
+                            AdmissionDetailsGenericAddForm(
+                              title: 'Add Echo Findings',
+                              saving: _savingGeneric,
+                              onCancel: _cancelAddGeneric,
+                              onSave: _saveGenericAdd,
+                              fields: [
+                                AdmissionDetailsFormFieldSpec(
+                                  hint: 'Note text',
+                                  controller: _getCtrl('text'),
+                                  maxLines: 3,
+                                  isRequired: true,
+                                ),
+                              ],
+                            ),
+                          if (admission.echoes.isEmpty &&
+                              _addingSection != 'echo')
+                            const AdmissionDetailsEmptyHint(
+                              'No echo findings recorded.',
+                            )
+                          else
+                            ...admission.echoes.map(
+                              (e) => AdmissionDetailsSimpleTextCard(
+                                text: e.text,
+                                date: e.createdAt,
+                                onDelete: () => _deleteItem('echo', e.id),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // ── Ultrasound ───────────────────────────────────────────
+                    AdmissionDetailsSectionContainer(
+                      title: 'Ultrasound',
+                      headerAction: _addingSection == 'us'
+                          ? null
+                          : IconButton(
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                              onPressed: () => _startAddGeneric('us'),
+                            ),
+                      child: Column(
+                        children: [
+                          if (_addingSection == 'us')
+                            AdmissionDetailsGenericAddForm(
+                              title: 'Add Ultrasound Findings',
+                              saving: _savingGeneric,
+                              onCancel: _cancelAddGeneric,
+                              onSave: _saveGenericAdd,
+                              fields: [
+                                AdmissionDetailsFormFieldSpec(
+                                  hint: 'Note text',
+                                  controller: _getCtrl('text'),
+                                  maxLines: 3,
+                                  isRequired: true,
+                                ),
+                              ],
+                            ),
+                          if (admission.ultrasounds.isEmpty &&
+                              _addingSection != 'us')
+                            const AdmissionDetailsEmptyHint(
+                              'No ultrasound findings recorded.',
+                            )
+                          else
+                            ...admission.ultrasounds.map(
+                              (u) => AdmissionDetailsSimpleTextCard(
+                                text: u.text,
+                                date: u.createdAt,
+                                onDelete: () =>
+                                    _deleteItem('ultrasounds', u.id),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // ── Cultures ─────────────────────────────────────────────
+                    AdmissionDetailsSectionContainer(
+                      title: 'Cultures',
+                      headerAction: _addingSection == 'culture'
+                          ? null
+                          : IconButton(
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                              onPressed: () => _startAddGeneric('culture'),
+                            ),
+                      child: Column(
+                        children: [
+                          if (_addingSection == 'culture')
+                            AdmissionDetailsGenericAddForm(
+                              title: 'Add Culture',
+                              saving: _savingGeneric,
+                              onCancel: _cancelAddGeneric,
+                              onSave: _saveGenericAdd,
+                              fields: [
+                                AdmissionDetailsFormFieldSpec(
+                                  hint: 'Title',
+                                  controller: _getCtrl('title'),
+                                  isRequired: true,
+                                ),
+                                AdmissionDetailsFormFieldSpec(
+                                  hint: 'Note',
+                                  controller: _getCtrl('note'),
+                                  maxLines: 2,
+                                ),
+                              ],
+                            ),
+                          if (admission.cultures.isEmpty &&
+                              _addingSection != 'culture')
+                            const AdmissionDetailsEmptyHint(
+                              'No cultures recorded.',
+                            )
+                          else
+                            ...admission.cultures.map(
+                              (c) => AdmissionDetailsCultureCard(
+                                culture: c,
+                                onDelete: () => _deleteItem('cultures', c.id),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // ── Doctor info ──────────────────────────────────────────
+                    if (admission.doctor != null)
+                      AdmissionDetailsSectionContainer(
+                        title: 'Doctor',
+                        child: Wrap(
+                          spacing: 16,
+                          runSpacing: 6,
+                          children: [
+                            AdmissionDetailsMetaChip(
+                              label: 'Name',
+                              value: admission.doctor!.name,
+                              icon: Icons.person_outline,
+                            ),
+                            AdmissionDetailsMetaChip(
+                              label: 'Email',
+                              value: admission.doctor!.email,
+                              icon: Icons.email_outlined,
+                            ),
+                            AdmissionDetailsMetaChip(
+                              label: 'Phone',
+                              value: admission.doctor!.phone.isEmpty
+                                  ? AppTexts.notAvailable
+                                  : admission.doctor!.phone,
+                              icon: Icons.phone_outlined,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // ── Hospital Group ───────────────────────────────────────
+                    if (admission.hospitalGroup != null)
+                      AdmissionDetailsSectionContainer(
+                        title: 'Ward / Group',
+                        child: Wrap(
+                          spacing: 16,
+                          runSpacing: 6,
+                          children: [
+                            AdmissionDetailsMetaChip(
+                              label: 'Name',
+                              value: admission.hospitalGroup!.name,
+                              icon: Icons.business,
+                            ),
+                            AdmissionDetailsMetaChip(
+                              label: 'Total beds',
+                              value: '${admission.hospitalGroup!.totalBeds}',
+                              icon: Icons.bed_outlined,
+                            ),
+                            AdmissionDetailsMetaChip(
+                              label: 'Available beds',
+                              value:
+                                  '${admission.hospitalGroup!.availableBeds}',
+                              icon: Icons.event_available,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // ── Admission Notes ──────────────────────────────────────
+                    AdmissionDetailsSectionContainer(
+                      title: AppTexts.admissionNotesSection,
+                      child: Text(
+                        admission.notes.isEmpty
+                            ? AppTexts.notAvailable
+                            : admission.notes,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            );
           },
         ),
       ),
     );
   }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Body – scrollable content
-// ═══════════════════════════════════════════════════════════════════════════════
-class _AdmissionBody extends StatelessWidget {
-  const _AdmissionBody({required this.admission});
-
-  final PatientAdmissionModel admission;
-
-  @override
-  Widget build(BuildContext context) {
-    // Split clinical notes by type
-    final historyNotes = admission.clinicalNotes
-        .where((n) => n.type == 'history_complaint')
-        .toList();
-    final progressNotes = admission.clinicalNotes
-        .where((n) => n.type == 'progress_note')
-        .toList();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Patient Header ──────────────────────────────────────────────
-          _PatientHeader(admission: admission),
-          const Divider(height: 24),
-
-          // ── History & Complaint ─────────────────────────────────────────
-          _SectionContainer(
-            title: AppTexts.historyAndComplaint,
-            child: historyNotes.isEmpty
-                ? const _EmptyHint('No history or complaint recorded.')
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: historyNotes
-                        .map((n) => _NoteCard(note: n))
-                        .toList(),
-                  ),
-          ),
-
-          // ── Progress Notes ─────────────────────────────────────────────
-          _SectionContainer(
-            title: AppTexts.progressNote,
-            child: progressNotes.isEmpty
-                ? const _EmptyHint('No progress notes recorded.')
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: progressNotes
-                        .map((n) => _NoteCard(note: n))
-                        .toList(),
-                  ),
-          ),
-
-          // ── Radiology ──────────────────────────────────────────────────
-          _SectionContainer(
-            title: AppTexts.radiology,
-            child: admission.radiologyImages.isEmpty
-                ? const _EmptyHint('No radiology images available.')
-                : Column(
-                    children: admission.radiologyImages
-                        .map((img) => _RadiologyCard(image: img))
-                        .toList(),
-                  ),
-          ),
-
-          // ── Treatment Plans ────────────────────────────────────────────
-          _SectionContainer(
-            title: AppTexts.plans,
-            child: admission.treatmentPlans.isEmpty
-                ? const _EmptyHint('No treatment plans defined.')
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: admission.treatmentPlans
-                        .map((p) => _TreatmentPlanCard(plan: p))
-                        .toList(),
-                  ),
-          ),
-
-          // ── Vital Signs Table ──────────────────────────────────────────
-          _SectionContainer(
-            title: AppTexts.vitalSigns,
-            child: admission.vitals.isEmpty
-                ? const _EmptyHint('No vital signs recorded.')
-                : _MeasurementTable(
-                    records: admission.vitals.map((v) {
-                      final title = v.vitalsTitle;
-                      return _MeasurementRow(
-                        title: title?.title.toUpperCase() ??
-                            AppTexts.defaultVitalMeasurementTitle,
-                        value: v.value,
-                        unit: title?.unit ?? '',
-                        normalMin: title?.normalRangeMin ?? '',
-                        normalMax: title?.normalRangeMax ?? '',
-                        date: v.date,
-                      );
-                    }).toList(),
-                  ),
-          ),
-
-          // ── Labs Table ─────────────────────────────────────────────────
-          _SectionContainer(
-            title: AppTexts.labs,
-            child: admission.labs.isEmpty
-                ? const _EmptyHint('No lab results recorded.')
-                : _MeasurementTable(
-                    records: admission.labs.map((l) {
-                      final title = l.labsTitle;
-                      return _MeasurementRow(
-                        title: title?.title.toUpperCase() ??
-                            AppTexts.defaultLabMeasurementTitle,
-                        value: l.value,
-                        unit: title?.unit ?? '',
-                        normalMin: title?.normalRangeMin ?? '',
-                        normalMax: title?.normalRangeMax ?? '',
-                        date: l.date,
-                      );
-                    }).toList(),
-                  ),
-          ),
-
-          // ── Admission Notes ────────────────────────────────────────────
-          _SectionContainer(
-            title: AppTexts.admissionNotesSection,
-            child: Text(
-              admission.notes.isEmpty ? AppTexts.notAvailable : admission.notes,
-              style: const TextStyle(
-                  color: AppColors.textPrimary, height: 1.5),
-            ),
-          ),
-
-          // ── Doctor & Hospital Info ─────────────────────────────────────
-          if (admission.doctor != null || admission.hospital != null)
-            const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (admission.doctor != null)
-                Expanded(
-                  child: _InfoCard(
-                    icon: Icons.medical_services_rounded,
-                    title: 'Doctor',
-                    rows: [
-                      _KV(AppTexts.name, admission.doctor!.name),
-                      _KV(AppTexts.emailLabel, admission.doctor!.email),
-                      _KV(
-                          AppTexts.phone,
-                          admission.doctor!.phone.isEmpty
-                              ? AppTexts.notAvailable
-                              : admission.doctor!.phone),
-                    ],
-                  ),
-                ),
-              if (admission.doctor != null && admission.hospital != null)
-                const SizedBox(width: 12),
-              if (admission.hospital != null)
-                Expanded(
-                  child: _InfoCard(
-                    icon: Icons.local_hospital_rounded,
-                    title: 'Hospital',
-                    rows: [
-                      _KV(AppTexts.name, admission.hospital!.name),
-                      _KV(AppTexts.location, admission.hospital!.location),
-                      _KV(AppTexts.totalBeds,
-                          '${admission.hospital!.totalBeds}'),
-                      _KV(AppTexts.availableBeds,
-                          '${admission.hospital!.availableBeds}'),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Patient Header
-// ═══════════════════════════════════════════════════════════════════════════════
-class _PatientHeader extends StatelessWidget {
-  const _PatientHeader({required this.admission});
-  final PatientAdmissionModel admission;
-
-  Color _statusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'admitted':
-        return AppColors.success;
-      case 'discharged':
-        return Colors.orange;
-      case 'deceased':
-        return AppColors.error;
-      default:
-        return AppColors.textSecondary;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final patient = admission.patient;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // First row – bed chip + name
-        Row(
-          children: [
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                admission.bedNumber.isEmpty
-                    ? AppTexts.notAvailable
-                    : admission.bedNumber,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: _statusColor(admission.status).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                admission.status.isEmpty
-                    ? AppTexts.notAvailable
-                    : admission.status[0].toUpperCase() +
-                        admission.status.substring(1),
-                style: TextStyle(
-                  color: _statusColor(admission.status),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-            const Spacer(),
-            Text(
-              patient?.name ?? AppTexts.notAvailable,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        // Second row – meta info
-        Wrap(
-          spacing: 16,
-          runSpacing: 4,
-          children: [
-            _MetaChip(
-                label: AppTexts.admitted,
-                value: _formatDate(admission.dateComes)),
-            if (patient != null) ...[
-              _MetaChip(label: AppTexts.age, value: '${patient.age}'),
-              _MetaChip(label: AppTexts.gender, value: patient.gender),
-              _MetaChip(label: AppTexts.bloodGroup, value: patient.bloodGroup),
-              _MetaChip(label: AppTexts.phone, value: patient.phone),
-              _MetaChip(label: AppTexts.nationalId, value: patient.nationalId),
-            ],
-            if (admission.dateLeave != null)
-              _MetaChip(
-                  label: AppTexts.dischargedLabel,
-                  value: _formatDate(admission.dateLeave)),
-            if (admission.dateOfDeath != null)
-              _MetaChip(
-                  label: AppTexts.dateOfDeathLabel,
-                  value: _formatDate(admission.dateOfDeath)),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      '$label : $value',
-      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Reusable section container – matches patient_detail_screen style
-// ═══════════════════════════════════════════════════════════════════════════════
-class _SectionContainer extends StatelessWidget {
-  const _SectionContainer({required this.title, required this.child});
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE0E0E0).withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: child,
-        ),
-      ],
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Clinical note card
-// ═══════════════════════════════════════════════════════════════════════════════
-class _NoteCard extends StatelessWidget {
-  const _NoteCard({required this.note});
-  final ClinicalNoteModel note;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            note.content,
-            style: const TextStyle(
-                color: AppColors.textPrimary, fontSize: 13, height: 1.5),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _formatDateTime(note.createdAt),
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 11),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Radiology image card – tappable for full-screen view
-// ═══════════════════════════════════════════════════════════════════════════════
-class _RadiologyCard extends StatelessWidget {
-  const _RadiologyCard({required this.image});
-  final RadiologyImageModel image;
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrl = '$_storageBaseUrl${image.imagePath}';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image
-          ClipRRect(
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(12)),
-            child: GestureDetector(
-              onTap: () => _openFullScreenImage(context, imageUrl, image.title),
-              child: Image.network(
-                imageUrl,
-                width: double.infinity,
-                height: 200,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  height: 200,
-                  color: AppColors.border,
-                  child: const Center(
-                    child: Icon(Icons.broken_image_rounded,
-                        size: 48, color: AppColors.textSecondary),
-                  ),
-                ),
-                loadingBuilder: (_, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    height: 200,
-                    color: AppColors.border,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.primary),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          // Title + report
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  image.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                  ),
-                ),
-                if (image.report.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    image.report,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 12, height: 1.4),
-                  ),
-                ],
-                const SizedBox(height: 4),
-                Text(
-                  _formatDateTime(image.createdAt),
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _openFullScreenImage(
-      BuildContext context, String url, String title) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          backgroundColor: Colors.black,
-          appBar: AppBar(
-            backgroundColor: Colors.black,
-            iconTheme: const IconThemeData(color: Colors.white),
-            title: Text(title,
-                style: const TextStyle(color: Colors.white, fontSize: 16)),
-          ),
-          body: Center(
-            child: InteractiveViewer(
-              child: Image.network(url,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(
-                      Icons.broken_image_rounded,
-                      size: 64,
-                      color: Colors.white54)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TreatmentPlanCard extends StatelessWidget {
-  const _TreatmentPlanCard({required this.plan});
-  final TreatmentPlanModel plan;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            plan.planContent,
-            style: const TextStyle(
-                color: AppColors.textPrimary, fontSize: 13, height: 1.5),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _formatDateTime(plan.createdAt),
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 11),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-
-class _MeasurementRow {
-  const _MeasurementRow({
-    required this.title,
-    required this.value,
-    required this.unit,
-    required this.normalMin,
-    required this.normalMax,
-    required this.date,
-  });
-
-  final String title;
-  final String value;
-  final String unit;
-  final String normalMin;
-  final String normalMax;
-  final String date;
-}
-
-class _MeasurementTable extends StatelessWidget {
-  const _MeasurementTable({required this.records});
-  final List<_MeasurementRow> records;
-
-  Color _valueColor(_MeasurementRow r) {
-    final val = double.tryParse(r.value);
-    final min = double.tryParse(r.normalMin);
-    final max = double.tryParse(r.normalMax);
-    if (val == null || min == null || max == null) {
-      return AppColors.textPrimary;
-    }
-    return (val >= min && val <= max) ? AppColors.success : AppColors.error;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Table(
-      columnWidths: const {
-        0: FlexColumnWidth(2),
-        1: FlexColumnWidth(1.5),
-        2: FlexColumnWidth(1),
-        3: FlexColumnWidth(2),
-      },
-      children: [
-        // Header
-        const TableRow(
-          decoration: BoxDecoration(
-            border: Border(
-                bottom: BorderSide(color: AppColors.border, width: 1)),
-          ),
-          children: [
-            _TableHeader('Title'),
-            _TableHeader('Value'),
-            _TableHeader('Unit'),
-            _TableHeader('Normal'),
-          ],
-        ),
-        // Data rows
-        ...records.map((r) {
-          final color = _valueColor(r);
-          return TableRow(
-            children: [
-              _TableCell(r.title, fontWeight: FontWeight.w600),
-              _TableCell(r.value, color: color, fontWeight: FontWeight.bold),
-              _TableCell(r.unit),
-              _TableCell('${r.normalMin} – ${r.normalMax}'),
-            ],
-          );
-        }),
-      ],
-    );
-  }
-}
-
-class _TableHeader extends StatelessWidget {
-  const _TableHeader(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textSecondary,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-}
-
-class _TableCell extends StatelessWidget {
-  const _TableCell(this.text,
-      {this.color = AppColors.textPrimary,
-      this.fontWeight = FontWeight.normal});
-  final String text;
-  final Color color;
-  final FontWeight fontWeight;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          color: color,
-          fontWeight: fontWeight,
-        ),
-      ),
-    );
-  }
-}
-
-
-class _KV {
-  const _KV(this.key, this.value);
-  final String key;
-  final String value;
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard(
-      {required this.icon, required this.title, required this.rows});
-  final IconData icon;
-  final String title;
-  final List<_KV> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 18, color: AppColors.primary),
-              const SizedBox(width: 6),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 16),
-          ...rows.map(
-            (kv) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 65,
-                    child: Text(
-                      kv.key,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      kv.value,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-class _EmptyHint extends StatelessWidget {
-  const _EmptyHint(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 12,
-          fontStyle: FontStyle.italic,
-        ),
-      ),
-    );
-  }
-}
-
-
-String _formatDate(String? raw) {
-  if (raw == null || raw.isEmpty) return AppTexts.notAvailable;
-  final t = raw.indexOf('T');
-  return t > 0 ? raw.substring(0, t) : raw;
-}
-
-String _formatDateTime(String raw) {
-  if (raw.isEmpty) return AppTexts.notAvailable;
-  final t = raw.indexOf('T');
-  if (t <= 0) return raw;
-  final date = raw.substring(0, t);
-  final time = raw.length > t + 1
-      ? raw.substring(t + 1, raw.length > t + 9 ? t + 9 : raw.length)
-      : '';
-  return time.isEmpty ? date : '$date $time';
 }

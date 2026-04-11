@@ -7,12 +7,13 @@ import 'package:icu_connect/core/widgets/app_text_field.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../hospital_details/screens/hospital_details_screen.dart';
+import 'request_join_hospital_flow.dart';
 import '../cubit/doctor_hospitals_cubit.dart';
 import '../cubit/doctor_hospitals_state.dart';
 import '../models/doctor_hospital.dart';
 
 
-const double _hospitalCardMinHeight = 168;
+const double _hospitalCardMinHeight = 120;
 
 List<DoctorHospital> _filterHospitals(List<DoctorHospital> hospitals, String query) {
   final q = query.trim().toLowerCase();
@@ -48,60 +49,63 @@ class _DoctorHospitalsSectionState extends State<DoctorHospitalsSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 10),
-          child: Text(
-            AppTexts.yourHospitals,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-        ),
-        AppTextField(
-          controller: _searchController,
-          hintText: AppTexts.searchHospitalsHint,
-          textInputAction: TextInputAction.search,
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-            color: AppColors.textSecondary,
-          ),
-          suffixIcon: _searchController.text.isEmpty
-              ? null
-              : IconButton(
-                  onPressed: () => _searchController.clear(),
-                  icon: const Icon(
-                    Icons.clear_rounded,
-                    color: AppColors.textSecondary,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 10),
+            child: Text(
+              AppTexts.yourHospitals,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
                   ),
-                ),
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: BlocBuilder<DoctorHospitalsCubit, DoctorHospitalsState>(
-            builder: (context, state) {
-              return switch (state) {
-                DoctorHospitalsInitial() ||
-                DoctorHospitalsLoading() =>
-                  const _HospitalsShimmerList(),
-                DoctorHospitalsLoaded(:final hospitals) =>
-                  _HospitalsListBody(
-                    hospitals: hospitals,
-                    query: _searchController.text,
-                  ),
-                DoctorHospitalsFailure(:final message) => _HospitalsError(
-                    message: message,
-                    onRetry: () =>
-                        context.read<DoctorHospitalsCubit>().refresh(),
-                  ),
-              };
-            },
+            ),
           ),
-        ),
-      ],
+          AppTextField(
+            controller: _searchController,
+            hintText: AppTexts.searchHospitalsHint,
+            textInputAction: TextInputAction.search,
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: AppColors.textSecondary,
+            ),
+            suffixIcon: _searchController.text.isEmpty
+                ? null
+                : IconButton(
+                    onPressed: () => _searchController.clear(),
+                    icon: const Icon(
+                      Icons.clear_rounded,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: BlocBuilder<DoctorHospitalsCubit, DoctorHospitalsState>(
+              builder: (context, state) {
+                return switch (state) {
+                  DoctorHospitalsInitial() ||
+                  DoctorHospitalsLoading() =>
+                    const _HospitalsShimmerList(),
+                  DoctorHospitalsLoaded(:final hospitals) =>
+                    _HospitalsListBody(
+                      hospitals: hospitals,
+                      query: _searchController.text,
+                    ),
+                  DoctorHospitalsFailure(:final message) => _HospitalsError(
+                      message: message,
+                      onRetry: () =>
+                          context.read<DoctorHospitalsCubit>().refresh(),
+                    ),
+                };
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -321,20 +325,39 @@ class _HospitalCard extends StatelessWidget {
                       ),
                     ],
                     const Spacer(),
-                    Text(
-                      '${AppTexts.hospitalBedsSummary}: '
-                      '${hospital.availableBeds} / ${hospital.totalBeds}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.accent,
-                      ),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
+                        Text(
+                          '${AppTexts.hospitalBedsSummary}: ${hospital.totalBeds}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.accent,
+                          ),
+                        ),
+                        Text(
+                          '${AppTexts.hospitalGroupsSummary}: ${hospital.groupsCount}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
               if (!unlocked)
-                _LockOverlay(statusLabel: _statusLabel, statusColor: _statusColor),
+                _LockOverlay(
+                  statusLabel: _statusLabel,
+                  statusColor: _statusColor,
+                  onTap: hospital.userStatus.canRequest
+                      ? () => showJoinHospitalRequestFlow(context, hospital)
+                      : () {},
+                ),
             ],
           ),
         ),
@@ -347,74 +370,80 @@ class _LockOverlay extends StatelessWidget {
   const _LockOverlay({
     required this.statusLabel,
     required this.statusColor,
+    required this.onTap,
   });
 
   final String statusLabel;
   final Color statusColor;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withValues(alpha: 0.28),
-                    AppColors.primary.withValues(alpha: 0.12),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.28),
+                      AppColors.primary.withValues(alpha: 0.12),
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                color: Colors.white.withValues(alpha: 0.45),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.lock_rounded,
+                        size: 26,
+                        color: AppColors.primary.withValues(alpha: 0.85),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.35)),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: statusColor,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-            Container(
-              color: Colors.white.withValues(alpha: 0.45),
-              alignment: Alignment.center,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.lock_rounded,
-                      size: 26,
-                      color: AppColors.primary.withValues(alpha: 0.85),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.35)),
-                    ),
-                    child: Text(
-                      statusLabel,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: statusColor,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -1,11 +1,12 @@
 enum AdmissionStatus {
   admitted('admitted'),
-  active('active'),
-  inactive('inactive'),
-  discharged('discharged'),
-  leavesAma('leaves_ama'),
-  deceased('deceased'),
-  referred('referred');
+  discharged('discharged');
+  // active('active'),
+  // inactive('inactive'),
+
+  // leavesAma('leaves_ama'),
+  // deceased('deceased'),
+  // referred('referred');
 
   const AdmissionStatus(this.apiValue);
 
