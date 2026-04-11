@@ -66,37 +66,5 @@ class HospitalDoctorsCubit extends Cubit<HospitalDoctorsState> {
       emit(s.copyWith(activatingIds: activating..remove(doctorId)));
     }
   }
-
-  Future<void> createDoctor({
-    required int hospitalId,
-    required String name,
-    required String email,
-    required String phone,
-    required String password,
-    required String passwordConfirmation,
-  }) async {
-    final s = state;
-    if (s is! HospitalDoctorsLoaded) return;
-    emit(s.copyWith(creating: true));
-    try {
-      await _repository.createDoctor(
-        hospitalId: hospitalId,
-        name: name,
-        email: email,
-        phone: phone,
-        password: password,
-        passwordConfirmation: passwordConfirmation,
-      );
-      await refresh(hospitalId);
-    } on NetworkException catch (e) {
-      emit(s.copyWith(creating: false));
-      emit(HospitalDoctorsFailure(e.message));
-      emit(s.copyWith(creating: false));
-    } catch (_) {
-      emit(s.copyWith(creating: false));
-      emit(const HospitalDoctorsFailure('Could not create doctor.'));
-      emit(s.copyWith(creating: false));
-    }
-  }
 }
 

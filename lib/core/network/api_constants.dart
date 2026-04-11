@@ -40,9 +40,12 @@ class ApiConstants {
   static const String patientVitalSigns = '/vital-signs';
   static String patientVitalSignsById(String patientId) =>
       '/patients/$patientId/vital-signs';
+  static const String vitals = '/vitals';
   static const String labs = '/labs';
   static String labsByPatientId(String patientId) => '/patients/$patientId/labs';
   static String hospitalDoctors(int hospitalId) => '/hospitals/$hospitalId/doctors';
+  static String hospitalDoctorsAdd(int hospitalId) =>
+      '/hospitals/$hospitalId/doctors/add';
   static String hospitalAcceptDoctor(int hospitalId) =>
       '/hospitals/$hospitalId/doctors/accept';
   static String doctorActivate(int doctorId) => '/doctors/$doctorId/activate';

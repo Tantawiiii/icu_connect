@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../admins/models/pagination_model.dart';
 import '../cubit/users_cubit.dart';
 import '../cubit/users_state.dart';
 import '../models/user_model.dart';
@@ -20,8 +21,38 @@ class UsersListScreen extends StatelessWidget {
   }
 }
 
-class _UsersListView extends StatelessWidget {
+List<UserModel> _filterUsers(List<UserModel> users, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return users;
+  return users.where((u) {
+    if (u.name.toLowerCase().contains(q)) return true;
+    if (u.email.toLowerCase().contains(q)) return true;
+    if (u.phone.toLowerCase().contains(q)) return true;
+    if (u.role.toLowerCase().contains(q)) return true;
+    return false;
+  }).toList();
+}
+
+class _UsersListView extends StatefulWidget {
   const _UsersListView();
+
+  @override
+  State<_UsersListView> createState() => _UsersListViewState();
+}
+
+class _UsersListViewState extends State<_UsersListView> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _applySearch() {
+    setState(() => _searchQuery = _searchController.text.trim());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +69,11 @@ class _UsersListView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_outlined, color: Colors.white),
-            onPressed: () => context.read<UsersCubit>().fetchUsers(),
+            onPressed: () {
+              final state = context.read<UsersCubit>().state;
+              final page = state is UsersLoaded ? state.pagination.currentPage : 1;
+              context.read<UsersCubit>().fetchUsers(page: page);
+            },
           ),
         ],
       ),
@@ -49,57 +84,102 @@ class _UsersListView extends StatelessWidget {
         label: const Text(AppTexts.addUser),
         onPressed: () => _openForm(context, user: null),
       ),
-      body: BlocConsumer<UsersCubit, UsersState>(
-        listener: (context, state) {
-          if (state is UsersActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-          if (state is UsersActionFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is UsersLoading || state is UsersInitial) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            );
-          }
-          if (state is UsersFailure) {
-            return _ErrorView(
-              message: state.message,
-              onRetry: () => context.read<UsersCubit>().fetchUsers(),
-            );
-          }
-          if (state is UsersActionLoading) {
-            return Stack(
-              children: [
-                _UsersList(users: state.users),
-                const ColoredBox(
-                  color: Color(0x55000000),
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => _applySearch(),
+              decoration: InputDecoration(
+                hintText: 'Search users',
+                prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _applySearch();
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
                 ),
-              ],
-            );
-          }
-          if (state is UsersLoaded) {
-            return _UsersList(users: state.users);
-          }
-          return const SizedBox.shrink();
-        },
+              ),
+            ),
+          ),
+          Expanded(
+            child: BlocConsumer<UsersCubit, UsersState>(
+              listener: (context, state) {
+                if (state is UsersActionSuccess) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+                if (state is UsersActionFailure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                if (state is UsersLoading || state is UsersInitial) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  );
+                }
+                if (state is UsersFailure) {
+                  return _ErrorView(
+                    message: state.message,
+                    onRetry: () => context.read<UsersCubit>().fetchUsers(
+                          page: 1,
+                        ),
+                  );
+                }
+                if (state is UsersActionLoading) {
+                  return Stack(
+                    children: [
+                      _UsersList(
+                        users: state.users,
+                        pagination: state.pagination,
+                        searchQuery: _searchQuery,
+                      ),
+                      const ColoredBox(
+                        color: Color(0x55000000),
+                        child: Center(
+                          child:
+                              CircularProgressIndicator(color: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                if (state is UsersLoaded) {
+                  return _UsersList(
+                    users: state.users,
+                    pagination: state.pagination,
+                    searchQuery: _searchQuery,
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -110,7 +190,12 @@ class _UsersListView extends StatelessWidget {
           builder: (_) => UserFormScreen(user: user),
         ))
         .then((_) {
-      if (context.mounted) context.read<UsersCubit>().fetchUsers();
+      if (!context.mounted) return;
+      final state = context.read<UsersCubit>().state;
+      final page = state is UsersLoaded ? state.pagination.currentPage : 1;
+      context.read<UsersCubit>().fetchUsers(
+            page: page,
+          );
     });
   }
 }
@@ -118,9 +203,15 @@ class _UsersListView extends StatelessWidget {
 // ── List ─────────────────────────────────────────────────────────────────────
 
 class _UsersList extends StatelessWidget {
-  const _UsersList({required this.users});
+  const _UsersList({
+    required this.users,
+    required this.pagination,
+    required this.searchQuery,
+  });
 
   final List<UserModel> users;
+  final PaginationModel pagination;
+  final String searchQuery;
 
   @override
   Widget build(BuildContext context) {
@@ -140,21 +231,85 @@ class _UsersList extends StatelessWidget {
 
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: () => context.read<UsersCubit>().fetchUsers(),
+      onRefresh: () =>
+          context.read<UsersCubit>().fetchUsers(page: pagination.currentPage),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              '${users.length} ${users.length == 1 ? 'user' : 'users'}',
+              'Showing ${pagination.from}-${pagination.to} '
+              'of ${pagination.total} users',
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
               ),
             ),
           ),
-          ...users.map((u) => _UserCard(user: u)),
+          ..._filterUsers(users, searchQuery).map((u) => _UserCard(user: u)),
+          const SizedBox(height: 6),
+          _PaginationControls(pagination: pagination),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaginationControls extends StatelessWidget {
+  const _PaginationControls({
+    required this.pagination,
+  });
+
+  final PaginationModel pagination;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFirst = pagination.currentPage <= 1;
+    final isLast = pagination.currentPage >= pagination.lastPage;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE9E9E9)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isFirst
+                  ? null
+                  : () => context
+                      .read<UsersCubit>()
+                      .fetchUsers(page: pagination.currentPage - 1),
+              icon: const Icon(Icons.chevron_left),
+              label: const Text('Previous'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '${pagination.currentPage}/${pagination.lastPage}',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isLast
+                  ? null
+                  : () => context
+                      .read<UsersCubit>()
+                      .fetchUsers(page: pagination.currentPage + 1),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.chevron_right),
+              label: const Text('Next'),
+            ),
+          ),
         ],
       ),
     );
@@ -345,7 +500,10 @@ class _UserCard extends StatelessWidget {
           builder: (_) => UserFormScreen(user: user),
         ))
         .then((_) {
-      if (context.mounted) context.read<UsersCubit>().fetchUsers();
+      if (!context.mounted) return;
+      final state = context.read<UsersCubit>().state;
+      final page = state is UsersLoaded ? state.pagination.currentPage : 1;
+      context.read<UsersCubit>().fetchUsers(page: page);
     });
   }
 

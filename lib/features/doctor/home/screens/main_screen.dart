@@ -51,14 +51,9 @@ class _MainViewState extends State<_MainView> {
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
       drawer: const SideDrawer(),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => context.read<DoctorHospitalsCubit>().refresh(),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: DoctorHospitalsSection(),
-          ),
-        ),
+      body: RefreshIndicator(
+        onRefresh: () => context.read<DoctorHospitalsCubit>().refresh(),
+        child: DoctorHospitalsSection(),
       ),
     );
   }

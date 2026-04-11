@@ -291,30 +291,37 @@ class _StatCard extends StatelessWidget {
         border: Border.all(color: item.color.withAlpha(51)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(item.icon, color: item.color, size: 22),
-          const SizedBox(height: 6),
-          Text(
-            item.value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: item.color,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(item.icon, color: item.color, size: 24),
+              const SizedBox(width: 6),
+              Text(
+                item.value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: item.color,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 6),
+
           Text(
             item.label,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
               color: item.color.withValues(alpha: 0.85),
-              height: 1.2,
             ),
           ),
         ],

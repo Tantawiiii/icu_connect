@@ -261,6 +261,13 @@ class AppTexts {
   static const String hospitalAccessGranted = 'Active';
   static const String hospitalLockedHint =
       'You need an approved assignment to open this hospital.';
+  static const String hospitalJoinRequestTitle = 'Request to join this hospital?';
+  static const String hospitalJoinRequestMessage =
+      'This will update your profile and send a join request for this hospital.';
+  static const String sendJoinRequest = 'Send request';
+  static const String hospitalJoinRequestSent = 'Join request sent';
+  static const String hospitalJoinRequestFailed = 'Could not send request.';
+  static const String joinRequestSending = 'Sending request…';
   static const String viewHospitalDoctors = 'Doctors';
   static const String doctorsInHospital = 'Doctors in hospital';
   static const String acceptDoctor = 'Accept';
@@ -269,6 +276,19 @@ class AppTexts {
   static const String createDoctor = 'Create doctor';
   static const String doctorName = 'Doctor name';
   static const String doctorCreatedSuccessfully = 'Doctor created successfully';
+  static const String doctorAddedSuccessfully = 'Doctor added successfully';
+  static const String addDoctorPendingPoolSection =
+      'Pending doctors (link to hospital)';
+  static const String addDoctorRequestsSection = 'Inactive pending requests';
+  static const String hospitalGroupsSummary = 'Groups';
+  static const String noBedsInGroup = 'No beds in this group';
+
+  // Admission form validation
+  static const String admissionLeaveNotBeforeComes =
+      'Leave date and time must be on or after admission.';
+  static const String admissionDeathNotBeforeComes =
+      'Date of death must be on or after admission.';
+  static const String admissionSetComesFirst = 'Set admission date first.';
 
   // Drawer
   static const String profile = 'Profile';
@@ -290,6 +310,9 @@ class AppTexts {
   static const String setting = 'Setting';
   static const String trash = 'Trash';
   static const String logOut = 'Log Out';
+  static const String deleteAccount = 'Delete account';
+  static const String deleteAccountConfirmTitle = 'Delete account?';
+  static const String deleteAccountConfirmMessage = 'This will permanently delete your account and data. This cannot be undone.';
 
   // Patient Actions
   static const String save = 'SAVE';

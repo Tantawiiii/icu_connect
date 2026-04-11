@@ -9,13 +9,16 @@ import '../models/users_list_response.dart';
 class UsersRepository extends BaseApiService {
   const UsersRepository() : super(UserRole.admin);
 
-  /// GET /users?per_page=10
-  Future<UsersListResponse> fetchUsers({int perPage = 10}) async {
+  /// GET /users?per_page=10&page=1
+  Future<UsersListResponse> fetchUsers({
+    int perPage = 10,
+    int page = 1,
+  }) async {
     try {
       final data = await get<Map<String, dynamic>>(
         ApiConstants.users,
-        queryParameters: {'per_page': perPage},
-        cancelTag: 'users_list',
+        queryParameters: {'per_page': perPage, 'page': page},
+        cancelTag: 'users_list_$page',
       );
       return UsersListResponse.fromJson(data);
     } on NetworkException {

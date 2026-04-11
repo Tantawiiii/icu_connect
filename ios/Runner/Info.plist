@@ -49,5 +49,7 @@
 	<string>Used to attach radiology images to admissions.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Used to capture radiology images for admissions.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

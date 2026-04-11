@@ -79,4 +79,16 @@ class DoctorProfileRepository extends BaseApiService {
       rethrow;
     }
   }
+
+  /// `DELETE /auth/profile` — delete the authenticated user's account.
+  Future<void> deleteAccount() async {
+    try {
+      await deleteWithoutBody(
+        ApiConstants.authProfile,
+        cancelTag: 'doctor_profile_delete_account',
+      );
+    } on NetworkException {
+      rethrow;
+    }
+  }
 }

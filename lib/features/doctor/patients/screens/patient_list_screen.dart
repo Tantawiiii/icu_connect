@@ -18,41 +18,32 @@ class PatientListScreen extends StatefulWidget {
 }
 
 class _PatientListScreenState extends State<PatientListScreen> {
-  static const int _perPage = 15;
+  static const int _perPage = 10;
 
-  final _scrollController = ScrollController();
   final _repository = const HospitalAdmissionsRepository();
+  final _searchController = TextEditingController();
 
   final List<AdmissionPatientModel> _patients = [];
   bool _initialLoading = true;
-  bool _loadingMore = false;
   String? _errorMessage;
   int _currentPage = 0;
   int _lastPage = 1;
+  int _total = 0;
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     _loadFirstPage();
   }
 
   @override
   void dispose() {
-    _scrollController
-      ..removeListener(_onScroll)
-      ..dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_loadingMore || _initialLoading) return;
-    if (_currentPage >= _lastPage) return;
-    final pos = _scrollController.position;
-    if (!pos.hasViewportDimension) return;
-    if (pos.pixels > pos.maxScrollExtent - 200) {
-      _loadMore();
-    }
+  void _applySearch() {
+    setState(() {});
   }
 
   Future<void> _loadFirstPage() async {
@@ -62,14 +53,19 @@ class _PatientListScreenState extends State<PatientListScreen> {
       _patients.clear();
       _currentPage = 0;
       _lastPage = 1;
+      _total = 0;
     });
     try {
-      final page = await _repository.listPatientsPage(page: 1, perPage: _perPage);
+      final page = await _repository.listPatientsPage(
+        page: 1,
+        perPage: _perPage,
+      );
       if (!mounted) return;
       setState(() {
         _patients.addAll(page.patients);
         _currentPage = page.currentPage;
         _lastPage = page.lastPage;
+        _total = page.total;
         _initialLoading = false;
       });
     } on NetworkException catch (e) {
@@ -87,28 +83,40 @@ class _PatientListScreenState extends State<PatientListScreen> {
     }
   }
 
-  Future<void> _loadMore() async {
-    final next = _currentPage + 1;
-    if (next > _lastPage) return;
-    setState(() => _loadingMore = true);
+  Future<void> _loadPage(int page) async {
+    if (page < 1 || page > _lastPage) return;
+    setState(() {
+      _initialLoading = true;
+      _errorMessage = null;
+    });
     try {
-      final page = await _repository.listPatientsPage(page: next, perPage: _perPage);
+      final result =
+          await _repository.listPatientsPage(
+        page: page,
+        perPage: _perPage,
+      );
       if (!mounted) return;
       setState(() {
-        _patients.addAll(page.patients);
-        _currentPage = page.currentPage;
-        _lastPage = page.lastPage;
-        _loadingMore = false;
+        _patients
+          ..clear()
+          ..addAll(result.patients);
+        _currentPage = result.currentPage;
+        _lastPage = result.lastPage;
+        _total = result.total;
+        _initialLoading = false;
       });
     } on NetworkException catch (e) {
       if (!mounted) return;
-      setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: AppColors.error),
-      );
+      setState(() {
+        _errorMessage = e.message;
+        _initialLoading = false;
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loadingMore = false);
+      setState(() {
+        _errorMessage = 'Failed to load patients.';
+        _initialLoading = false;
+      });
     }
   }
 
@@ -128,10 +136,10 @@ class _PatientListScreenState extends State<PatientListScreen> {
   }
 
   Future<void> _openCreate() async {
-    final created = await Navigator.of(context).push<bool>(
+    final result = await Navigator.of(context).push<Object?>(
       MaterialPageRoute(builder: (_) => const PatientFormScreen()),
     );
-    if (created == true && mounted) _loadFirstPage();
+    if (mounted && (result is int || result == true)) _loadFirstPage();
   }
 
   Future<void> _openEdit(AdmissionPatientModel p) async {
@@ -183,6 +191,17 @@ class _PatientListScreenState extends State<PatientListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final query = _searchController.text.trim().toLowerCase();
+    final filteredPatients = query.isEmpty
+        ? _patients
+        : _patients.where((p) {
+            if (p.name.toLowerCase().contains(query)) return true;
+            if (p.nationalId.toLowerCase().contains(query)) return true;
+            if (p.phone.toLowerCase().contains(query)) return true;
+            if (p.bloodGroup.toLowerCase().contains(query)) return true;
+            return false;
+          }).toList();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       floatingActionButton: FloatingActionButton.extended(
@@ -231,13 +250,47 @@ class _PatientListScreenState extends State<PatientListScreen> {
                 )
               : RefreshIndicator(
                   color: AppColors.primary,
-                  onRefresh: _loadFirstPage,
+                  onRefresh: () => _loadPage(_currentPage == 0 ? 1 : _currentPage),
                   child: _patients.isEmpty
                       ? ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          children: const [
-                            SizedBox(height: 120),
-                            Center(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: TextField(
+                                controller: _searchController,
+                                textInputAction: TextInputAction.search,
+                                onChanged: (_) => setState(() {}),
+                                onSubmitted: (_) => _applySearch(),
+                                decoration: InputDecoration(
+                                  hintText: 'Search patients',
+                                  prefixIcon: const Icon(
+                                    Icons.search,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  suffixIcon: _searchController.text.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(Icons.clear),
+                                          onPressed: () {
+                                            _searchController.clear();
+                                            _applySearch();
+                                          },
+                                        )
+                                      : null,
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.border,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 120),
+                            const Center(
                               child: Text(
                                 'No patients yet.',
                                 style: TextStyle(color: AppColors.textSecondary),
@@ -245,44 +298,148 @@ class _PatientListScreenState extends State<PatientListScreen> {
                             ),
                           ],
                         )
-                      : ListView.builder(
-                          controller: _scrollController,
+                      : ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                          itemCount: _patients.length + (_loadingMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index >= _patients.length) {
-                              return const Padding(
-                                padding: EdgeInsets.all(16),
-                                child: Center(
-                                  child: CircularProgressIndicator(color: AppColors.primary),
-                                ),
-                              );
-                            }
-                            final p = _patients[index];
-                            return PatientCardWidget(
-                              name: p.name,
-                              bedNumber: _badge(p),
-                              admittedDate: _metaLine(p),
-                              plainDetailLine: true,
-                              onTap: () async {
-                                final refreshed =
-                                    await Navigator.of(context).push<bool>(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        PatientDetailScreen(patientId: p.id),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: TextField(
+                                controller: _searchController,
+                                textInputAction: TextInputAction.search,
+                                onChanged: (_) => setState(() {}),
+                                onSubmitted: (_) => _applySearch(),
+                                decoration: InputDecoration(
+                                  hintText: 'Search patients',
+                                  prefixIcon: const Icon(
+                                    Icons.search,
+                                    color: AppColors.textSecondary,
                                   ),
-                                );
-                                if (refreshed == true && mounted) {
-                                  _loadFirstPage();
-                                }
-                              },
-                              onEdit: () => _openEdit(p),
-                              onDelete: () => _deletePatient(p),
-                            );
-                          },
+                                  suffixIcon: _searchController.text.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(Icons.clear),
+                                          onPressed: () {
+                                            _searchController.clear();
+                                            _applySearch();
+                                          },
+                                        )
+                                      : null,
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.border,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                _total == 0
+                                    ? 'Showing 0-0 of 0 patients'
+                                    : 'Showing ${((_currentPage - 1) * _perPage) + 1}-'
+                                        '${(((_currentPage - 1) * _perPage) + filteredPatients.length)} '
+                                        'of $_total patients',
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            ...filteredPatients.map(
+                              (p) => PatientCardWidget(
+                                name: p.name,
+                                bedNumber: _badge(p),
+                                admittedDate: _metaLine(p),
+                                plainDetailLine: true,
+                                onTap: () async {
+                                  final refreshed =
+                                      await Navigator.of(context).push<bool>(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          PatientDetailScreen(patientId: p.id),
+                                    ),
+                                  );
+                                  if (refreshed == true && mounted) {
+                                    _loadFirstPage();
+                                  }
+                                },
+                                onEdit: () => _openEdit(p),
+                                onDelete: () => _deletePatient(p),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            _PaginationControls(
+                              currentPage: _currentPage,
+                              lastPage: _lastPage,
+                              onPrevious: () => _loadPage(_currentPage - 1),
+                              onNext: () => _loadPage(_currentPage + 1),
+                            ),
+                          ],
                         ),
                 ),
+    );
+  }
+}
+
+class _PaginationControls extends StatelessWidget {
+  const _PaginationControls({
+    required this.currentPage,
+    required this.lastPage,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final int currentPage;
+  final int lastPage;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final safeCurrent = currentPage <= 0 ? 1 : currentPage;
+    final isFirst = safeCurrent <= 1;
+    final isLast = safeCurrent >= lastPage;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE9E9E9)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isFirst ? null : onPrevious,
+              icon: const Icon(Icons.chevron_left),
+              label: const Text('Previous'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '$safeCurrent/$lastPage',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isLast ? null : onNext,
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.chevron_right),
+              label: const Text('Next'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
