@@ -54,6 +54,34 @@ class HospitalUserStatus extends Equatable {
   ];
 }
 
+/// ICU group / ward returned under `hospital.groups` from the API.
+class HospitalGroup extends Equatable {
+  const HospitalGroup({
+    required this.id,
+    required this.name,
+    required this.totalBeds,
+    required this.availableBeds,
+  });
+
+  final int id;
+  final String name;
+  final int totalBeds;
+  final int availableBeds;
+
+  factory HospitalGroup.fromJson(Map<String, dynamic> json) {
+    final idRaw = json['id'];
+    return HospitalGroup(
+      id: idRaw is int ? idRaw : int.tryParse('$idRaw') ?? 0,
+      name: json['name'] as String? ?? '',
+      totalBeds: json['total_beds'] as int? ?? 0,
+      availableBeds: json['available_beds'] as int? ?? 0,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, name, totalBeds, availableBeds];
+}
+
 class DoctorHospital extends Equatable {
   const DoctorHospital({
     required this.id,
@@ -61,7 +89,9 @@ class DoctorHospital extends Equatable {
     this.location,
     required this.totalBeds,
     required this.availableBeds,
+    required this.groupsCount,
     required this.userStatus,
+    this.groups = const [],
   });
 
   final int id;
@@ -69,18 +99,31 @@ class DoctorHospital extends Equatable {
   final String? location;
   final int totalBeds;
   final int availableBeds;
+  final int groupsCount;
   final HospitalUserStatus userStatus;
+  final List<HospitalGroup> groups;
 
   bool get isUnlocked => userStatus.hasAccess;
 
   factory DoctorHospital.fromJson(Map<String, dynamic> json) {
     final idRaw = json['id'];
+    final groupsRaw = json['groups'] as List<dynamic>?;
+    final groupsList = <HospitalGroup>[];
+    if (groupsRaw != null) {
+      for (final e in groupsRaw) {
+        if (e is Map<String, dynamic>) {
+          groupsList.add(HospitalGroup.fromJson(e));
+        }
+      }
+    }
     return DoctorHospital(
       id: idRaw is int ? idRaw : int.tryParse('$idRaw') ?? 0,
       name: json['name'] as String? ?? '',
       location: json['location'] as String?,
       totalBeds: json['total_beds'] as int? ?? 0,
       availableBeds: json['available_beds'] as int? ?? 0,
+      groupsCount: groupsList.isNotEmpty ? groupsList.length : (groupsRaw?.length ?? 0),
+      groups: groupsList,
       userStatus: HospitalUserStatus.fromJson(
         json['user_status'] as Map<String, dynamic>?,
       ),
@@ -94,6 +137,8 @@ class DoctorHospital extends Equatable {
     location,
     totalBeds,
     availableBeds,
+    groupsCount,
     userStatus,
+    groups,
   ];
 }

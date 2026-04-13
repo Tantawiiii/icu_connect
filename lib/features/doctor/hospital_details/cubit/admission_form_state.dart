@@ -17,11 +17,15 @@ class AdmissionFormRefsReady extends AdmissionFormState {
     required this.vitalsTitles,
     required this.labsTitles,
     required this.patients,
+    required this.currentDoctorId,
   });
 
   final List<MeasurementTitleModel> vitalsTitles;
   final List<MeasurementTitleModel> labsTitles;
   final List<AdmissionPatientModel> patients;
+
+  /// Logged-in user id from `GET /auth/profile` (sent as `doctor_id` on create).
+  final int currentDoctorId;
 }
 
 class AdmissionFormSubmitting extends AdmissionFormState {

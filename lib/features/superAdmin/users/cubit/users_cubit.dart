@@ -9,11 +9,11 @@ class UsersCubit extends Cubit<UsersState> {
 
   final _repo = const UsersRepository();
 
-  Future<void> fetchUsers() async {
+  Future<void> fetchUsers({int page = 1}) async {
     emit(const UsersLoading());
     try {
-      final response = await _repo.fetchUsers();
-      emit(UsersLoaded(response.data));
+      final response = await _repo.fetchUsers(page: page);
+      emit(UsersLoaded(response.data, response.pagination));
     } on NetworkException catch (e) {
       emit(UsersFailure(e.message));
     } catch (_) {
@@ -25,15 +25,23 @@ class UsersCubit extends Cubit<UsersState> {
     final current = state;
     if (current is! UsersLoaded) return;
 
-    emit(UsersActionLoading(current.users));
+    emit(UsersActionLoading(current.users, current.pagination));
     try {
       await _repo.deleteUser(id);
       final updated = current.users.where((u) => u.id != id).toList();
-      emit(UsersActionSuccess(updated, 'User deleted successfully'));
+      emit(UsersActionSuccess(
+        updated,
+        current.pagination,
+        'User deleted successfully',
+      ));
     } on NetworkException catch (e) {
-      emit(UsersActionFailure(current.users, e.message));
+      emit(UsersActionFailure(current.users, current.pagination, e.message));
     } catch (_) {
-      emit(UsersActionFailure(current.users, 'An unexpected error occurred'));
+      emit(UsersActionFailure(
+        current.users,
+        current.pagination,
+        'An unexpected error occurred',
+      ));
     }
   }
 
@@ -41,16 +49,24 @@ class UsersCubit extends Cubit<UsersState> {
     final current = state;
     if (current is! UsersLoaded) return;
 
-    emit(UsersActionLoading(current.users));
+    emit(UsersActionLoading(current.users, current.pagination));
     try {
       final restored = await _repo.restoreUser(id);
       final updated =
           current.users.map((u) => u.id == id ? restored : u).toList();
-      emit(UsersActionSuccess(updated, 'User restored successfully'));
+      emit(UsersActionSuccess(
+        updated,
+        current.pagination,
+        'User restored successfully',
+      ));
     } on NetworkException catch (e) {
-      emit(UsersActionFailure(current.users, e.message));
+      emit(UsersActionFailure(current.users, current.pagination, e.message));
     } catch (_) {
-      emit(UsersActionFailure(current.users, 'An unexpected error occurred'));
+      emit(UsersActionFailure(
+        current.users,
+        current.pagination,
+        'An unexpected error occurred',
+      ));
     }
   }
 }

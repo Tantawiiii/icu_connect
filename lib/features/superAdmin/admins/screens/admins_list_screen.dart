@@ -6,6 +6,7 @@ import '../../../../core/constants/app_texts.dart';
 import '../../login/models/admin_model.dart';
 import '../cubit/admins_cubit.dart';
 import '../cubit/admins_state.dart';
+import '../models/pagination_model.dart';
 import '../repository/admins_repository.dart';
 import 'admin_form_screen.dart';
 
@@ -21,8 +22,38 @@ class AdminsListScreen extends StatelessWidget {
   }
 }
 
-class _AdminsListView extends StatelessWidget {
+List<AdminModel> _filterAdmins(List<AdminModel> admins, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return admins;
+  return admins.where((a) {
+    if (a.name.toLowerCase().contains(q)) return true;
+    if (a.email.toLowerCase().contains(q)) return true;
+    if (a.phone.toLowerCase().contains(q)) return true;
+    if (a.role.toLowerCase().contains(q)) return true;
+    return false;
+  }).toList();
+}
+
+class _AdminsListView extends StatefulWidget {
   const _AdminsListView();
+
+  @override
+  State<_AdminsListView> createState() => _AdminsListViewState();
+}
+
+class _AdminsListViewState extends State<_AdminsListView> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _applySearch() {
+    setState(() => _searchQuery = _searchController.text.trim());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +70,12 @@ class _AdminsListView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_outlined, color: Colors.white),
-            onPressed: () => context.read<AdminsCubit>().fetchAdmins(),
+            onPressed: () {
+              final state = context.read<AdminsCubit>().state;
+              final page =
+                  state is AdminsLoaded ? state.pagination.currentPage : 1;
+              context.read<AdminsCubit>().fetchAdmins(page: page);
+            },
           ),
         ],
       ),
@@ -50,44 +86,83 @@ class _AdminsListView extends StatelessWidget {
         label: const Text(AppTexts.addAdmin),
         onPressed: () => _openForm(context, admin: null),
       ),
-      body: BlocConsumer<AdminsCubit, AdminsState>(
-        listener: (context, state) {
-          if (state is AdminsActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => _applySearch(),
+              decoration: InputDecoration(
+                hintText: 'Search admins',
+                prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _applySearch();
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
               ),
-            );
-          }
-          if (state is AdminsActionFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return switch (state) {
-            AdminsLoading() || AdminsInitial() => const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
-            AdminsFailure(:final message) => _ErrorView(
-                message: message,
-                onRetry: () => context.read<AdminsCubit>().fetchAdmins(),
-              ),
-            AdminsLoaded(:final admins, :final pagination) =>
-              _AdminsList(admins: admins, total: pagination.total),
-            AdminsActionLoading() => const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
-            _ => const SizedBox.shrink(),
-          };
-        },
+            ),
+          ),
+          Expanded(
+            child: BlocConsumer<AdminsCubit, AdminsState>(
+              listener: (context, state) {
+                if (state is AdminsActionSuccess) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+                if (state is AdminsActionFailure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                return switch (state) {
+                  AdminsLoading() || AdminsInitial() => const Center(
+                      child: CircularProgressIndicator(color: AppColors.primary),
+                    ),
+                  AdminsFailure(:final message) => _ErrorView(
+                      message: message,
+                      onRetry: () => context.read<AdminsCubit>().fetchAdmins(
+                            page: 1,
+                          ),
+                    ),
+                  AdminsLoaded(:final admins, :final pagination) => _AdminsList(
+                      admins: admins,
+                      pagination: pagination,
+                      searchQuery: _searchQuery,
+                    ),
+                  AdminsActionLoading() => const Center(
+                      child: CircularProgressIndicator(color: AppColors.primary),
+                    ),
+                  _ => const SizedBox.shrink(),
+                };
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -98,8 +173,12 @@ class _AdminsListView extends StatelessWidget {
       builder: (_) => AdminFormScreen(admin: admin),
     ))
         .then((_) {
-      // Refresh list after returning from form
-      if (context.mounted) context.read<AdminsCubit>().fetchAdmins();
+      if (!context.mounted) return;
+      final state = context.read<AdminsCubit>().state;
+      final page = state is AdminsLoaded ? state.pagination.currentPage : 1;
+      context.read<AdminsCubit>().fetchAdmins(
+            page: page,
+          );
     });
   }
 }
@@ -107,10 +186,15 @@ class _AdminsListView extends StatelessWidget {
 // ── List ─────────────────────────────────────────────────────────────────────
 
 class _AdminsList extends StatelessWidget {
-  const _AdminsList({required this.admins, required this.total});
+  const _AdminsList({
+    required this.admins,
+    required this.pagination,
+    required this.searchQuery,
+  });
 
   final List<AdminModel> admins;
-  final int total;
+  final PaginationModel pagination;
+  final String searchQuery;
 
   @override
   Widget build(BuildContext context) {
@@ -130,22 +214,87 @@ class _AdminsList extends StatelessWidget {
 
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: () => context.read<AdminsCubit>().fetchAdmins(),
+      onRefresh: () => context
+          .read<AdminsCubit>()
+          .fetchAdmins(page: pagination.currentPage),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
-          // Count header
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              '$total ${total == 1 ? 'admin' : 'admins'}',
+              'Showing ${pagination.from}-${pagination.to} '
+              'of ${pagination.total} admins',
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
               ),
             ),
           ),
-          ...admins.map((admin) => _AdminCard(admin: admin)),
+          ..._filterAdmins(admins, searchQuery)
+              .map((admin) => _AdminCard(admin: admin)),
+          const SizedBox(height: 6),
+          _PaginationControls(pagination: pagination),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaginationControls extends StatelessWidget {
+  const _PaginationControls({
+    required this.pagination,
+  });
+
+  final PaginationModel pagination;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFirst = pagination.currentPage <= 1;
+    final isLast = pagination.currentPage >= pagination.lastPage;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE9E9E9)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isFirst
+                  ? null
+                  : () => context
+                      .read<AdminsCubit>()
+                      .fetchAdmins(page: pagination.currentPage - 1),
+              icon: const Icon(Icons.chevron_left),
+              label: const Text('Previous'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '${pagination.currentPage}/${pagination.lastPage}',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isLast
+                  ? null
+                  : () => context
+                      .read<AdminsCubit>()
+                      .fetchAdmins(page: pagination.currentPage + 1),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.chevron_right),
+              label: const Text('Next'),
+            ),
+          ),
         ],
       ),
     );
@@ -257,7 +406,10 @@ class _AdminCard extends StatelessWidget {
       builder: (_) => AdminFormScreen(admin: admin),
     ))
         .then((_) {
-      if (context.mounted) context.read<AdminsCubit>().fetchAdmins();
+      if (!context.mounted) return;
+      final state = context.read<AdminsCubit>().state;
+      final page = state is AdminsLoaded ? state.pagination.currentPage : 1;
+      context.read<AdminsCubit>().fetchAdmins(page: page);
     });
   }
 

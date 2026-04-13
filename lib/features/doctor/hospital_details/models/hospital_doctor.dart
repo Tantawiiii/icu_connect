@@ -21,8 +21,28 @@ class HospitalDoctor extends Equatable {
   final String? roleInHospital;
   final String? status;
 
-  factory HospitalDoctor.fromJson(Map<String, dynamic> json) {
+  factory HospitalDoctor.fromJson(
+    Map<String, dynamic> json, {
+    int? forHospitalId,
+  }) {
     final idRaw = json['id'];
+    String? roleInHospital = json['role_in_hospital'] as String?;
+    String? status = json['status'] as String?;
+    if (forHospitalId != null) {
+      final hospitals = json['hospitals'] as List<dynamic>?;
+      if (hospitals != null) {
+        for (final raw in hospitals) {
+          final m = raw as Map<String, dynamic>;
+          final hidRaw = m['id'];
+          final hid = hidRaw is int ? hidRaw : int.tryParse('$hidRaw') ?? 0;
+          if (hid == forHospitalId) {
+            roleInHospital = m['role_in_hospital'] as String? ?? roleInHospital;
+            status = m['status'] as String? ?? status;
+            break;
+          }
+        }
+      }
+    }
     return HospitalDoctor(
       id: idRaw is int ? idRaw : int.tryParse('$idRaw') ?? 0,
       name: json['name'] as String? ?? '',
@@ -30,8 +50,8 @@ class HospitalDoctor extends Equatable {
       phone: json['phone'] as String? ?? '',
       role: json['role'] as String? ?? '',
       isActive: json['is_active'] as bool? ?? false,
-      roleInHospital: json['role_in_hospital'] as String?,
-      status: json['status'] as String?,
+      roleInHospital: roleInHospital,
+      status: status,
     );
   }
 

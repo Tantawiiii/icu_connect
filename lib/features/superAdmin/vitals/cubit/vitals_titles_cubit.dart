@@ -11,11 +11,11 @@ class VitalsTitlesCubit extends Cubit<VitalsTitlesState> {
 
   final _repo = const VitalsTitlesRepository();
 
-  Future<void> fetchVitalsTitles() async {
+  Future<void> fetchVitalsTitles({int page = 1}) async {
     emit(const VitalsTitlesLoading());
     try {
-      final items = await _repo.fetchVitalsTitles();
-      emit(VitalsTitlesLoaded(items));
+      final result = await _repo.fetchVitalsTitles(page: page);
+      emit(VitalsTitlesLoaded(result.items, result.pagination));
     } on NetworkException catch (e) {
       emit(VitalsTitlesFailure(e.message));
     } catch (_) {
@@ -27,8 +27,8 @@ class VitalsTitlesCubit extends Cubit<VitalsTitlesState> {
     emit(const VitalsTitlesLoading());
     try {
       await _repo.createVitalTitle(request);
-      final items = await _repo.fetchVitalsTitles();
-      emit(VitalsTitlesLoaded(items));
+      final result = await _repo.fetchVitalsTitles(page: 1);
+      emit(VitalsTitlesLoaded(result.items, result.pagination));
     } on NetworkException catch (e) {
       emit(VitalsTitlesFailure(e.message));
     } catch (_) {
@@ -40,17 +40,24 @@ class VitalsTitlesCubit extends Cubit<VitalsTitlesState> {
     final current = state;
     if (current is! VitalsTitlesLoaded) return;
 
-    emit(VitalsTitlesActionLoading(current.items));
+    emit(VitalsTitlesActionLoading(current.items, current.pagination));
     try {
       final updated = await _repo.updateVitalTitle(id, request);
       final items =
           current.items.map((e) => e.id == id ? updated : e).toList();
-      emit(VitalsTitlesActionSuccess(items, AppTexts.vitalTitleUpdated));
+      emit(VitalsTitlesActionSuccess(
+        items,
+        current.pagination,
+        AppTexts.vitalTitleUpdated,
+      ));
     } on NetworkException catch (e) {
-      emit(VitalsTitlesActionFailure(current.items, e.message));
+      emit(VitalsTitlesActionFailure(current.items, current.pagination, e.message));
     } catch (_) {
       emit(VitalsTitlesActionFailure(
-          current.items, 'An unexpected error occurred'));
+        current.items,
+        current.pagination,
+        'An unexpected error occurred',
+      ));
     }
   }
 
@@ -58,16 +65,23 @@ class VitalsTitlesCubit extends Cubit<VitalsTitlesState> {
     final current = state;
     if (current is! VitalsTitlesLoaded) return;
 
-    emit(VitalsTitlesActionLoading(current.items));
+    emit(VitalsTitlesActionLoading(current.items, current.pagination));
     try {
       await _repo.deleteVitalTitle(id);
       final items = current.items.where((e) => e.id != id).toList();
-      emit(VitalsTitlesActionSuccess(items, AppTexts.vitalTitleDeleted));
+      emit(VitalsTitlesActionSuccess(
+        items,
+        current.pagination,
+        AppTexts.vitalTitleDeleted,
+      ));
     } on NetworkException catch (e) {
-      emit(VitalsTitlesActionFailure(current.items, e.message));
+      emit(VitalsTitlesActionFailure(current.items, current.pagination, e.message));
     } catch (_) {
       emit(VitalsTitlesActionFailure(
-          current.items, 'An unexpected error occurred'));
+        current.items,
+        current.pagination,
+        'An unexpected error occurred',
+      ));
     }
   }
 }

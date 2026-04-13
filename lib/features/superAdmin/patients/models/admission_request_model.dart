@@ -86,6 +86,58 @@ class AdmissionLabDraft {
       };
 }
 
+class AdmissionMedicationDraft {
+  const AdmissionMedicationDraft({
+    required this.type,
+    required this.title,
+    required this.value,
+    required this.duration,
+  });
+
+  final String type;
+  final String title;
+  final String value;
+  final String duration;
+
+  Map<String, dynamic> toJson() => {
+        'type': type,
+        'title': title,
+        'value': value,
+        'duration': duration,
+      };
+}
+
+class AdmissionEchoDraft {
+  const AdmissionEchoDraft({required this.text});
+
+  final String text;
+
+  Map<String, dynamic> toJson() => {'text': text};
+}
+
+class AdmissionUltrasoundDraft {
+  const AdmissionUltrasoundDraft({required this.text});
+
+  final String text;
+
+  Map<String, dynamic> toJson() => {'text': text};
+}
+
+class AdmissionCultureDraft {
+  const AdmissionCultureDraft({
+    required this.title,
+    required this.note,
+  });
+
+  final String title;
+  final String note;
+
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'note': note,
+      };
+}
+
 class AdmissionCreateRequest {
   const AdmissionCreateRequest({
     required this.patientId,
@@ -93,6 +145,7 @@ class AdmissionCreateRequest {
     required this.doctorId,
     required this.bedNumber,
     required this.dateComes,
+    this.hospitalGroupId,
     this.status,
     this.dateLeave,
     this.dateOfDeath,
@@ -102,6 +155,10 @@ class AdmissionCreateRequest {
     this.treatmentPlans = const [],
     this.vitals = const [],
     this.labs = const [],
+    this.medications = const [],
+    this.echoes = const [],
+    this.ultrasounds = const [],
+    this.cultures = const [],
   });
 
   final int patientId;
@@ -109,6 +166,7 @@ class AdmissionCreateRequest {
   final int doctorId;
   final String bedNumber;
   final String dateComes;
+  final int? hospitalGroupId;
   final String? status;
   final String? dateLeave;
   final String? dateOfDeath;
@@ -118,6 +176,10 @@ class AdmissionCreateRequest {
   final List<AdmissionTreatmentDraft> treatmentPlans;
   final List<AdmissionVitalDraft> vitals;
   final List<AdmissionLabDraft> labs;
+  final List<AdmissionMedicationDraft> medications;
+  final List<AdmissionEchoDraft> echoes;
+  final List<AdmissionUltrasoundDraft> ultrasounds;
+  final List<AdmissionCultureDraft> cultures;
 
   bool get needsMultipart => radiologyImages.any((r) => r.hasFile);
 
@@ -129,6 +191,7 @@ class AdmissionCreateRequest {
       'bed_number': bedNumber,
       'date_comes': dateComes,
     };
+    if (hospitalGroupId != null) m['hospital_group_id'] = hospitalGroupId;
     if (status != null && status!.isNotEmpty) m['status'] = status;
     if (dateLeave != null && dateLeave!.isNotEmpty) {
       m['date_leave'] = dateLeave;
@@ -154,6 +217,18 @@ class AdmissionCreateRequest {
     if (labs.isNotEmpty) {
       m['labs'] = labs.map((e) => e.toJson()).toList();
     }
+    if (medications.isNotEmpty) {
+      m['medications'] = medications.map((e) => e.toJson()).toList();
+    }
+    if (echoes.isNotEmpty) {
+      m['echoes'] = echoes.map((e) => e.toJson()).toList();
+    }
+    if (ultrasounds.isNotEmpty) {
+      m['ultrasounds'] = ultrasounds.map((e) => e.toJson()).toList();
+    }
+    if (cultures.isNotEmpty) {
+      m['cultures'] = cultures.map((e) => e.toJson()).toList();
+    }
     return m;
   }
 
@@ -169,6 +244,9 @@ class AdmissionCreateRequest {
     addField('doctor_id', '$doctorId');
     addField('bed_number', bedNumber);
     addField('date_comes', dateComes);
+    if (hospitalGroupId != null) {
+      addField('hospital_group_id', '$hospitalGroupId');
+    }
     if (status != null && status!.isNotEmpty) addField('status', status!);
     if (dateLeave != null && dateLeave!.isNotEmpty) {
       addField('date_leave', dateLeave!);
@@ -226,6 +304,28 @@ class AdmissionCreateRequest {
       addField('labs[$i][date]', l.date);
     }
 
+    for (var i = 0; i < medications.length; i++) {
+      final med = medications[i];
+      addField('medications[$i][type]', med.type);
+      addField('medications[$i][title]', med.title);
+      addField('medications[$i][value]', med.value);
+      addField('medications[$i][duration]', med.duration);
+    }
+
+    for (var i = 0; i < echoes.length; i++) {
+      addField('echoes[$i][text]', echoes[i].text);
+    }
+
+    for (var i = 0; i < ultrasounds.length; i++) {
+      addField('ultrasounds[$i][text]', ultrasounds[i].text);
+    }
+
+    for (var i = 0; i < cultures.length; i++) {
+      final c = cultures[i];
+      addField('cultures[$i][title]', c.title);
+      addField('cultures[$i][note]', c.note);
+    }
+
     return fd;
   }
 }
@@ -233,6 +333,7 @@ class AdmissionCreateRequest {
 class AdmissionUpdateRequest {
   const AdmissionUpdateRequest({
     this.bedNumber,
+    this.hospitalGroupId,
     this.status,
     this.dateLeave,
     this.dateOfDeath,
@@ -242,9 +343,14 @@ class AdmissionUpdateRequest {
     this.treatmentPlans = const [],
     this.vitals = const [],
     this.labs = const [],
+    this.medications = const [],
+    this.echoes = const [],
+    this.ultrasounds = const [],
+    this.cultures = const [],
   });
 
   final String? bedNumber;
+  final int? hospitalGroupId;
   final String? status;
   final String? dateLeave;
   final String? dateOfDeath;
@@ -254,11 +360,16 @@ class AdmissionUpdateRequest {
   final List<AdmissionTreatmentDraft> treatmentPlans;
   final List<AdmissionVitalDraft> vitals;
   final List<AdmissionLabDraft> labs;
+  final List<AdmissionMedicationDraft> medications;
+  final List<AdmissionEchoDraft> echoes;
+  final List<AdmissionUltrasoundDraft> ultrasounds;
+  final List<AdmissionCultureDraft> cultures;
 
   bool get needsMultipart => radiologyImages.any((r) => r.hasFile);
 
   bool get isEmpty =>
       (bedNumber == null || bedNumber!.isEmpty) &&
+      hospitalGroupId == null &&
       (status == null || status!.isEmpty) &&
       (dateLeave == null || dateLeave!.isEmpty) &&
       (dateOfDeath == null || dateOfDeath!.isEmpty) &&
@@ -267,13 +378,18 @@ class AdmissionUpdateRequest {
       radiologyImages.isEmpty &&
       treatmentPlans.isEmpty &&
       vitals.isEmpty &&
-      labs.isEmpty;
+      labs.isEmpty &&
+      medications.isEmpty &&
+      echoes.isEmpty &&
+      ultrasounds.isEmpty &&
+      cultures.isEmpty;
 
   Map<String, dynamic> toJson() {
     final m = <String, dynamic>{};
     if (bedNumber != null && bedNumber!.isNotEmpty) {
       m['bed_number'] = bedNumber;
     }
+    if (hospitalGroupId != null) m['hospital_group_id'] = hospitalGroupId;
     if (status != null && status!.isNotEmpty) m['status'] = status;
     if (dateLeave != null && dateLeave!.isNotEmpty) {
       m['date_leave'] = dateLeave;
@@ -299,6 +415,18 @@ class AdmissionUpdateRequest {
     if (labs.isNotEmpty) {
       m['labs'] = labs.map((e) => e.toJson()).toList();
     }
+    if (medications.isNotEmpty) {
+      m['medications'] = medications.map((e) => e.toJson()).toList();
+    }
+    if (echoes.isNotEmpty) {
+      m['echoes'] = echoes.map((e) => e.toJson()).toList();
+    }
+    if (ultrasounds.isNotEmpty) {
+      m['ultrasounds'] = ultrasounds.map((e) => e.toJson()).toList();
+    }
+    if (cultures.isNotEmpty) {
+      m['cultures'] = cultures.map((e) => e.toJson()).toList();
+    }
     return m;
   }
 
@@ -311,6 +439,9 @@ class AdmissionUpdateRequest {
 
     if (bedNumber != null && bedNumber!.isNotEmpty) {
       addField('bed_number', bedNumber!);
+    }
+    if (hospitalGroupId != null) {
+      addField('hospital_group_id', '$hospitalGroupId');
     }
     if (status != null && status!.isNotEmpty) addField('status', status!);
     if (dateLeave != null && dateLeave!.isNotEmpty) {
@@ -367,6 +498,28 @@ class AdmissionUpdateRequest {
       addField('labs[$i][labs_title_id]', '${l.labsTitleId}');
       addField('labs[$i][value]', _numStr(l.value));
       addField('labs[$i][date]', l.date);
+    }
+
+    for (var i = 0; i < medications.length; i++) {
+      final med = medications[i];
+      addField('medications[$i][type]', med.type);
+      addField('medications[$i][title]', med.title);
+      addField('medications[$i][value]', med.value);
+      addField('medications[$i][duration]', med.duration);
+    }
+
+    for (var i = 0; i < echoes.length; i++) {
+      addField('echoes[$i][text]', echoes[i].text);
+    }
+
+    for (var i = 0; i < ultrasounds.length; i++) {
+      addField('ultrasounds[$i][text]', ultrasounds[i].text);
+    }
+
+    for (var i = 0; i < cultures.length; i++) {
+      final c = cultures[i];
+      addField('cultures[$i][title]', c.title);
+      addField('cultures[$i][note]', c.note);
     }
 
     return fd;

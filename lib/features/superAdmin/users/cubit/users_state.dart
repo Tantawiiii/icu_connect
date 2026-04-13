@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../admins/models/pagination_model.dart';
 import '../models/user_model.dart';
 
 abstract class UsersState extends Equatable {
@@ -18,11 +19,12 @@ class UsersLoading extends UsersState {
 }
 
 class UsersLoaded extends UsersState {
-  const UsersLoaded(this.users);
+  const UsersLoaded(this.users, this.pagination);
   final List<UserModel> users;
+  final PaginationModel pagination;
 
   @override
-  List<Object?> get props => [users];
+  List<Object?> get props => [users, pagination];
 }
 
 class UsersFailure extends UsersState {
@@ -34,21 +36,21 @@ class UsersFailure extends UsersState {
 }
 
 class UsersActionLoading extends UsersLoaded {
-  const UsersActionLoading(super.users);
+  const UsersActionLoading(super.users, super.pagination);
 }
 
 class UsersActionSuccess extends UsersLoaded {
-  const UsersActionSuccess(super.users, this.message);
+  const UsersActionSuccess(super.users, super.pagination, this.message);
   final String message;
 
   @override
-  List<Object?> get props => [users, message];
+  List<Object?> get props => [users, pagination, message];
 }
 
 class UsersActionFailure extends UsersLoaded {
-  const UsersActionFailure(super.users, this.message);
+  const UsersActionFailure(super.users, super.pagination, this.message);
   final String message;
 
   @override
-  List<Object?> get props => [users, message];
+  List<Object?> get props => [users, pagination, message];
 }

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../admins/models/pagination_model.dart';
 import '../cubit/vitals_titles_cubit.dart';
 import '../cubit/vitals_titles_state.dart';
 import '../models/vital_title_model.dart';
@@ -72,7 +73,10 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
       ),
     )
         .then((_) {
-      if (context.mounted) cubit.fetchVitalsTitles();
+      if (!context.mounted) return;
+      final state = cubit.state;
+      final page = state is VitalsTitlesLoaded ? state.pagination.currentPage : 1;
+      cubit.fetchVitalsTitles(page: page);
     });
   }
 
@@ -91,8 +95,13 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_outlined, color: Colors.white),
-            onPressed: () =>
-                context.read<VitalsTitlesCubit>().fetchVitalsTitles(),
+            onPressed: () {
+              final cubit = context.read<VitalsTitlesCubit>();
+              final state = cubit.state;
+              final page =
+                  state is VitalsTitlesLoaded ? state.pagination.currentPage : 1;
+              cubit.fetchVitalsTitles(page: page);
+            },
           ),
         ],
       ),
@@ -179,7 +188,7 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
                   return _ErrorView(
                     message: state.message,
                     onRetry: () =>
-                        context.read<VitalsTitlesCubit>().fetchVitalsTitles(),
+                        context.read<VitalsTitlesCubit>().fetchVitalsTitles(page: 1),
                   );
                 }
                 if (state is VitalsTitlesLoaded) {
@@ -190,6 +199,8 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
                   final searchActive = _searchController.text.trim().isNotEmpty;
                   final list = _VitalsList(
                     items: filtered,
+                    allItemsCount: state.items.length,
+                    pagination: state.pagination,
                     emptyFromSearch: searchActive && state.items.isNotEmpty,
                   );
                   if (state is VitalsTitlesActionLoading) {
@@ -222,10 +233,14 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
 class _VitalsList extends StatelessWidget {
   const _VitalsList({
     required this.items,
+    required this.allItemsCount,
+    required this.pagination,
     this.emptyFromSearch = false,
   });
 
   final List<VitalTitleModel> items;
+  final int allItemsCount;
+  final PaginationModel pagination;
   final bool emptyFromSearch;
 
   @override
@@ -257,12 +272,87 @@ class _VitalsList extends StatelessWidget {
 
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: () => context.read<VitalsTitlesCubit>().fetchVitalsTitles(),
-      child: ListView.builder(
+      onRefresh: () => context
+          .read<VitalsTitlesCubit>()
+          .fetchVitalsTitles(page: pagination.currentPage),
+      child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        itemCount: items.length,
-        itemBuilder: (context, index) =>
-            _VitalCard(vital: items[index]),
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Showing ${pagination.from}-${pagination.to} '
+              'of ${pagination.total} vitals titles',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          ...items.map((e) => _VitalCard(vital: e)),
+          if (!emptyFromSearch || allItemsCount == 0) ...[
+            const SizedBox(height: 6),
+            _PaginationControls(pagination: pagination),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PaginationControls extends StatelessWidget {
+  const _PaginationControls({required this.pagination});
+
+  final PaginationModel pagination;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFirst = pagination.currentPage <= 1;
+    final isLast = pagination.currentPage >= pagination.lastPage;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE9E9E9)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isFirst
+                  ? null
+                  : () => context
+                      .read<VitalsTitlesCubit>()
+                      .fetchVitalsTitles(page: pagination.currentPage - 1),
+              icon: const Icon(Icons.chevron_left),
+              label: const Text('Previous'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '${pagination.currentPage}/${pagination.lastPage}',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isLast
+                  ? null
+                  : () => context
+                      .read<VitalsTitlesCubit>()
+                      .fetchVitalsTitles(page: pagination.currentPage + 1),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.chevron_right),
+              label: const Text('Next'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -365,7 +455,10 @@ class _VitalCard extends StatelessWidget {
       ),
     )
         .then((_) {
-      if (context.mounted) cubit.fetchVitalsTitles();
+      if (!context.mounted) return;
+      final state = cubit.state;
+      final page = state is VitalsTitlesLoaded ? state.pagination.currentPage : 1;
+      cubit.fetchVitalsTitles(page: page);
     });
   }
 

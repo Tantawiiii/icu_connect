@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../admins/models/pagination_model.dart';
 import '../cubit/hospitals_cubit.dart';
 import '../cubit/hospitals_state.dart';
 import '../models/hospital_model.dart';
@@ -20,8 +21,36 @@ class HospitalsListScreen extends StatelessWidget {
   }
 }
 
-class _HospitalsListView extends StatelessWidget {
+List<HospitalModel> _filterHospitals(List<HospitalModel> hospitals, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return hospitals;
+  return hospitals.where((h) {
+    if (h.name.toLowerCase().contains(q)) return true;
+    if (h.location.toLowerCase().contains(q)) return true;
+    return false;
+  }).toList();
+}
+
+class _HospitalsListView extends StatefulWidget {
   const _HospitalsListView();
+
+  @override
+  State<_HospitalsListView> createState() => _HospitalsListViewState();
+}
+
+class _HospitalsListViewState extends State<_HospitalsListView> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _applySearch() {
+    setState(() => _searchQuery = _searchController.text.trim());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +67,12 @@ class _HospitalsListView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_outlined, color: Colors.white),
-            onPressed: () => context.read<HospitalsCubit>().fetchHospitals(),
+            onPressed: () {
+              final state = context.read<HospitalsCubit>().state;
+              final page =
+                  state is HospitalsLoaded ? state.pagination.currentPage : 1;
+              context.read<HospitalsCubit>().fetchHospitals(page: page);
+            },
           ),
         ],
       ),
@@ -49,58 +83,102 @@ class _HospitalsListView extends StatelessWidget {
         label: const Text(AppTexts.addHospital),
         onPressed: () => _openForm(context, hospital: null),
       ),
-      body: BlocConsumer<HospitalsCubit, HospitalsState>(
-        listener: (context, state) {
-          if (state is HospitalsActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-          if (state is HospitalsActionFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is HospitalsLoading || state is HospitalsInitial) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            );
-          }
-          if (state is HospitalsFailure) {
-            return _ErrorView(
-              message: state.message,
-              onRetry: () => context.read<HospitalsCubit>().fetchHospitals(),
-            );
-          }
-          if (state is HospitalsActionLoading) {
-            return Stack(
-              children: [
-                _HospitalsList(hospitals: state.hospitals),
-                const ColoredBox(
-                  color: Color(0x55000000),
-                  child: Center(
-                    child:
-                        CircularProgressIndicator(color: AppColors.primary),
-                  ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => _applySearch(),
+              decoration: InputDecoration(
+                hintText: 'Search hospitals',
+                prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _applySearch();
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
                 ),
-              ],
-            );
-          }
-          if (state is HospitalsLoaded) {
-            return _HospitalsList(hospitals: state.hospitals);
-          }
-          return const SizedBox.shrink();
-        },
+              ),
+            ),
+          ),
+          Expanded(
+            child: BlocConsumer<HospitalsCubit, HospitalsState>(
+              listener: (context, state) {
+                if (state is HospitalsActionSuccess) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+                if (state is HospitalsActionFailure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                if (state is HospitalsLoading || state is HospitalsInitial) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  );
+                }
+                if (state is HospitalsFailure) {
+                  return _ErrorView(
+                    message: state.message,
+                    onRetry: () => context.read<HospitalsCubit>().fetchHospitals(
+                          page: 1,
+                        ),
+                  );
+                }
+                if (state is HospitalsActionLoading) {
+                  return Stack(
+                    children: [
+                      _HospitalsList(
+                        hospitals: state.hospitals,
+                        pagination: state.pagination,
+                        searchQuery: _searchQuery,
+                      ),
+                      const ColoredBox(
+                        color: Color(0x55000000),
+                        child: Center(
+                          child:
+                              CircularProgressIndicator(color: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                if (state is HospitalsLoaded) {
+                  return _HospitalsList(
+                    hospitals: state.hospitals,
+                    pagination: state.pagination,
+                    searchQuery: _searchQuery,
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -111,7 +189,12 @@ class _HospitalsListView extends StatelessWidget {
           builder: (_) => HospitalFormScreen(hospital: hospital),
         ))
         .then((_) {
-      if (context.mounted) context.read<HospitalsCubit>().fetchHospitals();
+      if (!context.mounted) return;
+      final state = context.read<HospitalsCubit>().state;
+      final page = state is HospitalsLoaded ? state.pagination.currentPage : 1;
+      context.read<HospitalsCubit>().fetchHospitals(
+            page: page,
+          );
     });
   }
 }
@@ -119,9 +202,15 @@ class _HospitalsListView extends StatelessWidget {
 // ── List ─────────────────────────────────────────────────────────────────────
 
 class _HospitalsList extends StatelessWidget {
-  const _HospitalsList({required this.hospitals});
+  const _HospitalsList({
+    required this.hospitals,
+    required this.pagination,
+    required this.searchQuery,
+  });
 
   final List<HospitalModel> hospitals;
+  final PaginationModel pagination;
+  final String searchQuery;
 
   @override
   Widget build(BuildContext context) {
@@ -142,22 +231,87 @@ class _HospitalsList extends StatelessWidget {
 
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: () => context.read<HospitalsCubit>().fetchHospitals(),
+      onRefresh: () => context
+          .read<HospitalsCubit>()
+          .fetchHospitals(page: pagination.currentPage),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              '${hospitals.length} '
-              '${hospitals.length == 1 ? 'hospital' : 'hospitals'}',
+              'Showing ${pagination.from}-${pagination.to} '
+              'of ${pagination.total} hospitals',
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
               ),
             ),
           ),
-          ...hospitals.map((h) => _HospitalCard(hospital: h)),
+          ..._filterHospitals(hospitals, searchQuery)
+              .map((h) => _HospitalCard(hospital: h)),
+          const SizedBox(height: 6),
+          _PaginationControls(pagination: pagination),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaginationControls extends StatelessWidget {
+  const _PaginationControls({
+    required this.pagination,
+  });
+
+  final PaginationModel pagination;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFirst = pagination.currentPage <= 1;
+    final isLast = pagination.currentPage >= pagination.lastPage;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE9E9E9)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isFirst
+                  ? null
+                  : () => context
+                      .read<HospitalsCubit>()
+                      .fetchHospitals(page: pagination.currentPage - 1),
+              icon: const Icon(Icons.chevron_left),
+              label: const Text('Previous'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '${pagination.currentPage}/${pagination.lastPage}',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: isLast
+                  ? null
+                  : () => context
+                      .read<HospitalsCubit>()
+                      .fetchHospitals(page: pagination.currentPage + 1),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.chevron_right),
+              label: const Text('Next'),
+            ),
+          ),
         ],
       ),
     );
@@ -335,7 +489,10 @@ class _HospitalCard extends StatelessWidget {
           builder: (_) => HospitalFormScreen(hospital: hospital),
         ))
         .then((_) {
-      if (context.mounted) context.read<HospitalsCubit>().fetchHospitals();
+      if (!context.mounted) return;
+      final state = context.read<HospitalsCubit>().state;
+      final page = state is HospitalsLoaded ? state.pagination.currentPage : 1;
+      context.read<HospitalsCubit>().fetchHospitals(page: page);
     });
   }
 

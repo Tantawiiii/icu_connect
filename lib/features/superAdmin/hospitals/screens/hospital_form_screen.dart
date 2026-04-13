@@ -38,8 +38,7 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
   late final TextEditingController _locationCtrl;
-  late final TextEditingController _totalBedsCtrl;
-  late final TextEditingController _availableBedsCtrl;
+  final List<_GroupDraft> _groups = [];
 
   bool get _isEdit => widget.hospital != null;
 
@@ -50,36 +49,55 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
         TextEditingController(text: widget.hospital?.name ?? '');
     _locationCtrl =
         TextEditingController(text: widget.hospital?.location ?? '');
-    _totalBedsCtrl = TextEditingController(
-        text: widget.hospital != null
-            ? widget.hospital!.totalBeds.toString()
-            : '');
-    _availableBedsCtrl = TextEditingController(
-        text: widget.hospital != null
-            ? widget.hospital!.availableBeds.toString()
-            : '');
+
+    if (widget.hospital != null && widget.hospital!.groups.isNotEmpty) {
+      for (final g in widget.hospital!.groups) {
+        _groups.add(
+          _GroupDraft(
+            id: g.id,
+            name: g.name,
+            totalBeds: g.totalBeds.toString(),
+            availableBeds: g.availableBeds.toString(),
+          ),
+        );
+      }
+    } else {
+      _groups.add(_GroupDraft(name: 'Group A'));
+    }
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _locationCtrl.dispose();
-    _totalBedsCtrl.dispose();
-    _availableBedsCtrl.dispose();
+    for (final group in _groups) {
+      group.dispose();
+    }
     super.dispose();
   }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-
-    final totalBeds = int.tryParse(_totalBedsCtrl.text.trim()) ?? 0;
-    final availableBeds = int.tryParse(_availableBedsCtrl.text.trim()) ?? 0;
+    final groups = _groups
+        .map(
+          (g) => HospitalGroupRequest(
+            id: g.id,
+            delete: g.markedForDeletion,
+            name: g.markedForDeletion ? null : g.nameCtrl.text.trim(),
+            totalBeds: g.markedForDeletion
+                ? null
+                : int.tryParse(g.totalBedsCtrl.text.trim()) ?? 0,
+            availableBeds: g.markedForDeletion
+                ? null
+                : int.tryParse(g.availableBedsCtrl.text.trim()) ?? 0,
+          ),
+        )
+        .toList();
 
     final request = HospitalRequest(
       name: _nameCtrl.text.trim(),
-      location: _locationCtrl.text.trim(),
-      totalBeds: totalBeds,
-      availableBeds: availableBeds,
+      location: _isEdit ? null : _locationCtrl.text.trim(),
+      groups: groups,
     );
 
     if (_isEdit) {
@@ -93,6 +111,18 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
 
   @override
   Widget build(BuildContext context) {
+    final activeGroups = _groups.where((g) => !g.markedForDeletion).toList();
+
+    final int totalBedsSum = activeGroups.fold<int>(
+      0,
+      (sum, g) => sum + (int.tryParse(g.totalBedsCtrl.text.trim()) ?? 0),
+    );
+    final int availableBedsSum = activeGroups.fold<int>(
+      0,
+      (sum, g) => sum + (int.tryParse(g.availableBedsCtrl.text.trim()) ?? 0),
+    );
+    final int occupiedBeds = (totalBedsSum - availableBedsSum).clamp(0, totalBedsSum);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -171,7 +201,8 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
                             textInputAction: TextInputAction.next,
                             enabled: !isLoading,
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
+                              if (!_isEdit &&
+                                  (v == null || v.trim().isEmpty)) {
                                 return 'Location is required';
                               }
                               return null;
@@ -184,76 +215,83 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
 
                   const SizedBox(height: 20),
 
-                  // ── Bed capacity ─────────────────────────────────────────
-                  _SectionHeader('Bed Capacity'),
+                  // ── Groups ────────────────────────────────────────────────
+                  _SectionHeader('Hospital Groups'),
                   const SizedBox(height: 12),
+                  ...List.generate(
+                    activeGroups.length,
+                    (index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Builder(
+                        builder: (_) {
+                          final draft = activeGroups[index];
+                          final sourceIndex = _groups.indexOf(draft);
+                          return _GroupCard(
+                            key: ValueKey('group_$sourceIndex'),
+                            draft: draft,
+                            enabled: !isLoading,
+                            canRemove: activeGroups.length > 1,
+                            onRemove: () {
+                              setState(() {
+                                final group = _groups[sourceIndex];
+                                if (_isEdit && group.id != null) {
+                                  group.markedForDeletion = true;
+                                } else {
+                                  _groups.removeAt(sourceIndex);
+                                  group.dispose();
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: isLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              _groups.add(
+                                _GroupDraft(
+                                  name: 'Group ${String.fromCharCode(65 + _groups.length)}',
+                                ),
+                              );
+                            });
+                          },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Group'),
+                  ),
+                  const SizedBox(height: 16),
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          AppTextField(
-                            controller: _totalBedsCtrl,
-                            labelText: AppTexts.totalBeds,
-                            prefixIcon: const Icon(Icons.bed_outlined),
-                            keyboardType: TextInputType.number,
-                            textInputAction: TextInputAction.next,
-                            enabled: !isLoading,
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
-                                return 'Total beds is required';
-                              }
-                              final n = int.tryParse(v.trim());
-                              if (n == null || n < 0) {
-                                return 'Enter a valid number';
-                              }
-                              return null;
-                            },
+                          _StatChip(
+                            label: 'Total',
+                            value: totalBedsSum,
+                            color: AppColors.accent,
                           ),
-                          const SizedBox(height: 14),
-                          AppTextField(
-                            controller: _availableBedsCtrl,
-                            labelText: AppTexts.availableBeds,
-                            prefixIcon:
-                                const Icon(Icons.check_circle_outline),
-                            keyboardType: TextInputType.number,
-                            textInputAction: TextInputAction.done,
-                            enabled: !isLoading,
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
-                                return 'Available beds is required';
-                              }
-                              final available = int.tryParse(v.trim());
-                              if (available == null || available < 0) {
-                                return 'Enter a valid number';
-                              }
-                              final total = int.tryParse(
-                                  _totalBedsCtrl.text.trim());
-                              if (total != null &&
-                                  available > total) {
-                                return 'Cannot exceed total beds ($total)';
-                              }
-                              return null;
-                            },
+                          _StatChip(
+                            label: 'Available',
+                            value: availableBedsSum,
+                            color: AppColors.success,
+                          ),
+                          _StatChip(
+                            label: 'Occupied',
+                            value: occupiedBeds,
+                            color: AppColors.error,
                           ),
                         ],
                       ),
                     ),
                   ),
-
-                  // Preview card (only shown in edit mode when values entered)
-                  if (_isEdit) ...[
-                    const SizedBox(height: 20),
-                    _SectionHeader('Current Occupancy'),
-                    const SizedBox(height: 12),
-                    _OccupancyPreview(
-                      totalCtrl: _totalBedsCtrl,
-                      availableCtrl: _availableBedsCtrl,
-                    ),
-                  ],
 
                   const SizedBox(height: 28),
 
@@ -283,96 +321,119 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
   }
 }
 
-// ── Occupancy preview (live-updating) ─────────────────────────────────────────
+class _GroupDraft {
+  _GroupDraft({
+    this.id,
+    String name = '',
+    String totalBeds = '',
+    String availableBeds = '',
+  })  : nameCtrl = TextEditingController(text: name),
+        totalBedsCtrl = TextEditingController(text: totalBeds),
+        availableBedsCtrl = TextEditingController(text: availableBeds);
 
-class _OccupancyPreview extends StatefulWidget {
-  const _OccupancyPreview({
-    required this.totalCtrl,
-    required this.availableCtrl,
-  });
+  final int? id;
+  bool markedForDeletion = false;
+  final TextEditingController nameCtrl;
+  final TextEditingController totalBedsCtrl;
+  final TextEditingController availableBedsCtrl;
 
-  final TextEditingController totalCtrl;
-  final TextEditingController availableCtrl;
-
-  @override
-  State<_OccupancyPreview> createState() => _OccupancyPreviewState();
+  void dispose() {
+    nameCtrl.dispose();
+    totalBedsCtrl.dispose();
+    availableBedsCtrl.dispose();
+  }
 }
 
-class _OccupancyPreviewState extends State<_OccupancyPreview> {
-  @override
-  void initState() {
-    super.initState();
-    widget.totalCtrl.addListener(_rebuild);
-    widget.availableCtrl.addListener(_rebuild);
-  }
+class _GroupCard extends StatelessWidget {
+  const _GroupCard({
+    super.key,
+    required this.draft,
+    required this.enabled,
+    required this.canRemove,
+    required this.onRemove,
+  });
 
-  void _rebuild() => setState(() {});
-
-  @override
-  void dispose() {
-    widget.totalCtrl.removeListener(_rebuild);
-    widget.availableCtrl.removeListener(_rebuild);
-    super.dispose();
-  }
+  final _GroupDraft draft;
+  final bool enabled;
+  final bool canRemove;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    final total = int.tryParse(widget.totalCtrl.text.trim()) ?? 0;
-    final available = int.tryParse(widget.availableCtrl.text.trim()) ?? 0;
-    final occupied = (total - available).clamp(0, total);
-    final rate = total > 0 ? occupied / total : 0.0;
-
-    final Color barColor = rate < 0.5
-        ? AppColors.success
-        : rate < 0.8
-            ? const Color(0xFFF59E0B)
-            : AppColors.error;
-
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _StatChip(label: 'Total', value: total, color: AppColors.accent),
-                _StatChip(
-                    label: 'Available',
-                    value: available,
-                    color: AppColors.success),
-                _StatChip(
-                    label: 'Occupied', value: occupied, color: AppColors.error),
-              ],
+            AppTextField(
+              controller: draft.nameCtrl,
+              labelText: 'Group Name',
+              prefixIcon: const Icon(Icons.groups_2_outlined),
+              textInputAction: TextInputAction.next,
+              enabled: enabled,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Group name is required';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Occupancy rate',
-                    style: TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary)),
-                Text(
-                  '${(rate * 100).toStringAsFixed(0)}%',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: barColor,
-                      fontWeight: FontWeight.bold),
+            AppTextField(
+              controller: draft.totalBedsCtrl,
+              labelText: AppTexts.totalBeds,
+              prefixIcon: const Icon(Icons.bed_outlined),
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
+              enabled: enabled,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Total beds is required';
+                }
+                final n = int.tryParse(v.trim());
+                if (n == null || n < 0) {
+                  return 'Enter a valid number';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            AppTextField(
+              controller: draft.availableBedsCtrl,
+              labelText: AppTexts.availableBeds,
+              prefixIcon: const Icon(Icons.check_circle_outline),
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              enabled: enabled,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Available beds is required';
+                }
+                final available = int.tryParse(v.trim());
+                if (available == null || available < 0) {
+                  return 'Enter a valid number';
+                }
+                final total = int.tryParse(draft.totalBedsCtrl.text.trim());
+                if (total != null && available > total) {
+                  return 'Cannot exceed total beds ($total)';
+                }
+                return null;
+              },
+            ),
+            if (canRemove) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: enabled ? onRemove : null,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Remove Group'),
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: rate,
-                minHeight: 8,
-                backgroundColor: const Color(0xFFEEEEEE),
-                valueColor: AlwaysStoppedAnimation<Color>(barColor),
               ),
-            ),
+            ],
           ],
         ),
       ),

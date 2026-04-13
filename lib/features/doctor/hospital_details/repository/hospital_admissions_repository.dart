@@ -18,10 +18,7 @@ class HospitalAdmissionsRepository extends BaseApiService {
     try {
       final data = await get<Map<String, dynamic>>(
         ApiConstants.admissions,
-        queryParameters: {
-          'hospital_id': hospitalId,
-          'status': status,
-        },
+        queryParameters: {'hospital_id': hospitalId, 'status': status},
         cancelTag: 'hospital_admissions_list_${hospitalId}_$status',
       );
 
@@ -40,7 +37,9 @@ class HospitalAdmissionsRepository extends BaseApiService {
         ApiConstants.admissionById(admissionId),
         cancelTag: 'hospital_admissions_details_$admissionId',
       );
-      return PatientAdmissionModel.fromJson(data['data'] as Map<String, dynamic>);
+      return PatientAdmissionModel.fromJson(
+        data['data'] as Map<String, dynamic>,
+      );
     } on NetworkException {
       rethrow;
     }
@@ -60,10 +59,23 @@ class HospitalAdmissionsRepository extends BaseApiService {
 
   Future<void> updateAdmission(int id, FormData formData) async {
     try {
-      await uploadPut<Map<String, dynamic>>(
+      await upload<Map<String, dynamic>>(
         ApiConstants.admissionById(id),
         formData,
         cancelTag: 'hospital_admissions_update_$id',
+      );
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  /// Updates admission fields via raw JSON body (no FormData required).
+  Future<void> updateAdmissionRaw(int id, Map<String, dynamic> body) async {
+    try {
+      await post<Map<String, dynamic>>(
+        ApiConstants.admissionById(id),
+        data: body,
+        cancelTag: 'hospital_admissions_update_raw_$id',
       );
     } on NetworkException {
       rethrow;
@@ -252,4 +264,3 @@ class HospitalAdmissionsRepository extends BaseApiService {
     }
   }
 }
-

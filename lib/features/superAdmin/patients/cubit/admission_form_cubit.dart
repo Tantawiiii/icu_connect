@@ -38,7 +38,7 @@ class AdmissionFormCubit extends Cubit<AdmissionFormState> {
       _refs = AdmissionFormRefsReady(
         hospitals: hospitalsRes.data,
         users: usersRes.data,
-        vitalTitles: vitalTitles,
+        vitalTitles: vitalTitles.items,
         labTitles: labTitles,
       );
       emit(_refs!);

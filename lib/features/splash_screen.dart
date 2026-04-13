@@ -104,9 +104,7 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       final profileResponse = await ApiClient.client(
         role,
-      ).get<Map<String, dynamic>>(
-        ApiConstants.authProfile,
-      );
+      ).get<Map<String, dynamic>>(ApiConstants.authProfile);
       final data = profileResponse.data?['data'] as Map<String, dynamic>?;
       if (data == null) return null;
 
@@ -141,7 +139,9 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       final role = ApiClient.roleFromStoredValue(storedRole);
       debugPrint('[Splash] refresh using role: ${role.name}');
-      debugPrint('[Splash] refresh url: ${role.baseUrl}${ApiConstants.refreshToken}');
+      debugPrint(
+        '[Splash] refresh url: ${role.baseUrl}${ApiConstants.refreshToken}',
+      );
 
       final response = await Dio().post<Map<String, dynamic>>(
         '${role.baseUrl}${ApiConstants.refreshToken}',

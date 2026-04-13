@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../admins/models/pagination_model.dart';
 import '../models/vital_title_model.dart';
 
 abstract class VitalsTitlesState extends Equatable {
@@ -18,11 +19,12 @@ class VitalsTitlesLoading extends VitalsTitlesState {
 }
 
 class VitalsTitlesLoaded extends VitalsTitlesState {
-  const VitalsTitlesLoaded(this.items);
+  const VitalsTitlesLoaded(this.items, this.pagination);
   final List<VitalTitleModel> items;
+  final PaginationModel pagination;
 
   @override
-  List<Object?> get props => [items];
+  List<Object?> get props => [items, pagination];
 }
 
 class VitalsTitlesFailure extends VitalsTitlesState {
@@ -34,22 +36,22 @@ class VitalsTitlesFailure extends VitalsTitlesState {
 }
 
 class VitalsTitlesActionLoading extends VitalsTitlesLoaded {
-  const VitalsTitlesActionLoading(super.items);
+  const VitalsTitlesActionLoading(super.items, super.pagination);
 }
 
 class VitalsTitlesActionSuccess extends VitalsTitlesLoaded {
-  const VitalsTitlesActionSuccess(super.items, this.message);
+  const VitalsTitlesActionSuccess(super.items, super.pagination, this.message);
   final String message;
 
   @override
-  List<Object?> get props => [items, message];
+  List<Object?> get props => [items, pagination, message];
 }
 
 class VitalsTitlesActionFailure extends VitalsTitlesLoaded {
-  const VitalsTitlesActionFailure(super.items, this.message);
+  const VitalsTitlesActionFailure(super.items, super.pagination, this.message);
   final String message;
 
   @override
-  List<Object?> get props => [items, message];
+  List<Object?> get props => [items, pagination, message];
 }
 

@@ -3,9 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
-import '../../session/doctor_session_display.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/network/network_exceptions.dart';
+import '../../../../core/network/token_storage.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../auth/login/screens/login_screen.dart';
+import '../../session/doctor_session_display.dart';
 import '../cubit/doctor_profile_cubit.dart';
 import '../cubit/doctor_profile_state.dart';
 import '../models/doctor_profile.dart';
@@ -40,6 +44,7 @@ class _ProfileViewState extends State<_ProfileView> {
   final _confirmPasswordController = TextEditingController();
 
   String? _lastSyncedUpdatedAt;
+  bool _deletingAccount = false;
 
   @override
   void dispose() {
@@ -82,6 +87,54 @@ class _ProfileViewState extends State<_ProfileView> {
       password: _passwordController.text,
       passwordConfirmation: _confirmPasswordController.text,
     );
+  }
+
+  Future<void> _confirmAndDeleteAccount() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(AppTexts.deleteAccountConfirmTitle),
+        content: Text(AppTexts.deleteAccountConfirmMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(AppTexts.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              AppTexts.deleteAccount,
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _deletingAccount = true);
+    try {
+      await const DoctorProfileRepository().deleteAccount();
+      await TokenStorage.instance.clearAll();
+      DoctorSessionDisplay.resetNotifiers();
+      ApiClient.reset();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (_) => false,
+      );
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _deletingAccount = false);
+    }
   }
 
   @override
@@ -134,16 +187,17 @@ class _ProfileViewState extends State<_ProfileView> {
           ),
           body: switch (state) {
             DoctorProfileInitial() || DoctorProfileLoading() => const Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: CircularProgressIndicator(),
+            ),
             DoctorProfileLoadFailure(:final message) => _LoadError(
-                message: message,
-                onRetry: () => context.read<DoctorProfileCubit>().load(),
-              ),
-            final DoctorProfileReady ready =>
-              _buildReadyBody(context, ready),
-            DoctorProfileSaveFailure(:final recover) =>
-              _buildReadyBody(context, recover),
+              message: message,
+              onRetry: () => context.read<DoctorProfileCubit>().load(),
+            ),
+            final DoctorProfileReady ready => _buildReadyBody(context, ready),
+            DoctorProfileSaveFailure(:final recover) => _buildReadyBody(
+              context,
+              recover,
+            ),
           },
         );
       },
@@ -156,7 +210,7 @@ class _ProfileViewState extends State<_ProfileView> {
   }
 
   Widget _buildForm(BuildContext context, DoctorProfileReady ready) {
-    final busy = ready.isSaving;
+    final busy = ready.isSaving || _deletingAccount;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -170,10 +224,10 @@ class _ProfileViewState extends State<_ProfileView> {
             Text(
               AppTexts.profileAccountSection,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                  ),
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
             ),
             const SizedBox(height: 12),
             AppTextField(
@@ -251,10 +305,10 @@ class _ProfileViewState extends State<_ProfileView> {
             Text(
               AppTexts.profileHospitalsSection,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                  ),
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -272,7 +326,16 @@ class _ProfileViewState extends State<_ProfileView> {
             AppButton(
               label: AppTexts.save,
               onPressed: busy ? null : _submit,
-              isLoading: busy,
+              isLoading: ready.isSaving,
+            ),
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: busy ? null : _confirmAndDeleteAccount,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.error,
+                textStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+              ),
+              child: Text(_deletingAccount ? '…' : AppTexts.deleteAccount),
             ),
             const SizedBox(height: 24),
           ],
@@ -338,7 +401,10 @@ class _ProfileHeader extends StatelessWidget {
             Chip(
               label: Text(
                 profile.role.toUpperCase(),
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               backgroundColor: AppColors.accent.withValues(alpha: 0.12),
               side: BorderSide.none,
@@ -347,7 +413,10 @@ class _ProfileHeader extends StatelessWidget {
             Chip(
               label: Text(
                 profile.isActive ? AppTexts.active : AppTexts.inactive,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               backgroundColor: profile.isActive
                   ? AppColors.success.withValues(alpha: 0.15)

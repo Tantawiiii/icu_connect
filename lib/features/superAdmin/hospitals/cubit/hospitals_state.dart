@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../admins/models/pagination_model.dart';
 import '../models/hospital_model.dart';
 
 abstract class HospitalsState extends Equatable {
@@ -18,11 +19,12 @@ class HospitalsLoading extends HospitalsState {
 }
 
 class HospitalsLoaded extends HospitalsState {
-  const HospitalsLoaded(this.hospitals);
+  const HospitalsLoaded(this.hospitals, this.pagination);
   final List<HospitalModel> hospitals;
+  final PaginationModel pagination;
 
   @override
-  List<Object?> get props => [hospitals];
+  List<Object?> get props => [hospitals, pagination];
 }
 
 class HospitalsFailure extends HospitalsState {
@@ -35,23 +37,23 @@ class HospitalsFailure extends HospitalsState {
 
 /// Emitted while a delete/restore action is in progress.
 class HospitalsActionLoading extends HospitalsLoaded {
-  const HospitalsActionLoading(super.hospitals);
+  const HospitalsActionLoading(super.hospitals, super.pagination);
 }
 
 /// Emitted after a successful delete/restore; includes a feedback message.
 class HospitalsActionSuccess extends HospitalsLoaded {
-  const HospitalsActionSuccess(super.hospitals, this.message);
+  const HospitalsActionSuccess(super.hospitals, super.pagination, this.message);
   final String message;
 
   @override
-  List<Object?> get props => [hospitals, message];
+  List<Object?> get props => [hospitals, pagination, message];
 }
 
 /// Emitted when a delete/restore action fails.
 class HospitalsActionFailure extends HospitalsLoaded {
-  const HospitalsActionFailure(super.hospitals, this.message);
+  const HospitalsActionFailure(super.hospitals, super.pagination, this.message);
   final String message;
 
   @override
-  List<Object?> get props => [hospitals, message];
+  List<Object?> get props => [hospitals, pagination, message];
 }

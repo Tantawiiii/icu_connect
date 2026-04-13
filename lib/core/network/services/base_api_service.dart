@@ -125,6 +125,27 @@ abstract class BaseApiService {
     }
   }
 
+  /// DELETE when the server may return no JSON body (e.g. 204 No Content).
+  Future<void> deleteWithoutBody(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    String? cancelTag,
+    Options? options,
+  }) async {
+    try {
+      await _dio.delete<void>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        cancelToken: _token(cancelTag),
+        options: options,
+      );
+    } on DioException catch (e) {
+      throw _toNetworkException(e);
+    }
+  }
+
   // ── Upload (multipart) ────────────────────────────────────────────────────
   Future<T> upload<T>(
     String path,

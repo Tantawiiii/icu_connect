@@ -9,12 +9,19 @@ import '../models/admins_list_response.dart';
 class AdminsRepository extends BaseApiService {
   const AdminsRepository() : super(UserRole.admin);
 
-  /// GET /admins
-  Future<AdminsListResponse> fetchAdmins() async {
+  /// GET /admins?per_page=20&page=1
+  Future<AdminsListResponse> fetchAdmins({
+    int perPage = 20,
+    int page = 1,
+  }) async {
     try {
       final data = await get<Map<String, dynamic>>(
         ApiConstants.admins,
-        cancelTag: 'admins_list',
+        queryParameters: {
+          'per_page': perPage,
+          'page': page,
+        },
+        cancelTag: 'admins_list_$page',
       );
       return AdminsListResponse.fromJson(data);
     } on NetworkException {
