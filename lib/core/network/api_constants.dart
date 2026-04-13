@@ -9,7 +9,6 @@ class ApiConstants {
   static const String adminBaseUrl = '$_scheme://$_host$_version/admin';
   static const String hospitalBaseUrl = '$_scheme://$_host$_version/hospital';
 
-
   static const String passwordBaseUrl = '$_scheme://$_host$_version/password/';
   static const String imageBaseUrl = '$_scheme://$_host/storage/';
 

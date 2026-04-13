@@ -60,8 +60,8 @@ class DoctorCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Wrap(
-              spacing: 8,
-              runSpacing: 6,
+              spacing: 6,
+              runSpacing: 2,
               children: [
                 Chip(
                   label: Text('Role: ${doctor.roleInHospital ?? doctor.role}'),

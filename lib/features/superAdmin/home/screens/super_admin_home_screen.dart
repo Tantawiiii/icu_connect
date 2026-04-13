@@ -8,6 +8,8 @@ import '../../../../core/network/token_storage.dart';
 import '../../../doctor/auth/login/screens/login_screen.dart';
 import '../../login/cubit/admin_login_cubit.dart';
 import '../../login/models/admin_model.dart';
+import '../cubit/admin_dashboard_cubit.dart';
+import '../widgets/admin_dashboard_section.dart';
 import '../widgets/quick_actions.dart';
 import '../widgets/welcome_banner.dart';
 
@@ -18,38 +20,39 @@ class SuperAdminHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        title: const Text(
-          AppTexts.superAdmin,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: AppTexts.logOut,
-            onPressed: () => _confirmLogout(context),
+    return BlocProvider(
+      create: (_) => AdminDashboardCubit()..fetchDashboard(),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          title: const Text(
+            AppTexts.superAdmin,
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            WelcomeBanner(admin: admin),
-            // const SizedBox(height: 24),
-            // const _SectionTitle('Admin Info'),
-            // const SizedBox(height: 12),
-            // AdminInfoCard(admin: admin),
-            const SizedBox(height: 24),
-            const _SectionTitle(AppTexts.quickActions),
-            const SizedBox(height: 12),
-            const QuickActions(),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout, color: Colors.white),
+              tooltip: AppTexts.logOut,
+              onPressed: () => _confirmLogout(context),
+            ),
           ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              WelcomeBanner(admin: admin),
+              const SizedBox(height: 24),
+              const AdminDashboardSection(),
+              const SizedBox(height: 24),
+              const _SectionTitle(AppTexts.quickActions),
+              const SizedBox(height: 12),
+              const QuickActions(),
+            ],
+          ),
         ),
       ),
     );

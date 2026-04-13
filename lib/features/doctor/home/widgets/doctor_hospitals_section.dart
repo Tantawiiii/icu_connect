@@ -12,7 +12,7 @@ import '../cubit/doctor_hospitals_state.dart';
 import '../models/doctor_hospital.dart';
 
 
-const double _hospitalCardMinHeight = 168;
+const double _hospitalCardMinHeight = 120;
 
 List<DoctorHospital> _filterHospitals(List<DoctorHospital> hospitals, String query) {
   final q = query.trim().toLowerCase();
@@ -323,7 +323,7 @@ class _HospitalCard extends StatelessWidget {
                     const Spacer(),
                     Text(
                       '${AppTexts.hospitalBedsSummary}: '
-                      '${hospital.availableBeds} / ${hospital.totalBeds}',
+                      '${hospital.totalBeds}',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

@@ -107,7 +107,7 @@ class _HospitalDoctorsView extends StatelessWidget {
             onRefresh: () => context.read<HospitalDoctorsCubit>().refresh(hospital.id),
             child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              padding: const EdgeInsets.all(4),
               itemCount: ready.doctors.length,
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {

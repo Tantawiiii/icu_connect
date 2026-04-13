@@ -34,6 +34,9 @@ class _RegisterView extends StatefulWidget {
 
 class _RegisterViewState extends State<_RegisterView> {
   final _formKey = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  /// Full name passed to signup (`first` + space + `last`); kept in sync in [_submit].
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -42,6 +45,8 @@ class _RegisterViewState extends State<_RegisterView> {
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -52,8 +57,13 @@ class _RegisterViewState extends State<_RegisterView> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    final first = _firstNameController.text.trim();
+    final last = _lastNameController.text.trim();
+    final fullName = last.isEmpty ? first : '$first $last'.trim();
+    _nameController.text = fullName;
+
     context.read<DoctorSignupCubit>().signup(
-      name: _nameController.text.trim(),
+      name: fullName,
       email: _emailController.text.trim(),
       phone: _phoneController.text.trim(),
       password: _passwordController.text,
@@ -169,8 +179,8 @@ class _RegisterViewState extends State<_RegisterView> {
                         )
                       else if (ready != null) ...[
                         AppTextField(
-                          controller: _nameController,
-                          labelText: AppTexts.name,
+                          controller: _firstNameController,
+                          labelText: AppTexts.firstName,
                           prefixIcon: const Icon(Icons.person_outline),
                           textInputAction: TextInputAction.next,
                           enabled: !isBusy && isValidHospitalBaseUrl,
@@ -180,6 +190,14 @@ class _RegisterViewState extends State<_RegisterView> {
                             }
                             return null;
                           },
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _lastNameController,
+                          labelText: AppTexts.lastName,
+                          prefixIcon: const Icon(Icons.badge_outlined),
+                          textInputAction: TextInputAction.next,
+                          enabled: !isBusy && isValidHospitalBaseUrl,
                         ),
                         const SizedBox(height: 16),
                         AppTextField(
@@ -213,61 +231,62 @@ class _RegisterViewState extends State<_RegisterView> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<int>(
+                        DropdownButtonFormField<int?>(
                           isExpanded: true,
-                          value: ready.hospitals.isEmpty
-                              ? null
-                              : ready.selectedHospitalId,
+                          value: ready.selectedHospitalId,
                           decoration: const InputDecoration(
                             labelText: AppTexts.hospitalLabel,
                             prefixIcon: Icon(Icons.local_hospital_outlined),
                           ),
-                          hint: const Text(
-                            AppTexts.selectHospital,
-                            overflow: TextOverflow.ellipsis,
-                          ),
                           selectedItemBuilder: (context) {
-                            return ready.hospitals.map((h) {
-                              final label = h.location != null &&
-                                      h.location!.isNotEmpty
-                                  ? h.name
-                                  : h.name;
-                              return Align(
+                            return [
+                              Align(
                                 alignment: AlignmentDirectional.centerStart,
                                 child: Text(
-                                  label,
+                                  AppTexts.hospitalOtherOptional,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                              );
-                            }).toList();
-                          },
-                          items: ready.hospitals
-                              .map(
-                                (h) => DropdownMenuItem<int>(
-                                  value: h.id,
-                                  child: Text(
+                              ),
+                              ...ready.hospitals.map((h) {
+                                final label =
                                     h.location != null && h.location!.isNotEmpty
                                         ? '${h.name} — ${h.location}'
-                                        : h.name,
-                                    maxLines: 2,
+                                        : h.name;
+                                return Align(
+                                  alignment: AlignmentDirectional.centerStart,
+                                  child: Text(
+                                    label,
+                                    maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                );
+                              }),
+                            ];
+                          },
+                          items: [
+                            const DropdownMenuItem<int?>(
+                              value: null,
+                              child: Text(AppTexts.hospitalOtherOptional),
+                            ),
+                            ...ready.hospitals.map(
+                              (h) => DropdownMenuItem<int?>(
+                                value: h.id,
+                                child: Text(
+                                  h.location != null && h.location!.isNotEmpty
+                                      ? '${h.name} — ${h.location}'
+                                      : h.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              )
-                              .toList(),
+                              ),
+                            ),
+                          ],
                           onChanged: !isBusy && isValidHospitalBaseUrl
                               ? (id) => context
                                     .read<DoctorSignupCubit>()
                                     .selectHospital(id)
                               : null,
-                          validator: (v) {
-                            if (ready.hospitals.isEmpty) {
-                              return AppTexts.noHospitalsAvailable;
-                            }
-                            if (v == null) return AppTexts.hospitalRequired;
-                            return null;
-                          },
                         ),
                         const SizedBox(height: 16),
                         AppTextField(
@@ -308,11 +327,7 @@ class _RegisterViewState extends State<_RegisterView> {
                         AppButton(
                           label: AppTexts.register,
                           onPressed:
-                              !isValidHospitalBaseUrl ||
-                                  isBusy ||
-                                  ready.hospitals.isEmpty
-                              ? null
-                              : _submit,
+                              !isValidHospitalBaseUrl || isBusy ? null : _submit,
                           isLoading: isSubmitting,
                         ),
                       ],

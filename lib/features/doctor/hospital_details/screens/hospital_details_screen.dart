@@ -107,7 +107,7 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(2),
           child: ListView(
             children: [
               Card(
@@ -117,7 +117,7 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                   side: const BorderSide(color: AppColors.border),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -147,69 +147,69 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                             label: AppTexts.totalBeds,
                             value: '${widget.hospital.totalBeds}',
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 6),
                           StatPill(
                             label: AppTexts.availableBeds,
                             value: '${widget.hospital.availableBeds}',
                           ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: AppButton(
+                                label: AppTexts.viewHospitalDoctors,
+                                borderRadius: 14,
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          HospitalDoctorsScreen(hospital: widget.hospital),
+                                    ),
+                                  );
+                                },
+                                leadingIcon: const Icon(
+                                  Icons.groups_2_outlined,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+
                         ],
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              // const SizedBox(height: 8),
+              // Card(
+              //   elevation: 0,
+              //   shape: RoundedRectangleBorder(
+              //     borderRadius: BorderRadius.circular(16),
+              //     side: const BorderSide(color: AppColors.border),
+              //   ),
+              //   child: Padding(
+              //     padding: const EdgeInsets.all(16),
+              //     child: Column(
+              //       crossAxisAlignment: CrossAxisAlignment.start,
+              //       children: [
+              //         Text(
+              //           AppTexts.status,
+              //           style: const TextStyle(
+              //             fontWeight: FontWeight.w800,
+              //             color: AppColors.textPrimary,
+              //           ),
+              //         ),
+              //         // const SizedBox(height: 12),
+              //         // _infoRow(AppTexts.roleInHospital, roleInHospital),
+              //         // _infoRow(AppTexts.status, status),
+              //         // _infoRow(
+              //         //   'Assigned',
+              //         //   widget.hospital.userStatus.isAssigned ? 'Yes' : 'No',
+              //         // ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
 
-
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: AppColors.border),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppTexts.status,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _infoRow(AppTexts.roleInHospital, roleInHospital),
-                      _infoRow(AppTexts.status, status),
-                      _infoRow(
-                        'Assigned',
-                        widget.hospital.userStatus.isAssigned ? 'Yes' : 'No',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (_isAdminInHospital) ...[
-                const SizedBox(height: 12),
-                AppButton(
-                  label: AppTexts.viewHospitalDoctors,
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            HospitalDoctorsScreen(hospital: widget.hospital),
-                      ),
-                    );
-                  },
-                  leadingIcon: const Icon(
-                    Icons.groups_2_outlined,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
               const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.all(8),

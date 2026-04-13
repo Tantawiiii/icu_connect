@@ -27,6 +27,7 @@ class AppTexts {
   static const String passwordsDoNotMatch = 'Passwords do not match';
   static const String hospitalLabel = 'Hospital';
   static const String selectHospital = 'Select a hospital';
+  static const String hospitalOtherOptional = 'Other (optional)';
   static const String hospitalRequired = 'Please select a hospital';
   static const String noHospitalsAvailable = 'No hospitals available.';
   static const String register = 'REGISTER';
@@ -58,12 +59,22 @@ class AppTexts {
   // Super Admin home
   static const String welcomeBack = 'Welcome back,';
   static const String quickActions = 'Quick Actions';
+  static const String dashboardOverview = 'Overview';
+  static const String dashboardTotalHospitals = 'Hospitals';
+  static const String dashboardTotalPatients = 'Patients';
+  static const String dashboardTotalDoctors = 'Doctors';
+  static const String dashboardTotalAdmissions = 'All admissions';
+  static const String dashboardActiveAdmissions = 'Active admissions';
+  static const String dashboardRecentAdmissions = 'Recent admissions';
+  static const String dashboardNoRecentAdmissions = 'No recent admissions.';
   static const String adminInfo = 'Admin Info';
   static const String logoutConfirmMessage = 'Are you sure you want to logout?';
 
   // Super Admin profile
   static const String myProfile = 'My Profile';
   static const String name = 'Name';
+  static const String firstName = 'First name';
+  static const String lastName = 'Last name';
   static const String phone = 'Phone';
   static const String lastLogin = 'Last Login';
   static const String status = 'Status';
@@ -183,6 +194,10 @@ class AppTexts {
   // Labs titles CRUD
   static const String labsLabel = 'Labs';
   static const String labsTitlesLabel = 'Labs Titles';
+  static const String searchLabsTitlesHint =
+      'Search by title, unit, or normal range';
+  static const String labsTitlesSearchEmpty =
+      'No lab titles match your search.';
   static const String addLabTitle = 'Add Lab Title';
   static const String editLabTitle = 'Edit Lab Title';
   static const String deleteLabTitle = 'Delete Lab Title';
@@ -192,12 +207,20 @@ class AppTexts {
   static const String labTitleUpdated = 'Lab title updated successfully';
   static const String labTitleDeleted = 'Lab title deleted successfully';
   static const String unit = 'Unit';
-  static const String normalRangeMin = 'Normal Range Min';
-  static const String normalRangeMax = 'Normal Range Max';
+  static const String normalRangeMin = 'Min Val';
+  static const String normalRangeMax = 'Max Val';
+  static const String normalRangeMaxMustExceedMin =
+      'Maximum must be greater than minimum';
+  static const String Min = 'Min Val';
+  static const String Max = 'Max Val';
 
   // Vitals titles CRUD
   static const String vitalsLabel = 'Vitals';
   static const String vitalsTitlesLabel = 'Vitals Titles';
+  static const String searchVitalsTitlesHint =
+      'Search by title, unit, or normal range';
+  static const String vitalsTitlesSearchEmpty =
+      'No vital titles match your search.';
   static const String addVitalTitle = 'Add Vital Title';
   static const String editVitalTitle = 'Edit Vital Title';
   static const String deleteVitalTitle = 'Delete Vital Title';
@@ -238,7 +261,7 @@ class AppTexts {
   static const String hospitalAccessGranted = 'Active';
   static const String hospitalLockedHint =
       'You need an approved assignment to open this hospital.';
-  static const String viewHospitalDoctors = 'View hospital doctors';
+  static const String viewHospitalDoctors = 'Doctors';
   static const String doctorsInHospital = 'Doctors in hospital';
   static const String acceptDoctor = 'Accept';
   static const String activateDoctor = 'Activate';

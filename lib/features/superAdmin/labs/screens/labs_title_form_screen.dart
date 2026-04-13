@@ -17,10 +17,7 @@ class LabsTitleFormScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: context.read<LabsTitlesCubit>(),
-      child: _LabsTitleFormView(lab: lab),
-    );
+    return _LabsTitleFormView(lab: lab);
   }
 }
 
@@ -60,11 +57,16 @@ class _LabsTitleFormViewState extends State<_LabsTitleFormView> {
     super.dispose();
   }
 
+  void _onRangeFieldChanged() {
+    _formKey.currentState?.validate();
+  }
+
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
 
     final min = double.tryParse(_minCtrl.text.trim()) ?? 0;
     final max = double.tryParse(_maxCtrl.text.trim()) ?? 0;
+    if (max <= min) return;
 
     final request = LabTitleRequest(
       title: _titleCtrl.text.trim(),
@@ -92,7 +94,9 @@ class _LabsTitleFormViewState extends State<_LabsTitleFormView> {
         title: Text(
           _isEdit ? AppTexts.editLabTitle : AppTexts.addLabTitle,
           style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -140,13 +144,14 @@ class _LabsTitleFormViewState extends State<_LabsTitleFormView> {
                       Expanded(
                         child: AppTextField(
                           controller: _minCtrl,
-                          labelText: AppTexts.normalRangeMin,
+                          labelText: AppTexts.Min,
                           prefixIcon: const Icon(Icons.arrow_downward),
-                          keyboardType:
-                              const TextInputType.numberWithOptions(
-                                  decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           textInputAction: TextInputAction.next,
                           enabled: !isLoading,
+                          onChanged: (_) => _onRangeFieldChanged(),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
                               return 'Required';
@@ -162,19 +167,26 @@ class _LabsTitleFormViewState extends State<_LabsTitleFormView> {
                       Expanded(
                         child: AppTextField(
                           controller: _maxCtrl,
-                          labelText: AppTexts.normalRangeMax,
+                          labelText: AppTexts.Max,
                           prefixIcon: const Icon(Icons.arrow_upward),
-                          keyboardType:
-                              const TextInputType.numberWithOptions(
-                                  decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           textInputAction: TextInputAction.done,
                           enabled: !isLoading,
+                          onChanged: (_) => _onRangeFieldChanged(),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
                               return 'Required';
                             }
-                            if (double.tryParse(v.trim()) == null) {
+                            final maxVal = double.tryParse(v.trim());
+                            if (maxVal == null) {
                               return 'Invalid';
+                            }
+                            final minVal =
+                                double.tryParse(_minCtrl.text.trim());
+                            if (minVal != null && maxVal <= minVal) {
+                              return AppTexts.normalRangeMaxMustExceedMin;
                             }
                             return null;
                           },
@@ -184,8 +196,9 @@ class _LabsTitleFormViewState extends State<_LabsTitleFormView> {
                   ),
                   const SizedBox(height: 28),
                   AppButton(
-                    label:
-                        _isEdit ? AppTexts.editLabTitle : AppTexts.addLabTitle,
+                    label: _isEdit
+                        ? AppTexts.editLabTitle
+                        : AppTexts.addLabTitle,
                     isLoading: isLoading,
                     onPressed: isLoading ? null : _submit,
                     leadingIcon: Icon(
@@ -203,4 +216,3 @@ class _LabsTitleFormViewState extends State<_LabsTitleFormView> {
     );
   }
 }
-

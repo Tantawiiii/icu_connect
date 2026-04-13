@@ -10,6 +10,8 @@ import '../cubit/vitals_titles_state.dart';
 import '../models/vital_title_model.dart';
 import '../models/vital_title_request.dart';
 
+/// Push with [BlocProvider.value] from [VitalsTitlesListScreen] so the cubit
+/// is in scope (a new route is not under the list’s [BlocProvider]).
 class VitalTitleFormScreen extends StatelessWidget {
   const VitalTitleFormScreen({super.key, this.vital});
 
@@ -17,10 +19,7 @@ class VitalTitleFormScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: context.read<VitalsTitlesCubit>(),
-      child: _VitalTitleFormView(vital: vital),
-    );
+    return _VitalTitleFormView(vital: vital);
   }
 }
 
@@ -62,11 +61,16 @@ class _VitalTitleFormViewState extends State<_VitalTitleFormView> {
     super.dispose();
   }
 
+  void _onRangeFieldChanged() {
+    _formKey.currentState?.validate();
+  }
+
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
 
     final min = double.tryParse(_minCtrl.text.trim()) ?? 0;
     final max = double.tryParse(_maxCtrl.text.trim()) ?? 0;
+    if (max <= min) return;
 
     final request = VitalTitleRequest(
       title: _titleCtrl.text.trim(),
@@ -149,6 +153,7 @@ class _VitalTitleFormViewState extends State<_VitalTitleFormView> {
                                   decimal: true),
                           textInputAction: TextInputAction.next,
                           enabled: !isLoading,
+                          onChanged: (_) => _onRangeFieldChanged(),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
                               return 'Required';
@@ -171,12 +176,19 @@ class _VitalTitleFormViewState extends State<_VitalTitleFormView> {
                                   decimal: true),
                           textInputAction: TextInputAction.done,
                           enabled: !isLoading,
+                          onChanged: (_) => _onRangeFieldChanged(),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
                               return 'Required';
                             }
-                            if (double.tryParse(v.trim()) == null) {
+                            final maxVal = double.tryParse(v.trim());
+                            if (maxVal == null) {
                               return 'Invalid';
+                            }
+                            final minVal =
+                                double.tryParse(_minCtrl.text.trim());
+                            if (minVal != null && maxVal <= minVal) {
+                              return AppTexts.normalRangeMaxMustExceedMin;
                             }
                             return null;
                           },
