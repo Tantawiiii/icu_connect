@@ -73,8 +73,8 @@ class HospitalGroup extends Equatable {
     return HospitalGroup(
       id: idRaw is int ? idRaw : int.tryParse('$idRaw') ?? 0,
       name: json['name'] as String? ?? '',
-      totalBeds: json['total_beds'] as int? ?? 0,
-      availableBeds: json['available_beds'] as int? ?? 0,
+      totalBeds: (json['total_beds'] as num?)?.toInt() ?? 0,
+      availableBeds: (json['available_beds'] as num?)?.toInt() ?? 0,
     );
   }
 

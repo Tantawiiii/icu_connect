@@ -52,9 +52,99 @@ class AdmissionDetailsPatientHeaderSection extends StatelessWidget {
   final VoidCallback? onSave;
   final VoidCallback onCancel;
 
+  bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
+
+  List<Widget> _patientMetaChips(AdmissionPatientModel? patient) {
+    final chips = <Widget>[];
+
+    if (admission.dateComes != null && admission.dateComes!.trim().isNotEmpty) {
+      chips.add(
+        AdmissionDetailsMetaChip(
+          label: AppTexts.admitted,
+          value: admissionDetailsFormatDate(admission.dateComes),
+          icon: Icons.login,
+        ),
+      );
+    }
+
+    if (patient != null) {
+      chips.add(
+        AdmissionDetailsMetaChip(
+          label: AppTexts.age,
+          value: '${patient.age}',
+          icon: Icons.cake,
+        ),
+      );
+
+      if (_hasText(patient.gender)) {
+        chips.add(
+          AdmissionDetailsMetaChip(
+            label: AppTexts.gender,
+            value: patient.gender,
+            icon: Icons.person_outline,
+          ),
+        );
+      }
+
+      if (_hasText(patient.bloodGroup)) {
+        chips.add(
+          AdmissionDetailsMetaChip(
+            label: AppTexts.bloodGroup,
+            value: patient.bloodGroup,
+            icon: Icons.bloodtype,
+          ),
+        );
+      }
+
+      if (_hasText(patient.phone)) {
+        chips.add(
+          AdmissionDetailsMetaChip(
+            label: AppTexts.phone,
+            value: patient.phone,
+            icon: Icons.phone,
+          ),
+        );
+      }
+
+      if (_hasText(patient.nationalId)) {
+        chips.add(
+          AdmissionDetailsMetaChip(
+            label: AppTexts.nationalId,
+            value: patient.nationalId,
+            icon: Icons.badge,
+          ),
+        );
+      }
+    }
+
+    if (admission.dateLeave != null && admission.dateLeave!.trim().isNotEmpty) {
+      chips.add(
+        AdmissionDetailsMetaChip(
+          label: AppTexts.dischargedLabel,
+          value: admissionDetailsFormatDate(admission.dateLeave),
+          icon: Icons.logout,
+        ),
+      );
+    }
+
+    if (admission.dateOfDeath != null && admission.dateOfDeath!.trim().isNotEmpty) {
+      chips.add(
+        AdmissionDetailsMetaChip(
+          label: AppTexts.dateOfDeathLabel,
+          value: admissionDetailsFormatDate(admission.dateOfDeath),
+          icon: Icons.close,
+          color: Colors.red,
+        ),
+      );
+    }
+
+    return chips;
+  }
+
   @override
   Widget build(BuildContext context) {
     final patient = admission.patient;
+    final metaChips = _patientMetaChips(patient);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,29 +185,17 @@ class AdmissionDetailsPatientHeaderSection extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            if (!editing) ...[
-              Flexible(
-                child: Text(
-                  patient?.name ?? AppTexts.notAvailable,
-                  textAlign: TextAlign.end,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
+            if (!editing && patient != null && onBeginEdit != null)
+              IconButton(
+                tooltip: AppTexts.editPatientAdmin,
+                onPressed: onBeginEdit,
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: AppColors.textPrimary,
+                  size: 22,
                 ),
-              ),
-              if (patient != null && onBeginEdit != null)
-                IconButton(
-                  tooltip: AppTexts.editPatientAdmin,
-                  onPressed: onBeginEdit,
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    color: AppColors.textPrimary,
-                    size: 22,
-                  ),
-                ),
-            ] else
+              )
+            else if (editing)
               const Text(
                 'Edit Patient',
                 style: TextStyle(
@@ -237,58 +315,11 @@ class AdmissionDetailsPatientHeaderSection extends StatelessWidget {
               ],
             ),
           )
-        else
+        else if (metaChips.isNotEmpty)
           Wrap(
             spacing: 16,
             runSpacing: 4,
-            children: [
-              AdmissionDetailsMetaChip(
-                label: AppTexts.admitted,
-                value: admissionDetailsFormatDate(admission.dateComes),
-                icon: Icons.login,
-              ),
-              AdmissionDetailsMetaChip(
-                label: AppTexts.age,
-                value: patient != null ? '${patient.age}' : AppTexts.notAvailable,
-                icon: Icons.cake,
-              ),
-              AdmissionDetailsMetaChip(
-                label: AppTexts.gender,
-                value: patient?.gender ?? AppTexts.notAvailable,
-                icon: Icons.person_outline,
-              ),
-              AdmissionDetailsMetaChip(
-                label: AppTexts.bloodGroup,
-                value: patient?.bloodGroup.isEmpty == false
-                    ? patient!.bloodGroup
-                    : AppTexts.notAvailable,
-                icon: Icons.bloodtype,
-              ),
-              AdmissionDetailsMetaChip(
-                label: AppTexts.phone,
-                value: patient?.phone.isEmpty == false
-                    ? patient!.phone
-                    : AppTexts.notAvailable,
-                icon: Icons.phone,
-              ),
-              AdmissionDetailsMetaChip(
-                label: AppTexts.nationalId,
-                value: patient?.nationalId ?? AppTexts.notAvailable,
-                icon: Icons.badge,
-              ),
-              AdmissionDetailsMetaChip(
-                label: AppTexts.dischargedLabel,
-                value: admissionDetailsFormatDate(admission.dateLeave),
-                icon: Icons.logout,
-              ),
-              if (admission.dateOfDeath != null)
-                AdmissionDetailsMetaChip(
-                  label: AppTexts.dateOfDeathLabel,
-                  value: admissionDetailsFormatDate(admission.dateOfDeath),
-                  icon: Icons.close,
-                  color: Colors.red,
-                ),
-            ],
+            children: metaChips,
           ),
       ],
     );

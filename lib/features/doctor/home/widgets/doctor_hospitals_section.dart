@@ -13,7 +13,7 @@ import '../cubit/doctor_hospitals_state.dart';
 import '../models/doctor_hospital.dart';
 
 
-const double _hospitalCardMinHeight = 120;
+const double _hospitalCardMinHeight = 110;
 
 List<DoctorHospital> _filterHospitals(List<DoctorHospital> hospitals, String query) {
   final q = query.trim().toLowerCase();
@@ -23,6 +23,60 @@ List<DoctorHospital> _filterHospitals(List<DoctorHospital> hospitals, String que
     final loc = h.location?.toLowerCase() ?? '';
     return loc.contains(q);
   }).toList();
+}
+
+bool _isPendingHospital(DoctorHospital hospital) {
+  if (hospital.isUnlocked) return false;
+  return hospital.userStatus.isAssigned &&
+      hospital.userStatus.status?.toLowerCase().trim() == 'pending';
+}
+
+int _compareHospitalNames(DoctorHospital a, DoctorHospital b) =>
+    a.name.toLowerCase().compareTo(b.name.toLowerCase());
+
+class _HospitalSection {
+  const _HospitalSection({required this.title, required this.hospitals});
+
+  final String title;
+  final List<DoctorHospital> hospitals;
+}
+
+List<_HospitalSection> _groupHospitals(List<DoctorHospital> hospitals) {
+  final myHospitals = <DoctorHospital>[];
+  final pendingRequests = <DoctorHospital>[];
+  final availableHospitals = <DoctorHospital>[];
+
+  for (final hospital in hospitals) {
+    if (hospital.isUnlocked) {
+      myHospitals.add(hospital);
+    } else if (_isPendingHospital(hospital)) {
+      pendingRequests.add(hospital);
+    } else {
+      availableHospitals.add(hospital);
+    }
+  }
+
+  myHospitals.sort(_compareHospitalNames);
+  pendingRequests.sort(_compareHospitalNames);
+  availableHospitals.sort(_compareHospitalNames);
+
+  return [
+    if (myHospitals.isNotEmpty)
+      _HospitalSection(
+        title: AppTexts.myHospitalsSection,
+        hospitals: myHospitals,
+      ),
+    if (pendingRequests.isNotEmpty)
+      _HospitalSection(
+        title: AppTexts.pendingHospitalRequestsSection,
+        hospitals: pendingRequests,
+      ),
+    if (availableHospitals.isNotEmpty)
+      _HospitalSection(
+        title: AppTexts.availableHospitalsSection,
+        hospitals: availableHospitals,
+      ),
+  ];
 }
 
 class DoctorHospitalsSection extends StatefulWidget {
@@ -221,11 +275,34 @@ class _HospitalsListBody extends StatelessWidget {
       );
     }
 
-    return ListView.separated(
+    final sections = _groupHospitals(filtered);
+
+    return ListView(
       padding: const EdgeInsets.only(bottom: 4),
-      itemCount: filtered.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _HospitalCard(hospital: filtered[index]),
+      children: [
+        for (var sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) ...[
+          if (sectionIndex > 0) const SizedBox(height: 8),
+          Padding(
+            padding: EdgeInsets.only(
+              left: 4,
+              top: sectionIndex == 0 ? 0 : 8,
+              bottom: 10,
+            ),
+            child: Text(
+              sections[sectionIndex].title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          for (var i = 0; i < sections[sectionIndex].hospitals.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            _HospitalCard(hospital: sections[sectionIndex].hospitals[i]),
+          ],
+        ],
+      ],
     );
   }
 }
@@ -265,7 +342,7 @@ class _HospitalCard extends StatelessWidget {
         color: AppColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(34),
           side: const BorderSide(color: AppColors.border),
         ),
         clipBehavior: Clip.antiAlias,

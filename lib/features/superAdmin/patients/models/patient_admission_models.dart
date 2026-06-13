@@ -487,6 +487,21 @@ class HospitalGroupModel extends Equatable {
   List<Object?> get props => [id, hospitalId, name, totalBeds, availableBeds, createdAt, updatedAt];
 }
 
+String _parseBedNumber(dynamic raw) {
+  if (raw == null) return '';
+  if (raw is String) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '';
+    final parsed = int.tryParse(trimmed);
+    return parsed != null ? '$parsed' : trimmed;
+  }
+  if (raw is num) return '${raw.toInt()}';
+  final text = raw.toString().trim();
+  if (text.isEmpty) return '';
+  final parsed = int.tryParse(text);
+  return parsed != null ? '$parsed' : text;
+}
+
 class PatientAdmissionModel extends Equatable {
   const PatientAdmissionModel({
     required this.id,
@@ -548,12 +563,12 @@ class PatientAdmissionModel extends Equatable {
 
   factory PatientAdmissionModel.fromJson(Map<String, dynamic> json) =>
       PatientAdmissionModel(
-        id: json['id'] as int,
-        patientId: json['patient_id'] as int,
-        hospitalId: json['hospital_id'] as int,
-        doctorId: json['doctor_id'] as int,
+        id: (json['id'] as num).toInt(),
+        patientId: (json['patient_id'] as num).toInt(),
+        hospitalId: (json['hospital_id'] as num).toInt(),
+        doctorId: (json['doctor_id'] as num).toInt(),
         hospitalGroupId: (json['hospital_group_id'] as num?)?.toInt(),
-        bedNumber: json['bed_number'] as String? ?? '',
+        bedNumber: _parseBedNumber(json['bed_number']),
         status: json['status'] as String? ?? '',
         dateComes: json['date_comes'] as String?,
         dateLeave: json['date_leave'] as String?,
