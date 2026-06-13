@@ -13,8 +13,8 @@ import '../cubit/admission_form_cubit.dart';
 import '../cubit/admission_form_state.dart';
 import '../enums/admission_status.dart';
 import '../widgets/admission_form_dynamic_section.dart';
+import '../widgets/admission_form_essentials_section.dart';
 import '../widgets/admission_form_section_card.dart';
-import '../widgets/admission_form_section_title.dart';
 import '../widgets/radiology_path_utils.dart';
 
 class AdmissionFormScreen extends StatelessWidget {
@@ -24,6 +24,7 @@ class AdmissionFormScreen extends StatelessWidget {
     this.admission,
     this.initialBedNumber,
     this.hospitalGroupId,
+    this.initialPatientId,
   });
 
   final int hospitalId;
@@ -35,17 +36,22 @@ class AdmissionFormScreen extends StatelessWidget {
   /// Sent as `hospital_group_id` when creating/updating (e.g. ward/group from hospital details).
   final int? hospitalGroupId;
 
+  /// Pre-selects the patient when opening after creating one from the bed flow.
+  final int? initialPatientId;
+
   bool get isEdit => admission != null;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => AdmissionFormCubit()..loadReferenceData(),
+      create: (_) => AdmissionFormCubit()
+        ..loadReferenceData(ensurePatientId: initialPatientId),
       child: _AdmissionFormBody(
         hospitalId: hospitalId,
         admission: admission,
         initialBedNumber: initialBedNumber,
         hospitalGroupId: hospitalGroupId,
+        initialPatientId: initialPatientId,
       ),
     );
   }
@@ -126,12 +132,14 @@ class _AdmissionFormBody extends StatefulWidget {
     this.admission,
     this.initialBedNumber,
     this.hospitalGroupId,
+    this.initialPatientId,
   });
 
   final int hospitalId;
   final PatientAdmissionModel? admission;
   final String? initialBedNumber;
   final int? hospitalGroupId;
+  final int? initialPatientId;
 
   @override
   State<_AdmissionFormBody> createState() => _AdmissionFormBodyState();
@@ -143,6 +151,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
   final _notesCtrl = TextEditingController();
 
   AdmissionPatientModel? _selectedPatient;
+  bool _initialPatientApplied = false;
   late AdmissionStatus _status;
   DateTime? _dateComes;
   DateTime? _dateLeave;
@@ -159,6 +168,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
   final _cultures = <_CultureEntry>[];
 
   final _picker = ImagePicker();
+  bool _optionalSectionsExpanded = false;
 
   bool get _isEdit => widget.admission != null;
 
@@ -195,13 +205,15 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
     return DateTime.tryParse(raw);
   }
 
-  AdmissionPatientModel? _patientDropdownValue(List<AdmissionPatientModel> patients) {
-    final s = _selectedPatient;
-    if (s == null) return null;
-    for (final p in patients) {
-      if (p.id == s.id) return p;
+  void _applyInitialPatient(List<AdmissionPatientModel> patients) {
+    if (_initialPatientApplied || widget.initialPatientId == null) return;
+    for (final patient in patients) {
+      if (patient.id == widget.initialPatientId) {
+        _initialPatientApplied = true;
+        setState(() => _selectedPatient = patient);
+        return;
+      }
     }
-    return null;
   }
 
   @override
@@ -523,43 +535,486 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
     }
   }
 
+  String _appBarTitle() {
+    final name = _selectedPatient?.name.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return _isEdit ? AppTexts.editAdmission : AppTexts.createAdmission;
+  }
+  List<Widget> _buildOptionalSections(
+    AdmissionFormRefsReady refs,
+    bool submitting,
+  ) {
+    return [
+      AdmissionFormDynamicSection(
+        title: 'Clinical Notes',
+        onAdd: () => setState(
+          () => _clinical.add(
+            _ClinicalEntry(
+              type: 'progress_note',
+              content: TextEditingController(),
+            ),
+          ),
+        ),
+        children: _clinical.asMap().entries.map((e) {
+          final i = e.key;
+          final row = e.value;
+          return AdmissionFormSectionCard(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: row.type,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'history_complaint',
+                            child: Text('History/Complaint'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'progress_note',
+                            child: Text('Progress Note'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'discharge_summary',
+                            child: Text('Discharge Summary'),
+                          ),
+                        ],
+                        onChanged: (v) => setState(() => row.type = v!),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: AppColors.error),
+                      onPressed: () => setState(() => _clinical.removeAt(i)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                AppTextField(
+                  controller: row.content,
+                  hintText: 'Content',
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+      AdmissionFormDynamicSection(
+        title: 'Radiology',
+        onAdd: () => setState(() => _radiology.add(_RadiologyEntry())),
+        children: _radiology.asMap().entries.map((e) {
+          final i = e.key;
+          final row = e.value;
+          return AdmissionFormSectionCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppTextField(
+                        controller: row.title,
+                        hintText: 'Image Title',
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: AppColors.error),
+                      onPressed: () => setState(() => _radiology.removeAt(i)),
+                    ),
+                  ],
+                ),
+                AppTextField(
+                  controller: row.report,
+                  hintText: 'Report',
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    TextButton.icon(
+                      onPressed:
+                          submitting ? null : () => _addRadiologyImages(row),
+                      icon: const Icon(Icons.photo_library_outlined, size: 20),
+                      label: const Text('Add images'),
+                    ),
+                    TextButton.icon(
+                      onPressed:
+                          submitting ? null : () => _addRadiologyVideo(row),
+                      icon: const Icon(Icons.video_library_outlined, size: 20),
+                      label: const Text('Add video'),
+                    ),
+                  ],
+                ),
+                if (row.localMediaPaths.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: row.localMediaPaths.asMap().entries.map((me) {
+                      final idx = me.key;
+                      final path = me.value;
+                      final isVideo = isRadiologyPathVideo(path);
+                      return InputChip(
+                        avatar: Icon(
+                          isVideo
+                              ? Icons.videocam_outlined
+                              : Icons.image_outlined,
+                          size: 18,
+                          color: isVideo ? AppColors.error : AppColors.primary,
+                        ),
+                        label: Text(
+                          path.split('/').last,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        onDeleted: submitting
+                            ? null
+                            : () =>
+                                setState(() => row.localMediaPaths.removeAt(idx)),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+      AdmissionFormDynamicSection(
+        title: 'Treatment plans',
+        onAdd: () => setState(() => _treatments.add(_TreatmentEntry())),
+        children: _treatments.asMap().entries.map((e) {
+          final i = e.key;
+          final row = e.value;
+          return AdmissionFormSectionCard(
+            child: Row(
+              children: [
+                Expanded(
+                  child: AppTextField(
+                    controller: row.plan,
+                    hintText: 'Plan content',
+                    maxLines: 3,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: AppColors.error),
+                  onPressed: () => setState(() => _treatments.removeAt(i)),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+      AdmissionFormDynamicSection(
+        title: 'Medications',
+        onAdd: () => setState(() => _medications.add(_MedicationEntry())),
+        children: _medications.asMap().entries.map((e) {
+          final i = e.key;
+          final row = e.value;
+          return AdmissionFormSectionCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: row.type,
+                        decoration: const InputDecoration(
+                          labelText: 'Type',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'infusion',
+                            child: Text('Infusion'),
+                          ),
+                          DropdownMenuItem(value: 'other', child: Text('Other')),
+                        ],
+                        onChanged: (v) =>
+                            setState(() => row.type = v ?? 'other'),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: AppColors.error),
+                      onPressed: () => setState(() => _medications.removeAt(i)),
+                    ),
+                  ],
+                ),
+                AppTextField(controller: row.title, hintText: 'Title'),
+                const SizedBox(height: 8),
+                AppTextField(
+                  controller: row.value,
+                  hintText: 'Value (e.g. dose, rate)',
+                ),
+                const SizedBox(height: 8),
+                AppTextField(controller: row.duration, hintText: 'Duration'),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+      AdmissionFormDynamicSection(
+        title: 'Echo',
+        onAdd: () => setState(() => _echoes.add(_EchoEntry())),
+        children: _echoes.asMap().entries.map((e) {
+          final i = e.key;
+          final row = e.value;
+          return AdmissionFormSectionCard(
+            child: Row(
+              children: [
+                Expanded(
+                  child: AppTextField(
+                    controller: row.text,
+                    hintText: 'Findings',
+                    maxLines: 4,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: AppColors.error),
+                  onPressed: () => setState(() => _echoes.removeAt(i)),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+      AdmissionFormDynamicSection(
+        title: 'Ultrasound',
+        onAdd: () => setState(() => _ultrasounds.add(_UltrasoundEntry())),
+        children: _ultrasounds.asMap().entries.map((e) {
+          final i = e.key;
+          final row = e.value;
+          return AdmissionFormSectionCard(
+            child: Row(
+              children: [
+                Expanded(
+                  child: AppTextField(
+                    controller: row.text,
+                    hintText: 'Findings',
+                    maxLines: 4,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: AppColors.error),
+                  onPressed: () => setState(() => _ultrasounds.removeAt(i)),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+      AdmissionFormDynamicSection(
+        title: 'Cultures',
+        onAdd: () => setState(() => _cultures.add(_CultureEntry())),
+        children: _cultures.asMap().entries.map((e) {
+          final i = e.key;
+          final row = e.value;
+          return AdmissionFormSectionCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppTextField(
+                        controller: row.title,
+                        hintText: 'Title',
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: AppColors.error),
+                      onPressed: () => setState(() => _cultures.removeAt(i)),
+                    ),
+                  ],
+                ),
+                AppTextField(controller: row.note, hintText: 'Note', maxLines: 3),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+      AdmissionFormDynamicSection(
+        title: 'Vitals',
+        onAdd: () => setState(() => _vitals.add(_VitalEntry())),
+        children: _vitals.asMap().entries.map((e) {
+          final i = e.key;
+          final row = e.value;
+          return AdmissionFormSectionCard(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        value: row.titleId,
+                        hint: const Text('Select Vital'),
+                        items: refs.vitalsTitles
+                            .map(
+                              (t) => DropdownMenuItem(
+                                value: t.id,
+                                child: Text('${t.title} (${t.unit})'),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) => setState(() => row.titleId = v),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: AppColors.error),
+                      onPressed: () => setState(() => _vitals.removeAt(i)),
+                    ),
+                  ],
+                ),
+                AppTextField(
+                  controller: row.value,
+                  hintText: 'Value',
+                  keyboardType: TextInputType.number,
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Measured at', style: TextStyle(fontSize: 13)),
+                  subtitle: Text(_sqlDateTime(row.date)),
+                  trailing: const Icon(Icons.schedule, size: 20),
+                  onTap: () => _pickDateTime(
+                    initial: row.date,
+                    onPick: (d) => setState(() => row.date = d),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+      AdmissionFormDynamicSection(
+        title: 'Labs',
+        onAdd: () => setState(() => _labs.add(_LabEntry())),
+        children: _labs.asMap().entries.map((e) {
+          final i = e.key;
+          final row = e.value;
+          return AdmissionFormSectionCard(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        value: row.titleId,
+                        hint: const Text('Select Lab'),
+                        items: refs.labsTitles
+                            .map(
+                              (t) => DropdownMenuItem(
+                                value: t.id,
+                                child: Text('${t.title} (${t.unit})'),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) => setState(() => row.titleId = v),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: AppColors.error),
+                      onPressed: () => setState(() => _labs.removeAt(i)),
+                    ),
+                  ],
+                ),
+                AppTextField(
+                  controller: row.value,
+                  hintText: 'Value',
+                  keyboardType: TextInputType.number,
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Measured at', style: TextStyle(fontSize: 13)),
+                  subtitle: Text(_sqlDateTime(row.date)),
+                  trailing: const Icon(Icons.schedule, size: 20),
+                  onTap: () => _pickDateTime(
+                    initial: row.date,
+                    onPick: (d) => setState(() => row.date = d),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
-        title: Text(
-          _isEdit ? 'Edit Admission' : 'New Admission',
-          style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: BlocConsumer<AdmissionFormCubit, AdmissionFormState>(
-        listener: (context, state) {
-          if (state is AdmissionFormSuccess) {
+    return BlocConsumer<AdmissionFormCubit, AdmissionFormState>(
+      listener: (context, state) {
+        if (state is AdmissionFormRefsReady) {
+          _applyInitialPatient(state.patients);
+        }
+        if (state is AdmissionFormSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          Navigator.pop(context, true);
+        } else if (state is AdmissionFormFailure) {
+          if (context.read<AdmissionFormCubit>().refs != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppColors.success),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppColors.error,
+              ),
             );
-            Navigator.pop(context, true);
-          } else if (state is AdmissionFormFailure) {
-            if (context.read<AdmissionFormCubit>().refs != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
-              );
-            }
           }
-        },
-        builder: (context, state) {
-          final cubit = context.read<AdmissionFormCubit>();
+        }
+      },
+      builder: (context, state) {
+        final cubit = context.read<AdmissionFormCubit>();
 
-          if (state is AdmissionFormInitial || state is AdmissionFormLoadingRefs) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-          }
+        if (state is AdmissionFormInitial ||
+            state is AdmissionFormLoadingRefs) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: AppColors.textPrimary),
+              title: Text(
+                _appBarTitle(),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            body: const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          );
+        }
 
-          if (state is AdmissionFormFailure && cubit.refs == null) {
-            return Center(
+        if (state is AdmissionFormFailure && cubit.refs == null) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: AppColors.textPrimary),
+              title: Text(
+                _appBarTitle(),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            body: Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
@@ -578,611 +1033,180 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                   ],
                 ),
               ),
-            );
-          }
+            ),
+          );
+        }
 
-          final refs = cubit.refs;
-          if (refs == null) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-          }
+        final refs = cubit.refs;
+        if (refs == null) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: AppColors.textPrimary),
+              title: Text(
+                _appBarTitle(),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            body: const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          );
+        }
 
-          final submitting = state is AdmissionFormSubmitting;
+        final submitting = state is AdmissionFormSubmitting;
 
-          return Stack(
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.background,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: AppColors.textPrimary),
+            title: Text(
+              _appBarTitle(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          bottomNavigationBar: SafeArea(
+            minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: AppButton(
+              label: submitting
+                  ? 'Saving...'
+                  : (_isEdit ? AppTexts.save : AppTexts.createAdmission),
+              onPressed: submitting ? null : _submit,
+            ),
+          ),
+          body: Stack(
             children: [
               Form(
                 key: _formKey,
                 child: ListView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                   children: [
-                    // ── Patient Selection ────────────────────────────────────
-                    const AdmissionFormSectionTitle(title: 'Patient'),
-                    if (_isEdit)
-                       AdmissionFormSectionCard(
-                         child: Text(
-                           _selectedPatient?.name ?? 'Unknown Patient',
-                           style: const TextStyle(fontWeight: FontWeight.bold),
-                         ),
-                       )
-                    else ...[
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<AdmissionPatientModel>(
-                              value: _patientDropdownValue(refs.patients),
-                              decoration: const InputDecoration(
-                                labelText: 'Patient',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(12),
-                                  ),
-                                ),
-                              ),
-                              hint: const Text('Select a patient'),
-                              isExpanded: true,
-                              items: refs.patients
-                                  .map(
-                                    (p) => DropdownMenuItem(
-                                      value: p,
-                                      child: Text(
-                                        '${p.name} · ${p.nationalId}',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: refs.patients.isEmpty
-                                  ? null
-                                  : (p) => setState(() => _selectedPatient = p),
-                              validator: (v) =>
-                                  v == null && refs.patients.isNotEmpty
-                                      ? 'Select a patient'
-                                      : null,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: IconButton(
-                              tooltip: AppTexts.addPatientAdmin,
-                              style: IconButton.styleFrom(
-                                backgroundColor:
-                                    AppColors.primary.withValues(alpha: 0.1),
-                                foregroundColor: AppColors.primary,
-                              ),
-                              onPressed: submitting ? null : _openAddPatient,
-                              icon: const Icon(Icons.person_add_outlined),
-                            ),
-                          ),
-                        ],
+                    AdmissionFormEssentialsSection(
+                      isEdit: _isEdit,
+                      submitting: submitting,
+                      bedCtrl: _bedCtrl,
+                      notesCtrl: _notesCtrl,
+                      status: _status,
+                      dateComes: _dateComes,
+                      dateLeave: _dateLeave,
+                      dateOfDeath: _dateOfDeath,
+                      patients: refs.patients,
+                      selectedPatient: _selectedPatient,
+                      hospitalGroupId: widget.hospitalGroupId,
+                      onPatientChanged: (patient) =>
+                          setState(() => _selectedPatient = patient),
+                      onAddPatient: _openAddPatient,
+                      onStatusChanged: (status) => setState(
+                        () => _status = status ?? AdmissionStatus.admitted,
                       ),
-                      if (refs.patients.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 4),
-                          child: Text(
-                            'No patients found. Try adding patients or check the API.',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 13,
+                      onPickDateComes: () => _pickDateTime(
+                        initial: _dateComes,
+                        onPick: (date) => setState(() {
+                          _dateComes = date;
+                          if (_dateLeave != null &&
+                              _dateLeave!.isBefore(date)) {
+                            _dateLeave = null;
+                          }
+                        }),
+                      ),
+                      onPickDateLeave: () {
+                        if (_dateComes == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(AppTexts.admissionSetComesFirst),
+                              backgroundColor: AppColors.error,
                             ),
+                          );
+                          return;
+                        }
+                        _pickDateTime(
+                          initial: _dateLeave ?? _dateComes,
+                          notBefore: _dateComes,
+                          onPick: (date) => setState(() => _dateLeave = date),
+                        );
+                      },
+                      onClearDateLeave: () =>
+                          setState(() => _dateLeave = null),
+                      onPickDateOfDeath: () {
+                        if (_dateComes == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(AppTexts.admissionSetComesFirst),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                          return;
+                        }
+                        _pickDateTime(
+                          initial: _dateOfDeath ?? _dateComes,
+                          notBefore: _dateComes,
+                          onPick: (date) =>
+                              setState(() => _dateOfDeath = date),
+                        );
+                      },
+                      onClearDateOfDeath: () =>
+                          setState(() => _dateOfDeath = null),
+                      bedValidator: (value) =>
+                          (value?.trim() ?? '').isEmpty ? 'Required' : null,
+                      patientValidator: (patient) =>
+                          patient == null ? 'Select a patient' : null,
+                    ),
+                    Theme(
+                      data: Theme.of(context).copyWith(
+                        dividerColor: Colors.transparent,
+                      ),
+                      child: ExpansionTile(
+                        key: const PageStorageKey('admission_optional_sections'),
+                        initiallyExpanded: _optionalSectionsExpanded,
+                        onExpansionChanged: (expanded) => setState(
+                          () => _optionalSectionsExpanded = expanded,
+                        ),
+                        tilePadding: const EdgeInsets.symmetric(horizontal: 4),
+                        childrenPadding: const EdgeInsets.only(bottom: 8),
+                        shape: const Border(),
+                        collapsedShape: const Border(),
+                        title: const Text(
+                          AppTexts.admissionOptionalRecords,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
                           ),
                         ),
-                    ],
-
-                    const SizedBox(height: 16),
-
-                    // ── Basic Info ───────────────────────────────────────────
-                    const AdmissionFormSectionTitle(title: 'Admission Info'),
-                    AdmissionFormSectionCard(
-                      child: Column(
-                        children: [
-                          AppTextField(
-                            controller: _bedCtrl,
-                            hintText: 'Bed Number',
-                            validator: (v) =>
-                                v == null || v.isEmpty ? 'Required' : null,
+                        subtitle: const Text(
+                          AppTexts.admissionOptionalRecordsHint,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
                           ),
-                          if (widget.hospitalGroupId != null) ...[
-                            const SizedBox(height: 10),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Hospital group ID: ${widget.hospitalGroupId}',
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<AdmissionStatus>(
-                            value: _status,
-                            decoration: const InputDecoration(
-                              labelText: 'Status',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                            ),
-                            items: AdmissionStatus.values.map((s) => DropdownMenuItem(
-                              value: s,
-                              child: Text(s.label.toUpperCase()),
-                            )).toList(),
-                            onChanged: (v) => setState(() => _status = v!),
-                          ),
-                          const SizedBox(height: 12),
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('Admission date & time'),
-                            subtitle: Text(
-                              _dateComes != null
-                                  ? _sqlDateTime(_dateComes!)
-                                  : 'Not set',
-                            ),
-                            trailing: const Icon(Icons.event),
-                            onTap: _isEdit
-                                ? null
-                                : () => _pickDateTime(
-                                      initial: _dateComes,
-                                      onPick: (d) => setState(() {
-                                        _dateComes = d;
-                                        if (_dateLeave != null &&
-                                            _dateLeave!.isBefore(d)) {
-                                          _dateLeave = null;
-                                        }
-                                      }),
-                                    ),
-                          ),
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('Leave date & time'),
-                            subtitle: Text(
-                              _dateLeave != null
-                                  ? _sqlDateTime(_dateLeave!)
-                                  : 'N/A',
-                            ),
-                            trailing: _dateLeave != null
-                                ? IconButton(
-                                    icon: const Icon(Icons.close),
-                                    onPressed: () =>
-                                        setState(() => _dateLeave = null),
-                                  )
-                                : const Icon(Icons.event),
-                            onTap: () {
-                              if (_dateComes == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      AppTexts.admissionSetComesFirst,
-                                    ),
-                                    backgroundColor: AppColors.error,
-                                  ),
-                                );
-                                return;
-                              }
-                              _pickDateTime(
-                                initial: _dateLeave ?? _dateComes,
-                                notBefore: _dateComes,
-                                onPick: (d) =>
-                                    setState(() => _dateLeave = d),
-                              );
-                            },
-                          ),
-                          AppTextField(
-                            controller: _notesCtrl,
-                            hintText: 'Common Notes',
-                            maxLines: 3,
-                          ),
-                        ],
+                        ),
+                        children: _buildOptionalSections(refs, submitting),
                       ),
                     ),
-                    AdmissionFormDynamicSection(
-                      title: 'Clinical Notes',
-                      onAdd: () => setState(() => _clinical.add(_ClinicalEntry(type: 'progress_note', content: TextEditingController()))),
-                      children: _clinical.asMap().entries.map((e) {
-                        final i = e.key;
-                        final row = e.value;
-                        return AdmissionFormSectionCard(
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: DropdownButtonFormField<String>(
-                                      value: row.type,
-                                      items: const [
-                                        DropdownMenuItem(value: 'history_complaint', child: Text('History/Complaint')),
-                                        DropdownMenuItem(value: 'progress_note', child: Text('Progress Note')),
-                                        DropdownMenuItem(value: 'discharge_summary', child: Text('Discharge Summary')),
-                                      ],
-                                      onChanged: (v) => setState(() => row.type = v!),
-                                    ),
-                                  ),
-                                  IconButton(icon: const Icon(Icons.delete, color: AppColors.error), onPressed: () => setState(() => _clinical.removeAt(i))),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              AppTextField(controller: row.content, hintText: 'Content', maxLines: 2),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-
-                    AdmissionFormDynamicSection(
-                      title: 'Radiology',
-                      onAdd: () => setState(() => _radiology.add(_RadiologyEntry())),
-                      children: _radiology.asMap().entries.map((e) {
-                        final i = e.key;
-                        final row = e.value;
-                        return AdmissionFormSectionCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                   Expanded(child: AppTextField(controller: row.title, hintText: 'Image Title')),
-                                   IconButton(icon: const Icon(Icons.delete, color: AppColors.error), onPressed: () => setState(() => _radiology.removeAt(i))),
-                                ],
-                              ),
-                              AppTextField(controller: row.report, hintText: 'Report', maxLines: 2),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 4,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  TextButton.icon(
-                                    onPressed: submitting ? null : () => _addRadiologyImages(row),
-                                    icon: const Icon(Icons.photo_library_outlined, size: 20),
-                                    label: const Text('Add images'),
-                                  ),
-                                  TextButton.icon(
-                                    onPressed: submitting ? null : () => _addRadiologyVideo(row),
-                                    icon: const Icon(Icons.video_library_outlined, size: 20),
-                                    label: const Text('Add video'),
-                                  ),
-                                ],
-                              ),
-                              if (row.localMediaPaths.isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: row.localMediaPaths.asMap().entries.map((me) {
-                                    final idx = me.key;
-                                    final path = me.value;
-                                    final isVideo = isRadiologyPathVideo(path);
-                                    final name = path.split('/').last;
-                                    return InputChip(
-                                      avatar: Icon(
-                                        isVideo ? Icons.videocam_outlined : Icons.image_outlined,
-                                        size: 18,
-                                        color: isVideo ? AppColors.error : AppColors.primary,
-                                      ),
-                                      label: ConstrainedBox(
-                                        constraints: const BoxConstraints(maxWidth: 200),
-                                        child: Text(
-                                          name,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
-                                      ),
-                                      onDeleted: submitting
-                                          ? null
-                                          : () => setState(() => row.localMediaPaths.removeAt(idx)),
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-
-                    AdmissionFormDynamicSection(
-                      title: 'Treatment plans',
-                      onAdd: () =>
-                          setState(() => _treatments.add(_TreatmentEntry())),
-                      children: _treatments.asMap().entries.map((e) {
-                        final i = e.key;
-                        final row = e.value;
-                        return AdmissionFormSectionCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: AppTextField(
-                                      controller: row.plan,
-                                      hintText: 'Plan content',
-                                      maxLines: 3,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: AppColors.error),
-                                    onPressed: () => setState(
-                                        () => _treatments.removeAt(i)),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-
-                    AdmissionFormDynamicSection(
-                      title: 'Medications',
-                      onAdd: () =>
-                          setState(() => _medications.add(_MedicationEntry())),
-                      children: _medications.asMap().entries.map((e) {
-                        final i = e.key;
-                        final row = e.value;
-                        return AdmissionFormSectionCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: DropdownButtonFormField<String>(
-                                      value: row.type,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Type',
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.all(
-                                            Radius.circular(12),
-                                          ),
-                                        ),
-                                      ),
-                                      items: const [
-                                        DropdownMenuItem(
-                                          value: 'infusion',
-                                          child: Text('Infusion'),
-                                        ),
-                                        DropdownMenuItem(
-                                          value: 'other',
-                                          child: Text('Other'),
-                                        ),
-                                      ],
-                                      onChanged: (v) => setState(
-                                        () => row.type = v ?? 'other',
-                                      ),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: AppColors.error),
-                                    onPressed: () => setState(
-                                        () => _medications.removeAt(i)),
-                                  ),
-                                ],
-                              ),
-                              AppTextField(
-                                controller: row.title,
-                                hintText: 'Title',
-                              ),
-                              const SizedBox(height: 8),
-                              AppTextField(
-                                controller: row.value,
-                                hintText: 'Value (e.g. dose, rate)',
-                              ),
-                              const SizedBox(height: 8),
-                              AppTextField(
-                                controller: row.duration,
-                                hintText: 'Duration',
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-
-                    AdmissionFormDynamicSection(
-                      title: 'Echo',
-                      onAdd: () =>
-                          setState(() => _echoes.add(_EchoEntry())),
-                      children: _echoes.asMap().entries.map((e) {
-                        final i = e.key;
-                        final row = e.value;
-                        return AdmissionFormSectionCard(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  controller: row.text,
-                                  hintText: 'Findings',
-                                  maxLines: 4,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete,
-                                    color: AppColors.error),
-                                onPressed: () =>
-                                    setState(() => _echoes.removeAt(i)),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-
-                    AdmissionFormDynamicSection(
-                      title: 'Ultrasound',
-                      onAdd: () => setState(
-                          () => _ultrasounds.add(_UltrasoundEntry())),
-                      children: _ultrasounds.asMap().entries.map((e) {
-                        final i = e.key;
-                        final row = e.value;
-                        return AdmissionFormSectionCard(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  controller: row.text,
-                                  hintText: 'Findings',
-                                  maxLines: 4,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete,
-                                    color: AppColors.error),
-                                onPressed: () => setState(
-                                    () => _ultrasounds.removeAt(i)),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-
-                    AdmissionFormDynamicSection(
-                      title: 'Cultures',
-                      onAdd: () =>
-                          setState(() => _cultures.add(_CultureEntry())),
-                      children: _cultures.asMap().entries.map((e) {
-                        final i = e.key;
-                        final row = e.value;
-                        return AdmissionFormSectionCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: AppTextField(
-                                      controller: row.title,
-                                      hintText: 'Title',
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: AppColors.error),
-                                    onPressed: () => setState(
-                                        () => _cultures.removeAt(i)),
-                                  ),
-                                ],
-                              ),
-                              AppTextField(
-                                controller: row.note,
-                                hintText: 'Note',
-                                maxLines: 3,
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-
-                    AdmissionFormDynamicSection(
-                        title: 'Vitals',
-                        onAdd: () => setState(() => _vitals.add(_VitalEntry())),
-                        children: _vitals.asMap().entries.map((e) {
-                          final i = e.key;
-                          final row = e.value;
-                          return AdmissionFormSectionCard(
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: DropdownButtonFormField<int>(
-                                        value: row.titleId,
-                                        hint: const Text('Select Vital'),
-                                        items: refs.vitalsTitles.map((t) => DropdownMenuItem(value: t.id, child: Text('${t.title} (${t.unit})'))).toList(),
-                                        onChanged: (v) => setState(() => row.titleId = v),
-                                      ),
-                                    ),
-                                    IconButton(icon: const Icon(Icons.delete, color: AppColors.error), onPressed: () => setState(() => _vitals.removeAt(i))),
-                                  ],
-                                ),
-                                AppTextField(controller: row.value, hintText: 'Value', keyboardType: TextInputType.number),
-                                ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  dense: true,
-                                  title: const Text(
-                                    'Measured at',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
-                                  subtitle: Text(_sqlDateTime(row.date)),
-                                  trailing: const Icon(Icons.schedule, size: 20),
-                                  onTap: () => _pickDateTime(
-                                    initial: row.date,
-                                    onPick: (d) =>
-                                        setState(() => row.date = d),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-
-                      AdmissionFormDynamicSection(
-                        title: 'Labs',
-                        onAdd: () => setState(() => _labs.add(_LabEntry())),
-                        children: _labs.asMap().entries.map((e) {
-                          final i = e.key;
-                          final row = e.value;
-                          return AdmissionFormSectionCard(
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: DropdownButtonFormField<int>(
-                                        value: row.titleId,
-                                        hint: const Text('Select Lab'),
-                                        items: refs.labsTitles.map((t) => DropdownMenuItem(value: t.id, child: Text('${t.title} (${t.unit})'))).toList(),
-                                        onChanged: (v) => setState(() => row.titleId = v),
-                                      ),
-                                    ),
-                                    IconButton(icon: const Icon(Icons.delete, color: AppColors.error), onPressed: () => setState(() => _labs.removeAt(i))),
-                                  ],
-                                ),
-                                AppTextField(controller: row.value, hintText: 'Value', keyboardType: TextInputType.number),
-                                ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  dense: true,
-                                  title: const Text(
-                                    'Measured at',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
-                                  subtitle: Text(_sqlDateTime(row.date)),
-                                  trailing: const Icon(Icons.schedule, size: 20),
-                                  onTap: () => _pickDateTime(
-                                    initial: row.date,
-                                    onPick: (d) =>
-                                        setState(() => row.date = d),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-
-                    const SizedBox(height: 32),
-                    AppButton(
-                      label: submitting ? 'Saving...' : (_isEdit ? 'Save Changes' : 'Create Admission'),
-                      onPressed: submitting ? null : _submit,
-                    ),
-                    const SizedBox(height: 48),
                   ],
                 ),
               ),
               if (submitting)
-                const ColoredBox(color: Colors.black26, child: Center(child: CircularProgressIndicator())),
+                const ColoredBox(
+                  color: Colors.black26,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

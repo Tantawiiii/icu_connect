@@ -577,12 +577,22 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
-        title: Text(
-          'Admission #${widget.admissionId}',
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
+        title: FutureBuilder<PatientAdmissionModel>(
+          future: _admissionFuture,
+          builder: (context, snapshot) {
+            final name = snapshot.data?.patient?.name.trim();
+            return Text(
+              name != null && name.isNotEmpty
+                  ? name
+                  : AppTexts.admissionsSection,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            );
+          },
         ),
         actions: [
           FutureBuilder<PatientAdmissionModel>(

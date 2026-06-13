@@ -13,8 +13,11 @@ class NetworkStatusOverlay extends StatefulWidget {
 
 class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
     with SingleTickerProviderStateMixin {
+  final InternetConnection _internetConnection = InternetConnection();
+
   late StreamSubscription<InternetStatus> _subscription;
   bool _isConnected = true;
+  bool _isInitialized = false;
   bool _isChecking = false;
   late AnimationController _pulseController;
   late Animation<double> _scaleAnimation;
@@ -31,26 +34,41 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    _subscription = InternetConnection().onStatusChange.listen((status) {
+    _subscription = _internetConnection.onStatusChange.listen((status) {
+      if (!_isInitialized) return;
+
       final isConnectedNow = status == InternetStatus.connected;
-      if (_isConnected != isConnectedNow) {
-        if (mounted) {
-          setState(() {
-            _isConnected = isConnectedNow;
-          });
-        }
+      if (_isConnected != isConnectedNow && mounted) {
+        setState(() {
+          _isConnected = isConnectedNow;
+        });
       }
     });
 
-    // Initial check
     _checkInitialConnection();
   }
 
+  Future<bool> _resolveConnectionStatus({int maxAttempts = 3}) async {
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      if (await _internetConnection.hasInternetAccess) {
+        return true;
+      }
+
+      if (attempt < maxAttempts - 1) {
+        await Future.delayed(Duration(milliseconds: 400 * (attempt + 1)));
+      }
+    }
+
+    return false;
+  }
+
   Future<void> _checkInitialConnection() async {
-    final hasInternet = await InternetConnection().hasInternetAccess;
+    final hasInternet = await _resolveConnectionStatus();
+
     if (mounted) {
       setState(() {
         _isConnected = hasInternet;
+        _isInitialized = true;
       });
     }
   }
@@ -60,10 +78,10 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
     setState(() {
       _isChecking = true;
     });
-    
-    final hasInternet = await InternetConnection().hasInternetAccess;
-    await Future.delayed(const Duration(milliseconds: 800)); // Smooth UX delay
-    
+
+    final hasInternet = await _resolveConnectionStatus();
+    await Future.delayed(const Duration(milliseconds: 800));
+
     if (mounted) {
       setState(() {
         _isConnected = hasInternet;
@@ -103,7 +121,7 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
               ),
             );
           },
-          child: _isConnected
+          child: !_isInitialized || _isConnected
               ? const SizedBox.shrink(key: ValueKey('connected'))
               : _buildFullScreenDisconnectUI(context),
         ),

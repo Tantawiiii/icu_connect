@@ -28,12 +28,19 @@ class AdmissionFormCubit extends Cubit<AdmissionFormState> {
   final _repository = const HospitalAdmissionsRepository();
   AdmissionFormRefsReady? refs;
 
-  Future<void> loadReferenceData() async {
+  Future<void> loadReferenceData({int? ensurePatientId}) async {
     emit(const AdmissionFormLoadingRefs());
     try {
       final vitals = await _repository.listVitalsTitles();
       final labs = await _repository.listLabsTitles();
-      final patients = await _repository.listPatients(perPage: 100);
+      var patients = await _repository.listPatients(perPage: 100);
+      if (ensurePatientId != null) {
+        final exists = patients.any((p) => p.id == ensurePatientId);
+        if (!exists) {
+          final patient = await _repository.getPatient(ensurePatientId);
+          patients = [_admissionPatientFromModel(patient), ...patients];
+        }
+      }
       final profile = await const DoctorProfileRepository().fetchProfile();
       refs = AdmissionFormRefsReady(
         vitalsTitles: vitals,

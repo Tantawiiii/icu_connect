@@ -172,6 +172,12 @@ class AppTexts {
   static const String patientDetailsDoctor = 'Doctor';
   static const String dischargedLabel = 'Discharged';
   static const String dateOfDeathLabel = 'Date of death';
+  static const String patientLabel = 'Patient';
+  static const String selectPatient = 'Select patient';
+  static const String optional = 'optional';
+  static const String admissionOptionalRecords = 'Additional records (optional)';
+  static const String admissionOptionalRecordsHint =
+      'Clinical notes, vitals, labs, medications, and more';
   static const String admissionNotesSection = 'Admission notes';
   static const String clinicalNotesSection = 'Clinical notes';
   static const String treatmentPlansSection = 'Treatment plans';
@@ -251,8 +257,13 @@ class AppTexts {
   static const String searchHospitalsHint =
       'Search by hospital name or location';
   static const String hospitalsSearchEmpty = 'No hospitals match your search.';
+  static const String searchBedsHint = 'Search by bed number or patient name';
+  static const String bedsSearchEmpty = 'No beds match your search.';
   static const String addPatient = '+ ADD PATIENT';
   static const String yourHospitals = 'Hospitals';
+  static const String myHospitalsSection = 'My hospitals';
+  static const String pendingHospitalRequestsSection = 'Pending requests';
+  static const String availableHospitalsSection = 'Available hospitals';
   static const String hospitalBedsSummary = 'Beds';
   static const String hospitalStatusPending = 'Pending approval';
   static const String hospitalStatusRejected = 'Rejected';
@@ -281,6 +292,10 @@ class AppTexts {
       'Pending doctors (link to hospital)';
   static const String addDoctorRequestsSection = 'Inactive pending requests';
   static const String hospitalGroupsSummary = 'Groups';
+  static const String selectHospitalGroup = 'Select group';
+  static const String totalBedsShort = 'Total Beds';
+  static const String availableBedsShort = 'Available';
+  static const String dischargedPatients = 'Discharged Patients';
   static const String noBedsInGroup = 'No beds in this group';
 
   // Admission form validation
