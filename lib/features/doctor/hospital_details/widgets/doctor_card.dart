@@ -12,16 +12,20 @@ class DoctorCard extends StatelessWidget {
     required this.isAdmin,
     required this.accepting,
     required this.activating,
+    required this.removing,
     required this.onAccept,
     required this.onActivate,
+    required this.onRemove,
   });
 
   final HospitalDoctor doctor;
   final bool isAdmin;
   final bool accepting;
   final bool activating;
+  final bool removing;
   final VoidCallback onAccept;
   final VoidCallback onActivate;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +106,34 @@ class DoctorCard extends StatelessWidget {
                       ),
                     ),
                 ],
+              ),
+            ],
+            if (isAdmin) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: removing || accepting || activating
+                      ? null
+                      : onRemove,
+                  icon: removing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.person_remove_outlined, size: 18),
+                  label: Text(
+                    removing
+                        ? '…'
+                        : AppTexts.removeDoctorFromHospital,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
               ),
             ],
           ],

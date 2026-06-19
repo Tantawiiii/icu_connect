@@ -10,10 +10,12 @@ import 'package:icu_connect/core/widgets/app_text_field.dart';
 import '../../home/models/doctor_hospital.dart';
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
 import '../enums/admission_status.dart';
+import '../models/swap_bed_selection.dart';
 import '../repository/hospital_admissions_repository.dart';
 import '../widgets/admission_status_filter_row.dart';
 import '../widgets/admission_tile.dart';
 import '../widgets/hospital_group_bed_card.dart';
+import '../widgets/swap_beds_confirm_sheet.dart';
 import 'admission_details_screen.dart';
 import 'admission_form_screen.dart';
 import 'hospital_doctors_screen.dart';
@@ -38,6 +40,9 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
   final GlobalKey _admissionsSectionKey = GlobalKey();
   final TextEditingController _searchController = TextEditingController();
   int? _selectedGroupId;
+  bool _swapMode = false;
+  SwapBedSelection? _firstSwapBed;
+  SwapBedSelection? _secondSwapBed;
 
   @override
   void initState() {
@@ -139,6 +144,127 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
     });
   }
 
+  void _exitSwapMode() {
+    setState(() {
+      _swapMode = false;
+      _firstSwapBed = null;
+      _secondSwapBed = null;
+    });
+  }
+
+  void _enterSwapMode({SwapBedSelection? preselected}) {
+    setState(() {
+      _swapMode = true;
+      _firstSwapBed = preselected;
+      _secondSwapBed = null;
+    });
+  }
+
+  SwapBedSelection _selectionFromBed(
+    String bedNumber,
+    int? groupId,
+    int admissionId,
+    BedOccupancyData occupancy,
+    List<HospitalGroup> groups,
+  ) {
+    final bedKey = bedOccupancyLookupKey(groupId, bedNumber);
+    final patientName =
+        occupancy.patientNameByBedKey[bedKey]?.trim() ?? '';
+    return SwapBedSelection(
+      bedLabel: bedNumber,
+      admissionId: admissionId,
+      patientName: patientName,
+      bedKey: bedKey,
+      groupId: groupId,
+      groupName: _groupNameForId(groups, groupId),
+    );
+  }
+
+  String _groupNameForId(List<HospitalGroup> groups, int? groupId) {
+    if (groupId == null) return '';
+    for (final group in groups) {
+      if (group.id == groupId) return group.name;
+    }
+    return '';
+  }
+
+  Future<void> _maybeConfirmSwap() async {
+    final first = _firstSwapBed;
+    final second = _secondSwapBed;
+    if (first == null || second == null) return;
+
+    final swapped = await showSwapBedsConfirmSheet(
+      context: context,
+      first: first,
+      second: second,
+    );
+    if (!mounted) return;
+
+    if (swapped) {
+      _exitSwapMode();
+      _refreshAdmissionsAndBeds();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AppTexts.swapBedsSuccess)),
+      );
+    }
+  }
+
+  void _handleSwapBedTap(
+    String bedNumber,
+    int? groupId,
+    int admissionId,
+    BedOccupancyData occupancy,
+    List<HospitalGroup> groups,
+  ) {
+    final selection = _selectionFromBed(
+      bedNumber,
+      groupId,
+      admissionId,
+      occupancy,
+      groups,
+    );
+
+    if (_firstSwapBed?.bedKey == selection.bedKey) {
+      setState(() {
+        _firstSwapBed = null;
+        _secondSwapBed = null;
+      });
+      return;
+    }
+    if (_secondSwapBed?.bedKey == selection.bedKey) {
+      setState(() => _secondSwapBed = null);
+      return;
+    }
+
+    if (_firstSwapBed == null) {
+      setState(() => _firstSwapBed = selection);
+      return;
+    }
+
+    setState(() => _secondSwapBed = selection);
+    _maybeConfirmSwap();
+  }
+
+  void _onOccupiedBedLongPress(
+    String bedNumber,
+    int? groupId,
+    int admissionId,
+    String patientName,
+    List<HospitalGroup> groups,
+  ) {
+    if (_swapMode) return;
+    _enterSwapMode(
+      preselected: SwapBedSelection(
+        bedLabel: bedNumber,
+        admissionId: admissionId,
+        patientName: patientName,
+        bedKey: bedOccupancyLookupKey(groupId, bedNumber),
+        groupId: groupId,
+        groupName: _groupNameForId(groups, groupId),
+      ),
+    );
+  }
+
   Future<void> _onPullToRefresh() async {
     setState(() {
       _admissionsFuture = _fetchAdmissions();
@@ -177,7 +303,21 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
     String bedNumber,
     int? hospitalGroupId,
     int? admissionIdIfOccupied,
+    BedOccupancyData occupancy,
+    List<HospitalGroup> groups,
   ) async {
+    if (_swapMode) {
+      if (admissionIdIfOccupied == null) return;
+      _handleSwapBedTap(
+        bedNumber,
+        hospitalGroupId,
+        admissionIdIfOccupied,
+        occupancy,
+        groups,
+      );
+      return;
+    }
+
     if (admissionIdIfOccupied != null) {
       final refresh = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
@@ -241,6 +381,8 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                   }
 
                   final occupancy = _buildBedOccupancyForGroup(admissions, groupId);
+                  final hospitalOccupiedCount = _countOccupiedBeds(admissions);
+                  final occupiedByGroup = _occupiedCountByGroupId(admissions);
                   final baseTotalBeds =
                       selectedGroup?.totalBeds ?? widget.hospital.totalBeds;
                   final maxOccupiedBed = occupancy.occupiedBedLabels
@@ -262,6 +404,21 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                             setState(() => _selectedGroupId = nextGroupId);
                           },
                         ),
+                        if (_swapMode &&
+                            groups.length > 1 &&
+                            _firstSwapBed != null &&
+                            _secondSwapBed == null) ...[
+                          const SizedBox(height: 10),
+                          _SwapGroupQuickPicker(
+                            groups: groups,
+                            selectedGroupId: _selectedGroupId ?? selectedGroup?.id,
+                            firstGroupId: _firstSwapBed!.groupId,
+                            occupiedByGroupId: occupiedByGroup,
+                            onGroupSelected: (nextGroupId) {
+                              setState(() => _selectedGroupId = nextGroupId);
+                            },
+                          ),
+                        ],
                         const SizedBox(height: 14),
                       ],
                       _GroupStatsRow(
@@ -297,6 +454,27 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                               ),
                       ),
                       const SizedBox(height: 14),
+                      if (_swapMode)
+                        _SwapModeBanner(
+                          first: _firstSwapBed,
+                          second: _secondSwapBed,
+                          showCrossGroupHint:
+                              groups.length > 1 &&
+                              _firstSwapBed != null &&
+                              _secondSwapBed == null,
+                          onCancel: _exitSwapMode,
+                          onReview: _firstSwapBed != null && _secondSwapBed != null
+                              ? _maybeConfirmSwap
+                              : null,
+                        ),
+                      if (_swapMode) const SizedBox(height: 10),
+                      if (!_swapMode && hospitalOccupiedCount >= 2)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _SwapBedsButton(
+                            onPressed: () => _enterSwapMode(),
+                          ),
+                        ),
                       HospitalGroupBedCard(
                         totalBeds: totalBeds,
                         groupId: groupId,
@@ -304,7 +482,25 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                         occupiedBedLabels: occupancy.occupiedBedLabels,
                         admissionIdByBedKey: occupancy.admissionIdByBedKey,
                         patientNameByBedKey: occupancy.patientNameByBedKey,
-                        onBedTap: _onBedTap,
+                        swapMode: _swapMode,
+                        firstSwapBedKey: _firstSwapBed?.bedKey,
+                        secondSwapBedKey: _secondSwapBed?.bedKey,
+                        onBedTap: (bed, gid, admissionId) => _onBedTap(
+                          bed,
+                          gid,
+                          admissionId,
+                          occupancy,
+                          groups,
+                        ),
+                        onOccupiedBedLongPress: (bed, gid, admissionId, name) {
+                          _onOccupiedBedLongPress(
+                            bed,
+                            gid,
+                            admissionId,
+                            name,
+                            groups,
+                          );
+                        },
                       ),
                     ],
                   );
@@ -628,6 +824,34 @@ BedOccupancyData _buildBedOccupancyForGroup(
   );
 }
 
+int _countOccupiedBeds(List<PatientAdmissionModel> admissions) {
+  var count = 0;
+  for (final admission in admissions) {
+    if (!_admissionOccupiesBed(admission)) continue;
+    if (normalizeBedNumber(admission.bedNumber).isEmpty) continue;
+    count++;
+  }
+  return count;
+}
+
+Map<int, int> _occupiedCountByGroupId(List<PatientAdmissionModel> admissions) {
+  final counts = <int, int>{};
+  for (final admission in admissions) {
+    if (!_admissionOccupiesBed(admission)) continue;
+    if (normalizeBedNumber(admission.bedNumber).isEmpty) continue;
+    final gid = admission.hospitalGroupId;
+    if (gid == null) continue;
+    counts[gid] = (counts[gid] ?? 0) + 1;
+  }
+  return counts;
+}
+
+String _swapBedLocationLabel(SwapBedSelection selection) {
+  final bed = '${AppTexts.bedLabel} ${selection.bedLabel}';
+  if (selection.groupName.isEmpty) return bed;
+  return '${selection.groupName} · $bed';
+}
+
 String _formatIsoDateTime(String raw) {
   if (raw.isEmpty) return AppTexts.notAvailable;
   final t = raw.indexOf('T');
@@ -637,4 +861,356 @@ String _formatIsoDateTime(String raw) {
       ? raw.substring(t + 1, raw.length > t + 9 ? t + 9 : raw.length)
       : '';
   return time.isEmpty ? date : '$date $time${AppTexts.utcTimeZoneSuffix}';
+}
+
+class _SwapBedsButton extends StatelessWidget {
+  const _SwapBedsButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(999),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.55),
+              width: 1.4,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.swap_horiz_rounded,
+                size: 20,
+                color: AppColors.primary.withValues(alpha: 0.95),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                AppTexts.swapBeds,
+                style: TextStyle(
+                  color: AppColors.primary.withValues(alpha: 0.95),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SwapModeBanner extends StatelessWidget {
+  const _SwapModeBanner({
+    required this.first,
+    required this.second,
+    required this.onCancel,
+    this.onReview,
+    this.showCrossGroupHint = false,
+  });
+
+  final SwapBedSelection? first;
+  final SwapBedSelection? second;
+  final VoidCallback onCancel;
+  final VoidCallback? onReview;
+  final bool showCrossGroupHint;
+
+  @override
+  Widget build(BuildContext context) {
+    final stepText = first == null
+        ? AppTexts.swapBedsSelectFirst
+        : second == null
+            ? AppTexts.swapBedsSelectSecond
+            : AppTexts.swapBedsConfirmTitle;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.swap_horiz_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  stepText,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: onCancel,
+                child: Text(
+                  AppTexts.cancel,
+                  style: TextStyle(
+                    color: AppColors.textSecondary.withValues(alpha: 0.95),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (showCrossGroupHint) ...[
+            const SizedBox(height: 8),
+            Text(
+              AppTexts.swapBedsSwitchGroupHint,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary.withValues(alpha: 0.95),
+                height: 1.3,
+              ),
+            ),
+          ],
+          if (first != null) ...[
+            const SizedBox(height: 10),
+            if (second != null &&
+                first!.groupId != null &&
+                second!.groupId != null &&
+                first!.groupId != second!.groupId)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  AppTexts.swapBedsCrossGroupNote,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary.withValues(alpha: 0.9),
+                  ),
+                ),
+              ),
+            Row(
+              children: [
+                Expanded(
+                  child: _MiniSwapChip(
+                    label: _swapBedLocationLabel(first!),
+                    subtitle: first!.patientName,
+                    color: AppColors.primary,
+                  ),
+                ),
+                if (second != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 18,
+                      color: AppColors.textSecondary.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  Expanded(
+                    child: _MiniSwapChip(
+                      label: _swapBedLocationLabel(second!),
+                      subtitle: second!.patientName,
+                      color: const Color(0xFFFF9800),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+          if (onReview != null) ...[
+            const SizedBox(height: 10),
+            AppButton(
+              label: AppTexts.confirmSwap,
+              height: 44,
+              borderRadius: 22,
+              onPressed: onReview,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniSwapChip extends StatelessWidget {
+  const _MiniSwapChip({
+    required this.label,
+    required this.subtitle,
+    required this.color,
+  });
+
+  final String label;
+  final String subtitle;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SwapGroupQuickPicker extends StatelessWidget {
+  const _SwapGroupQuickPicker({
+    required this.groups,
+    required this.selectedGroupId,
+    required this.firstGroupId,
+    required this.occupiedByGroupId,
+    required this.onGroupSelected,
+  });
+
+  final List<HospitalGroup> groups;
+  final int? selectedGroupId;
+  final int? firstGroupId;
+  final Map<int, int> occupiedByGroupId;
+  final ValueChanged<int> onGroupSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleGroups = groups
+        .where((g) => (occupiedByGroupId[g.id] ?? 0) > 0)
+        .toList();
+    if (visibleGroups.length < 2) return const SizedBox.shrink();
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: visibleGroups.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final group = visibleGroups[index];
+          final isSelected = group.id == selectedGroupId;
+          final isFirstGroup = group.id == firstGroupId;
+          final occupied = occupiedByGroupId[group.id] ?? 0;
+
+          return Material(
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.14)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(999),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => onGroupSelected(group.id),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.primary
+                        : isFirstGroup
+                            ? AppColors.primary.withValues(alpha: 0.45)
+                            : AppColors.border,
+                    width: isSelected ? 1.6 : 1.2,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isFirstGroup) ...[
+                      Icon(
+                        Icons.looks_one_rounded,
+                        size: 16,
+                        color: AppColors.primary.withValues(alpha: 0.9),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      group.name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '$occupied',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

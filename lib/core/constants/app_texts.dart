@@ -157,6 +157,10 @@ class AppTexts {
   static const String admissionCreated = 'Admission created successfully';
   static const String admissionUpdated = 'Admission updated successfully';
   static const String admissionDeleted = 'Admission deleted successfully';
+  static const String activityHistorySection = 'Activity history';
+  static const String activityFilterAll = 'All';
+  static const String noActivityYet = 'No activity recorded yet.';
+  static const String activityLoadFailed = 'Could not load activity.';
   static const String retry = 'Retry';
 
   /// Super admin patient details screen
@@ -283,6 +287,11 @@ class AppTexts {
   static const String doctorsInHospital = 'Doctors in hospital';
   static const String acceptDoctor = 'Accept';
   static const String activateDoctor = 'Activate';
+  static const String removeDoctorFromHospital = 'Remove from hospital';
+  static const String removeDoctorConfirmation =
+      'Remove this doctor from the hospital?';
+  static const String doctorRemovedFromHospital =
+      'Doctor removed from hospital';
   static const String addDoctor = 'Add doctor';
   static const String createDoctor = 'Create doctor';
   static const String doctorName = 'Doctor name';
@@ -297,6 +306,31 @@ class AppTexts {
   static const String availableBedsShort = 'Available';
   static const String dischargedPatients = 'Discharged Patients';
   static const String noBedsInGroup = 'No beds in this group';
+
+  // Bed swap
+  static const String swapBeds = 'Swap beds';
+  static const String swapBedsSelectFirst =
+      'Tap the first occupied bed to swap';
+  static const String swapBedsSelectSecond =
+      'Tap the second occupied bed — switch group if needed';
+  static const String swapBedsSwitchGroupHint =
+      'Pick another group to choose a bed from a different ward';
+  static const String swapBedsCrossGroupNote =
+      'Swapping beds across different groups';
+  static const String swapBedsEmptyBedHint =
+      'Only occupied beds can be swapped';
+  static const String swapBedsConfirmTitle = 'Confirm bed swap';
+  static const String swapBedsConfirmMessage =
+      'Patients will exchange beds. Their records stay linked to the same admission.';
+  static const String swapBedsSuccess = 'Beds swapped successfully';
+  static const String swapBedsFailed = 'Could not swap beds';
+  static const String confirmSwap = 'Confirm swap';
+  static const String bedLabel = 'Bed';
+
+  // Admission PDF export
+  static const String exportAdmissionPdf = 'Export PDF';
+  static const String admissionPdfExportFailed = 'Could not export admission PDF';
+  static const String admissionPdfGenerating = 'Generating PDF…';
 
   // Admission form validation
   static const String admissionLeaveNotBeforeComes =

@@ -66,5 +66,30 @@ class HospitalDoctorsCubit extends Cubit<HospitalDoctorsState> {
       emit(s.copyWith(activatingIds: activating..remove(doctorId)));
     }
   }
+
+  Future<void> removeDoctor({
+    required int hospitalId,
+    required int doctorId,
+  }) async {
+    final s = state;
+    if (s is! HospitalDoctorsLoaded) return;
+    final removing = {...s.removingIds, doctorId};
+    emit(s.copyWith(removingIds: removing));
+    try {
+      await _repository.removeDoctor(
+        hospitalId: hospitalId,
+        doctorId: doctorId,
+      );
+      await refresh(hospitalId);
+    } on NetworkException catch (e) {
+      emit(s.copyWith(removingIds: removing..remove(doctorId)));
+      emit(HospitalDoctorsFailure(e.message));
+      emit(s.copyWith(removingIds: removing..remove(doctorId)));
+    } catch (_) {
+      emit(s.copyWith(removingIds: removing..remove(doctorId)));
+      emit(const HospitalDoctorsFailure('Could not remove doctor.'));
+      emit(s.copyWith(removingIds: removing..remove(doctorId)));
+    }
+  }
 }
 
