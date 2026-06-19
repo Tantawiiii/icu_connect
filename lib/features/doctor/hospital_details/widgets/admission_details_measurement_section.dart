@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import 'package:icu_connect/core/constants/app_colors.dart';
@@ -7,7 +5,7 @@ import 'package:icu_connect/features/superAdmin/patients/models/patient_admissio
 
 import 'admission_details_formatters.dart';
 import 'admission_details_section_container.dart';
-import 'pending_measurement_entry.dart';
+import 'pending_measurement_column_entry.dart';
 
 class AdmissionDetailsMeasurementSection extends StatelessWidget {
   const AdmissionDetailsMeasurementSection({
@@ -16,486 +14,618 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
     required this.isLabs,
     required this.records,
     required this.titles,
-    required this.adding,
+    required this.addingColumn,
     required this.saving,
-    required this.pending,
-    required this.onStartAdd,
-    required this.onCancelAdd,
-    required this.onSaveAdd,
-    required this.onPickDate,
+    required this.pendingColumn,
+    required this.onStartAddColumn,
+    required this.onCancelAddColumn,
+    required this.onSaveColumn,
+    required this.onPickColumnDate,
+    required this.onEditColumn,
   });
 
   final String title;
   final bool isLabs;
   final List<dynamic> records;
   final List<MeasurementTitleModel> titles;
-  final bool adding;
+  final bool addingColumn;
   final bool saving;
-  final PendingMeasurementEntry? pending;
-  final void Function([int? titleId]) onStartAdd;
-  final VoidCallback onCancelAdd;
-  final VoidCallback onSaveAdd;
-  final VoidCallback onPickDate;
+  final PendingMeasurementColumnEntry? pendingColumn;
+  final VoidCallback onStartAddColumn;
+  final VoidCallback onCancelAddColumn;
+  final VoidCallback onSaveColumn;
+  final VoidCallback onPickColumnDate;
+  final void Function(String columnKey) onEditColumn;
 
-  Color _valueColor(String valueStr, String minStr, String maxStr) {
+  static const _titleWidth = 80.0;
+  static const _rangeWidth = 76.0;
+  static const _readingWidth = 100.0;
+  static const _headerHeight = 40.0;
+  static const _dateHeaderHeight = 52.0;
+  static const _rowHeight = 44.0;
+
+  String _columnKey(dynamic record) {
+    if (isLabs) {
+      final m = record as LabRecordModel;
+      return m.date.isNotEmpty ? m.date : m.createdAt;
+    }
+    final m = record as VitalRecordModel;
+    return m.date.isNotEmpty ? m.date : m.createdAt;
+  }
+
+  DateTime _parseColumnDate(String key) {
+    return DateTime.tryParse(key) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  String _columnDateLabel(String key) {
+    return admissionDetailsFormatDateTime(key);
+  }
+
+  List<String> _sortedColumnKeys() {
+    final keys = <String>{};
+    for (final r in records) {
+      final key = _columnKey(r);
+      if (key.isNotEmpty) keys.add(key);
+    }
+    final sorted = keys.toList()
+      ..sort((a, b) => _parseColumnDate(a).compareTo(_parseColumnDate(b)));
+    return sorted;
+  }
+
+  dynamic _recordAt(int titleId, String columnKey) {
+    for (final r in records) {
+      final tid = isLabs
+          ? (r as LabRecordModel).labsTitleId
+          : (r as VitalRecordModel).vitalsTitleId;
+      if (tid == titleId && _columnKey(r) == columnKey) return r;
+    }
+    return null;
+  }
+
+  Color _valueColor(String valueStr, MeasurementTitleModel measureTitle) {
     final val = double.tryParse(valueStr);
-    final min = double.tryParse(minStr);
-    final max = double.tryParse(maxStr);
+    final min = double.tryParse(measureTitle.normalRangeMin);
+    final max = double.tryParse(measureTitle.normalRangeMax);
     if (val == null || min == null || max == null) return AppColors.textPrimary;
     return (val >= min && val <= max) ? AppColors.success : AppColors.error;
   }
 
-  DateTime _recordDateTime(dynamic r) {
-    try {
-      if (isLabs) {
-        final m = r as LabRecordModel;
-        final raw = m.date.isNotEmpty ? m.date : m.createdAt;
-        return DateTime.tryParse(raw) ?? DateTime.fromMillisecondsSinceEpoch(0);
-      }
-      final m = r as VitalRecordModel;
-      final raw = m.date.isNotEmpty ? m.date : m.createdAt;
-      return DateTime.tryParse(raw) ?? DateTime.fromMillisecondsSinceEpoch(0);
-    } catch (_) {
-      return DateTime.fromMillisecondsSinceEpoch(0);
-    }
+  String _recordValue(dynamic record, MeasurementTitleModel measureTitle) {
+    if (record == null) return '—';
+    final value = isLabs
+        ? (record as LabRecordModel).value
+        : (record as VitalRecordModel).value;
+    if (value.isEmpty) return '—';
+    return '$value ${measureTitle.unit}';
   }
 
-  String _recordTimeLabel(dynamic r) {
-    try {
-      if (isLabs) {
-        final m = r as LabRecordModel;
-        final raw = m.date.isNotEmpty ? m.date : m.createdAt;
-        return admissionDetailsFormatDateTime(raw);
-      }
-      final m = r as VitalRecordModel;
-      final raw = m.date.isNotEmpty ? m.date : m.createdAt;
-      return admissionDetailsFormatDateTime(raw);
-    } catch (_) {
-      return '—';
-    }
-  }
+  Widget _buildReadingColumn(String key) {
+    final isEditingInPlace =
+        addingColumn && pendingColumn?.editingColumnKey == key;
 
-  List<dynamic> _recordsForTitle(int titleId) {
-    try {
-      final matches = records
-          .where(
-            (r) => (isLabs ? r.labsTitleId : r.vitalsTitleId) == titleId,
-          )
-          .toList();
-      matches.sort((a, b) => _recordDateTime(b).compareTo(_recordDateTime(a)));
-      return matches;
-    } catch (_) {
-      return [];
-    }
-  }
-
-  static const double _kTitleWidth = 76;
-  static const double _kRangeWidth = 100;
-  static const double _kActionWidth = 44;
-  static const double _kRowMinHeight = 52;
-  /// Approximate width of one reading chip + spacing (see [_ReadingChip] maxWidth).
-  static const double _kChipUnitWidth = 126;
-  static const double _kPendingBlockWidth = 270;
-  static const double _kReadingsMinWidth = 108;
-  /// Extra px so layout rarely underestimates real chip / pending widths.
-  static const double _kReadingsEstimatePadding = 40;
-
-  double _estimateReadingsColumnWidth(int titleId) {
-    final rowRecords = _recordsForTitle(titleId);
-    final isAddingThis = adding && pending?.titleId == titleId;
-
-    if (rowRecords.isEmpty && !isAddingThis) {
-      return _kReadingsMinWidth;
+    if (isEditingInPlace && pendingColumn != null) {
+      return _EditingReadingColumn(
+        pending: pendingColumn!,
+        titles: titles,
+        width: _readingWidth,
+        dateHeaderHeight: _dateHeaderHeight,
+        rowHeight: _rowHeight,
+        saving: saving,
+        onPickDate: onPickColumnDate,
+      );
     }
 
-    double w = 0;
-    if (isAddingThis) {
-      w += _kPendingBlockWidth;
-    }
-    for (var i = 0; i < rowRecords.length; i++) {
-      if (i > 0 || isAddingThis) {
-        w += 6;
-      }
-      w += _kChipUnitWidth;
-    }
-    return math.max(_kReadingsMinWidth, w) + _kReadingsEstimatePadding;
-  }
-
-  double _maxReadingsColumnWidth() {
-    if (titles.isEmpty) return _kReadingsMinWidth;
-    return titles
-        .map((t) => _estimateReadingsColumnWidth(t.id))
-        .fold<double>(_kReadingsMinWidth, math.max);
+    return _ReadingColumn(
+      columnKey: key,
+      dateLabel: _columnDateLabel(key),
+      titles: titles,
+      width: _readingWidth,
+      dateHeaderHeight: _dateHeaderHeight,
+      rowHeight: _rowHeight,
+      valueForTitle: (title) => _recordValue(_recordAt(title.id, key), title),
+      valueColorForTitle: (title) {
+        final record = _recordAt(title.id, key);
+        if (record == null) return AppColors.textSecondary;
+        final value = isLabs
+            ? (record as LabRecordModel).value
+            : (record as VitalRecordModel).value;
+        return _valueColor(value, title);
+      },
+      onEdit: () => onEditColumn(key),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final columnKeys = _sortedColumnKeys();
+
     return AdmissionDetailsSectionContainer(
       title: title,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final readingsW = _maxReadingsColumnWidth();
-          final tableInnerWidth =
-              _kTitleWidth + readingsW + _kRangeWidth + _kActionWidth;
-          final viewportW = constraints.maxWidth;
-          final contentW = viewportW.isFinite && viewportW > 0
-              ? math.max(viewportW, tableInnerWidth)
-              : tableInnerWidth;
-
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: contentW,
-              child: Column(
+      headerAction: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (addingColumn) ...[
+                  if (saving)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 4),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  else ...[
+                    IconButton(
+                      tooltip: 'Save column',
+                      onPressed: onSaveColumn,
+                      icon: const Icon(
+                        Icons.check_circle,
+                        color: AppColors.success,
+                        size: 22,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Cancel',
+                      onPressed: onCancelAddColumn,
+                      icon: const Icon(
+                        Icons.close,
+                        color: AppColors.error,
+                        size: 22,
+                      ),
+                    ),
+                  ],
+                ],
+                if (!saving)
+                  IconButton(
+                    tooltip: addingColumn
+                        ? 'Add new date column'
+                        : 'Add readings column',
+                    onPressed: onStartAddColumn,
+                    icon: Icon(
+                      addingColumn
+                          ? Icons.add_circle_outline
+                          : Icons.edit_outlined,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                  ),
+              ],
+            ),
+      child: titles.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'No measurement titles configured.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+            )
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _MeasurementHeaderRow(
-                    titleWidth: _kTitleWidth,
-                    readingsWidth: readingsW,
-                    rangeWidth: _kRangeWidth,
-                    actionWidth: _kActionWidth,
+                  Column(
+                    children: [
+                      _TitleCell(
+                        width: _titleWidth,
+                        height: _headerHeight,
+                        isHeader: true,
+                        child: const Text('Title', style: _headerStyle),
+                      ),
+                      _TitleCell(
+                        width: _titleWidth,
+                        height: _dateHeaderHeight,
+                        child: const SizedBox.shrink(),
+                      ),
+                      ...titles.map(
+                        (t) => _TitleCell(
+                          width: _titleWidth,
+                          height: _rowHeight,
+                          child: Text(
+                            t.title.toUpperCase(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const Divider(height: 1),
-                  ...titles.map((measureTitle) {
-                    final rowRecords = _recordsForTitle(measureTitle.id);
-                    final isAddingThis =
-                        adding && pending?.titleId == measureTitle.id;
-
-                    return Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              SizedBox(
-                                width: _kTitleWidth,
-                                child: Text(
-                                  measureTitle.title.toUpperCase(),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                              _ScrollCell(
+                                width: _rangeWidth,
+                                height: _headerHeight,
+                                isHeader: true,
+                                child: const Text('Range', style: _headerStyle),
                               ),
                               SizedBox(
-                                width: readingsW,
-                                height: _kRowMinHeight,
-                                child: ClipRect(
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      physics: const ClampingScrollPhysics(),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          if (isAddingThis)
-                                            _PendingInline(
-                                              pending: pending!,
-                                              saving: saving,
-                                              onPickDate: onPickDate,
-                                              onSaveAdd: onSaveAdd,
-                                              onCancelAdd: onCancelAdd,
-                                            ),
-                                          if (rowRecords.isEmpty && !isAddingThis)
-                                            const Padding(
-                                              padding: EdgeInsets.only(left: 4),
-                                              child: Text(
-                                                '—',
-                                                style: TextStyle(
-                                                  color:
-                                                      AppColors.textSecondary,
-                                                ),
-                                              ),
-                                            )
-                                          else
-                                            ...rowRecords.map(
-                                              (record) => Padding(
-                                                padding: const EdgeInsets.only(
-                                                  left: 6,
-                                                ),
-                                                child: _ReadingChip(
-                                                  measureTitle: measureTitle,
-                                                  record: record,
-                                                  isLabs: isLabs,
-                                                  valueColor: _valueColor(
-                                                    isLabs
-                                                        ? (record
-                                                                as LabRecordModel)
-                                                            .value
-                                                        : (record
-                                                                as VitalRecordModel)
-                                                            .value,
-                                                    measureTitle.normalRangeMin,
-                                                    measureTitle.normalRangeMax,
-                                                  ),
-                                                  timeLabel:
-                                                      _recordTimeLabel(record),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
+                                width: _readingAreaWidth(columnKeys),
+                                height: _headerHeight,
+                                child: const Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Padding(
+                                    padding: EdgeInsets.only(left: 8),
+                                    child: Text(
+                                      'Reading',
+                                      style: _headerStyle,
                                     ),
                                   ),
                                 ),
                               ),
-                              SizedBox(
-                                width: _kRangeWidth,
-                                child: Text(
-                                  '${measureTitle.normalRangeMin}–${measureTitle.normalRangeMax}',
-                                  textAlign: TextAlign.end,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: _kActionWidth,
-                                child: isAddingThis
-                                    ? const SizedBox.shrink()
-                                    : IconButton(
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(
-                                          minWidth: _kActionWidth,
-                                          minHeight: _kActionWidth,
-                                        ),
-                                        icon: const Icon(
-                                          Icons.add_circle_outline,
-                                          color: AppColors.primary,
-                                          size: 22,
-                                        ),
-                                        onPressed: () =>
-                                            onStartAdd(measureTitle.id),
-                                      ),
-                              ),
                             ],
                           ),
-                        ),
-                        const Divider(height: 1),
-                      ],
-                    );
-                  }),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _RangeColumn(
+                                titles: titles,
+                                width: _rangeWidth,
+                                dateHeaderHeight: _dateHeaderHeight,
+                                rowHeight: _rowHeight,
+                              ),
+                              ...columnKeys.map(_buildReadingColumn),
+                              if (addingColumn &&
+                                  pendingColumn != null &&
+                                  pendingColumn!.isNewColumn)
+                                _EditingReadingColumn(
+                                  pending: pendingColumn!,
+                                  titles: titles,
+                                  width: _readingWidth,
+                                  dateHeaderHeight: _dateHeaderHeight,
+                                  rowHeight: _rowHeight,
+                                  saving: saving,
+                                  onPickDate: onPickColumnDate,
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          );
-        },
+            ),
+    );
+  }
+
+  double _readingAreaWidth(List<String> columnKeys) {
+    var width = 0.0;
+    if (columnKeys.isNotEmpty) width += columnKeys.length * _readingWidth;
+    if (addingColumn && pendingColumn?.isNewColumn == true) {
+      width += _readingWidth;
+    }
+    return width > 0 ? width : _readingWidth;
+  }
+
+  static const _headerStyle = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w800,
+    color: AppColors.textPrimary,
+  );
+}
+
+class _TitleCell extends StatelessWidget {
+  const _TitleCell({
+    required this.width,
+    required this.height,
+    required this.child,
+    this.isHeader = false,
+  });
+
+  final double width;
+  final double height;
+  final Widget child;
+  final bool isHeader;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isHeader ? AppColors.background : Colors.white,
+          border: const Border(
+            right: BorderSide(color: AppColors.border),
+            bottom: BorderSide(color: AppColors.border),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: child,
+          ),
+        ),
       ),
     );
   }
 }
 
-class _MeasurementHeaderRow extends StatelessWidget {
-  const _MeasurementHeaderRow({
-    required this.titleWidth,
-    required this.readingsWidth,
-    required this.rangeWidth,
-    required this.actionWidth,
+class _ScrollCell extends StatelessWidget {
+  const _ScrollCell({
+    required this.width,
+    required this.height,
+    required this.child,
+    this.isHeader = false,
   });
 
-  final double titleWidth;
-  final double readingsWidth;
-  final double rangeWidth;
-  final double actionWidth;
+  final double width;
+  final double height;
+  final Widget child;
+  final bool isHeader;
 
   @override
   Widget build(BuildContext context) {
-    const labelStyle = TextStyle(
-      fontSize: 11,
-      fontWeight: FontWeight.bold,
-      color: AppColors.textPrimary,
+    return SizedBox(
+      width: width,
+      height: height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isHeader ? AppColors.background : Colors.white,
+          border: const Border(
+            right: BorderSide(color: AppColors.border),
+            bottom: BorderSide(color: AppColors.border),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Align(
+            alignment: isHeader ? Alignment.centerLeft : Alignment.center,
+            child: child,
+          ),
+        ),
+      ),
     );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
+  }
+}
+
+class _RangeColumn extends StatelessWidget {
+  const _RangeColumn({
+    required this.titles,
+    required this.width,
+    required this.dateHeaderHeight,
+    required this.rowHeight,
+  });
+
+  final List<MeasurementTitleModel> titles;
+  final double width;
+  final double dateHeaderHeight;
+  final double rowHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: Column(
         children: [
-          SizedBox(
-            width: titleWidth,
-            child: const Text('Title', style: labelStyle),
-          ),
-          SizedBox(
-            width: readingsWidth,
-            child: const Padding(
-              padding: EdgeInsets.only(left: 4),
-              child: Text(
-                'Reading',
-                style: labelStyle,
-              ),
-            ),
-          ),
-          SizedBox(
-            width: rangeWidth,
-            child: const Text(
-              'Range',
-              textAlign: TextAlign.end,
-              style: labelStyle,
-            ),
-          ),
-          SizedBox(
-            width: actionWidth,
+          _ScrollCell(
+            width: width,
+            height: dateHeaderHeight,
             child: const SizedBox.shrink(),
           ),
+          ...titles.map(
+            (t) => _ScrollCell(
+              width: width,
+              height: rowHeight,
+              child: Text(
+                '${t.normalRangeMin}–${t.normalRangeMax}',
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _ReadingChip extends StatelessWidget {
-  const _ReadingChip({
-    required this.measureTitle,
-    required this.record,
-    required this.isLabs,
-    required this.valueColor,
-    required this.timeLabel,
+class _ReadingColumn extends StatelessWidget {
+  const _ReadingColumn({
+    required this.columnKey,
+    required this.dateLabel,
+    required this.titles,
+    required this.width,
+    required this.dateHeaderHeight,
+    required this.rowHeight,
+    required this.valueForTitle,
+    required this.valueColorForTitle,
+    required this.onEdit,
   });
 
-  final MeasurementTitleModel measureTitle;
-  final dynamic record;
-  final bool isLabs;
-  final Color valueColor;
-  final String timeLabel;
+  final String columnKey;
+  final String dateLabel;
+  final List<MeasurementTitleModel> titles;
+  final double width;
+  final double dateHeaderHeight;
+  final double rowHeight;
+  final String Function(MeasurementTitleModel title) valueForTitle;
+  final Color Function(MeasurementTitleModel title) valueColorForTitle;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
-    final value = isLabs
-        ? (record as LabRecordModel).value
-        : (record as VitalRecordModel).value;
-    return Container(
-      constraints: const BoxConstraints(minWidth: 72, maxWidth: 120),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
-      ),
+    return SizedBox(
+      width: width,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '$value ${measureTitle.unit}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: valueColor,
+          _ScrollCell(
+            width: width,
+            height: dateHeaderHeight,
+            child: InkWell(
+              onTap: onEdit,
+              borderRadius: BorderRadius.circular(6),
+              child: Center(
+                child: Text(
+                  dateLabel,
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                    height: 1.2,
+                  ),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            timeLabel,
-            style: const TextStyle(
-              fontSize: 9,
-              color: AppColors.textSecondary,
-            ),
-          ),
+          ...titles.map((t) {
+            final value = valueForTitle(t);
+            final color = value == '—'
+                ? AppColors.textSecondary
+                : valueColorForTitle(t);
+            final hasValue = value != '—';
+
+            return _ScrollCell(
+              width: width,
+              height: rowHeight,
+              child: InkWell(
+                onTap: onEdit,
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: hasValue
+                        ? AppColors.background
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    border: hasValue
+                        ? Border.all(color: AppColors.border)
+                        : null,
+                  ),
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
   }
 }
 
-class _PendingInline extends StatelessWidget {
-  const _PendingInline({
+class _EditingReadingColumn extends StatelessWidget {
+  const _EditingReadingColumn({
     required this.pending,
+    required this.titles,
+    required this.width,
+    required this.dateHeaderHeight,
+    required this.rowHeight,
     required this.saving,
     required this.onPickDate,
-    required this.onSaveAdd,
-    required this.onCancelAdd,
   });
 
-  final PendingMeasurementEntry pending;
+  final PendingMeasurementColumnEntry pending;
+  final List<MeasurementTitleModel> titles;
+  final double width;
+  final double dateHeaderHeight;
+  final double rowHeight;
   final bool saving;
   final VoidCallback onPickDate;
-  final VoidCallback onSaveAdd;
-  final VoidCallback onCancelAdd;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+    return SizedBox(
+      width: width,
+      child: Column(
         children: [
-          SizedBox(
-            width: 64,
-            child: TextField(
-              controller: pending.valueCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                hintText: '0.0',
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 6),
-              ),
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-          const SizedBox(width: 6),
-          InkWell(
-            onTap: onPickDate,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(
-                  Icons.edit_calendar,
-                  size: 16,
-                  color: AppColors.primary,
-                ),
-                Text(
-                  admissionDetailsFormatDateTime(
-                    pending.date.toIso8601String(),
+          _ScrollCell(
+            width: width,
+            height: dateHeaderHeight,
+            child: InkWell(
+              onTap: saving ? null : onPickDate,
+              borderRadius: BorderRadius.circular(6),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.35),
                   ),
-                  style: const TextStyle(fontSize: 8),
                 ),
-              ],
+                child: Center(
+                  child: Text(
+                    admissionDetailsFormatDateTime(
+                      pending.date.toIso8601String(),
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                      height: 1.15,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-          const SizedBox(width: 4),
-          if (saving)
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else ...[
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: const Icon(
-                Icons.check_circle,
-                color: AppColors.success,
-                size: 22,
+          ...titles.map((t) {
+            final ctrl = pending.controllers[t.id]!;
+            return _ScrollCell(
+              width: width,
+              height: rowHeight,
+              child: TextField(
+                controller: ctrl,
+                enabled: !saving,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+                decoration: InputDecoration(
+                  hintText: '—',
+                  isDense: true,
+                  isCollapsed: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 6,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
               ),
-              onPressed: onSaveAdd,
-            ),
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: const Icon(
-                Icons.cancel,
-                color: AppColors.error,
-                size: 22,
-              ),
-              onPressed: onCancelAdd,
-            ),
-          ],
+            );
+          }),
         ],
       ),
     );

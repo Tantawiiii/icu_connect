@@ -3,17 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 
 import 'admission_details_formatters.dart';
+import 'admission_details_item_actions.dart';
 
 class AdmissionDetailsSimpleTextCard extends StatelessWidget {
   const AdmissionDetailsSimpleTextCard({
     super.key,
     required this.text,
     required this.date,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final String text;
   final String date;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -42,15 +45,7 @@ class AdmissionDetailsSimpleTextCard extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton(
-                onPressed: onDelete,
-                icon: const Icon(
-                  Icons.delete_outline,
-                  size: 18,
-                  color: Colors.redAccent,
-                ),
-                visualDensity: VisualDensity.compact,
-              ),
+              AdmissionDetailsItemActions(onEdit: onEdit, onDelete: onDelete),
             ],
           ),
           const SizedBox(height: 6),

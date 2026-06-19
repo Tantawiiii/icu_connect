@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'package:icu_connect/core/constants/app_colors.dart';
+import 'package:icu_connect/core/constants/app_texts.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
 import 'package:icu_connect/core/widgets/app_text_field.dart';
+
+import '../enums/admission_status.dart';
 
 class AdmissionDetailsFormFieldSpec {
   AdmissionDetailsFormFieldSpec({
@@ -31,6 +34,7 @@ class AdmissionDetailsGenericAddForm extends StatelessWidget {
     this.types,
     this.onTypeChanged,
     this.childrenAfterFields = const [],
+    this.isEditing = false,
   });
 
   final String title;
@@ -44,6 +48,7 @@ class AdmissionDetailsGenericAddForm extends StatelessWidget {
   final ValueChanged<String?>? onTypeChanged;
   /// Inserted after text fields (e.g. radiology image/video pickers).
   final List<Widget> childrenAfterFields;
+  final bool isEditing;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +78,11 @@ class AdmissionDetailsGenericAddForm extends StatelessWidget {
                   color: AppColors.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.add, size: 16, color: AppColors.primary),
+                child: Icon(
+                  isEditing ? Icons.edit : Icons.add,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(width: 8),
               Text(
@@ -106,7 +115,15 @@ class AdmissionDetailsGenericAddForm extends StatelessWidget {
             DropdownButtonFormField<String>(
               value: typeValue,
               items: types!
-                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .map(
+                    (t) => DropdownMenuItem(
+                      value: t,
+                      child: Text(
+                        AdmissionClinicalNoteType.labels[t] ??
+                            t.replaceAll('_', ' '),
+                      ),
+                    ),
+                  )
                   .toList(),
               onChanged: saving ? null : onTypeChanged,
               decoration: InputDecoration(
@@ -133,7 +150,11 @@ class AdmissionDetailsGenericAddForm extends StatelessWidget {
             width: double.infinity,
             height: 48,
             child: AppButton(
-              label: saving ? 'Saving...' : 'Save Entry',
+              label: saving
+                  ? 'Saving...'
+                  : isEditing
+                      ? AppTexts.saveChanges
+                      : 'Save Entry',
               onPressed: saving ? null : onSave,
             ),
           ),

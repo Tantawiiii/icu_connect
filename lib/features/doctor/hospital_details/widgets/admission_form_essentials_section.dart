@@ -174,11 +174,11 @@ class AdmissionFormEssentialsSection extends StatelessWidget {
                       borderRadius: BorderRadius.all(Radius.circular(12)),
                     ),
                   ),
-                  items: AdmissionStatus.values
+                  items: AdmissionStatus.editable
                       .map(
                         (item) => DropdownMenuItem(
                           value: item,
-                          child: Text(item.label.toUpperCase()),
+                          child: Text(item.displayLabel),
                         ),
                       )
                       .toList(),

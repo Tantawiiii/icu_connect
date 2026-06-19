@@ -5,6 +5,8 @@ import 'package:icu_connect/core/constants/app_texts.dart';
 
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
 
+import '../widgets/admission_details_formatters.dart';
+
 class AdmissionTile extends StatelessWidget {
   const AdmissionTile({
     super.key,
@@ -95,7 +97,9 @@ class AdmissionTile extends StatelessWidget {
                 border: Border.all(color: AppColors.border),
               ),
               child: Text(
-                admission.status.isEmpty ? AppTexts.notAvailable : admission.status,
+                admission.status.isEmpty
+                    ? AppTexts.notAvailable
+                    : admissionStatusDisplayLabel(admission.status),
                 style: const TextStyle(
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,

@@ -175,7 +175,7 @@ class AdmissionPdfBuilder {
         : 'Admission #${admission.id}';
     final status = admission.status.isEmpty
         ? AppTexts.notAvailable
-        : admission.status[0].toUpperCase() + admission.status.substring(1);
+        : admissionStatusDisplayLabel(admission.status);
 
     return pw.Container(
       width: double.infinity,
@@ -338,7 +338,7 @@ class AdmissionPdfBuilder {
     return [
       ('Admission ID', '#${admission.id}'),
       ('Bed', admission.bedNumber),
-      ('Status', admission.status),
+      ('Status', admissionStatusDisplayLabel(admission.status)),
       ('Admitted', admissionDetailsFormatDate(admission.dateComes)),
       ('Discharged', admissionDetailsFormatDate(admission.dateLeave)),
       if (admission.dateOfDeath != null && admission.dateOfDeath!.isNotEmpty)

@@ -166,24 +166,6 @@ class AdmissionDetailsPatientHeaderSection extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: admissionDetailsStatusColor(admission.status).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                admission.status.isEmpty
-                    ? AppTexts.notAvailable
-                    : admission.status[0].toUpperCase() + admission.status.substring(1),
-                style: TextStyle(
-                  color: admissionDetailsStatusColor(admission.status),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
-                ),
-              ),
-            ),
             const Spacer(),
             if (!editing && patient != null && onBeginEdit != null)
               IconButton(

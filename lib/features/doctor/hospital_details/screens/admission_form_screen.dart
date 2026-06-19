@@ -177,10 +177,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
     super.initState();
     final a = widget.admission;
     _status = a != null
-        ? AdmissionStatus.values.firstWhere(
-            (s) => s.apiValue == a.status,
-            orElse: () => AdmissionStatus.admitted,
-          )
+        ? AdmissionStatus.fromApiValue(a.status)
         : AdmissionStatus.admitted;
 
     if (a != null) {

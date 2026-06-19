@@ -156,6 +156,10 @@ class AppTexts {
       'Delete this admission? Related records may be removed.';
   static const String admissionCreated = 'Admission created successfully';
   static const String admissionUpdated = 'Admission updated successfully';
+  static const String editEntry = 'Edit entry';
+  static const String saveChanges = 'Save changes';
+  static const String entryUpdated = 'Entry updated';
+  static const String deleteEntry = 'Delete entry';
   static const String admissionDeleted = 'Admission deleted successfully';
   static const String activityHistorySection = 'Activity history';
   static const String activityFilterAll = 'All';
@@ -305,6 +309,15 @@ class AppTexts {
   static const String totalBedsShort = 'Total Beds';
   static const String availableBedsShort = 'Available';
   static const String dischargedPatients = 'Discharged Patients';
+  static const String dischargedFilterAll = 'All';
+  static const String dischargedPeriodLastMonth = 'Last Month';
+  static const String dischargedPeriodLast3Months = 'Last 3 Months';
+  static const String dischargedPeriodLastYear = 'Last Year';
+  static const String dischargedPeriodAllTime = 'All time';
+  static const String dischargedStatsImproved = 'Improved';
+  static const String dischargedStatsDie = 'Die';
+  static const String dischargedStatsDama = 'DAMA';
+  static const String dischargedEmpty = 'No discharged patients in this period.';
   static const String noBedsInGroup = 'No beds in this group';
 
   // Bed swap

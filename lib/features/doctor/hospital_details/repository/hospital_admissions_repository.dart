@@ -33,6 +33,25 @@ class HospitalAdmissionsRepository extends BaseApiService {
     }
   }
 
+  /// Fetches improved, deceased, and DAMA admissions for the hospital.
+  Future<List<PatientAdmissionModel>> listDischargedOutcomeAdmissions({
+    required int hospitalId,
+  }) async {
+    final batches = await Future.wait([
+      listAdmissions(hospitalId: hospitalId, status: 'discharged'),
+      listAdmissions(hospitalId: hospitalId, status: 'deceased'),
+      listAdmissions(hospitalId: hospitalId, status: 'leaves_ama'),
+    ]);
+
+    final byId = <int, PatientAdmissionModel>{};
+    for (final batch in batches) {
+      for (final admission in batch) {
+        byId[admission.id] = admission;
+      }
+    }
+    return byId.values.toList();
+  }
+
   Future<PatientAdmissionModel> getAdmission(int admissionId) async {
     try {
       final data = await get<Map<String, dynamic>>(

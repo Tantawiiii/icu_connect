@@ -4,15 +4,18 @@ import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/features/superAdmin/patients/models/patient_admission_models.dart';
 
 import 'admission_details_formatters.dart';
+import 'admission_details_item_actions.dart';
 
 class AdmissionDetailsTreatmentPlanCard extends StatelessWidget {
   const AdmissionDetailsTreatmentPlanCard({
     super.key,
     required this.plan,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final TreatmentPlanModel plan;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -41,15 +44,7 @@ class AdmissionDetailsTreatmentPlanCard extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton(
-                onPressed: onDelete,
-                icon: const Icon(
-                  Icons.delete_outline,
-                  size: 18,
-                  color: Colors.redAccent,
-                ),
-                visualDensity: VisualDensity.compact,
-              ),
+              AdmissionDetailsItemActions(onEdit: onEdit, onDelete: onDelete),
             ],
           ),
           const SizedBox(height: 6),

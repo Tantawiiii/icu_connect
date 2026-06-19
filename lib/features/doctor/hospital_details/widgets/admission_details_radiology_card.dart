@@ -5,16 +5,19 @@ import 'package:icu_connect/features/superAdmin/patients/models/patient_admissio
 
 import 'admission_details_formatters.dart';
 import 'admission_details_inline_media.dart';
+import 'admission_details_item_actions.dart';
 import 'radiology_path_utils.dart';
 
 class AdmissionDetailsRadiologyCard extends StatelessWidget {
   const AdmissionDetailsRadiologyCard({
     super.key,
     required this.image,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final RadiologyImageModel image;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   static bool _isVideo(String path) {
@@ -72,15 +75,7 @@ class AdmissionDetailsRadiologyCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: onDelete,
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        size: 18,
-                        color: Colors.redAccent,
-                      ),
-                      visualDensity: VisualDensity.compact,
-                    ),
+                    AdmissionDetailsItemActions(onEdit: onEdit, onDelete: onDelete),
                   ],
                 ),
                 if (image.report.isNotEmpty) ...[
