@@ -22,21 +22,25 @@ class HospitalDoctorsLoaded extends HospitalDoctorsState {
     required this.doctors,
     this.acceptingIds = const <int>{},
     this.activatingIds = const <int>{},
+    this.removingIds = const <int>{},
   });
 
   final List<HospitalDoctor> doctors;
   final Set<int> acceptingIds;
   final Set<int> activatingIds;
+  final Set<int> removingIds;
 
   HospitalDoctorsLoaded copyWith({
     List<HospitalDoctor>? doctors,
     Set<int>? acceptingIds,
     Set<int>? activatingIds,
+    Set<int>? removingIds,
   }) {
     return HospitalDoctorsLoaded(
       doctors: doctors ?? this.doctors,
       acceptingIds: acceptingIds ?? this.acceptingIds,
       activatingIds: activatingIds ?? this.activatingIds,
+      removingIds: removingIds ?? this.removingIds,
     );
   }
 
@@ -45,6 +49,7 @@ class HospitalDoctorsLoaded extends HospitalDoctorsState {
     doctors,
     acceptingIds.toList()..sort(),
     activatingIds.toList()..sort(),
+    removingIds.toList()..sort(),
   ];
 }
 

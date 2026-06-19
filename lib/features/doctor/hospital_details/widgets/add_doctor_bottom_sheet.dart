@@ -33,6 +33,7 @@ class _AddDoctorBottomSheetState extends State<AddDoctorBottomSheet> {
   final Set<int> _addingIds = {};
   final Set<int> _acceptingIds = {};
   final Set<int> _activatingIds = {};
+  final Set<int> _removingIds = {};
 
   @override
   void initState() {
@@ -143,6 +144,21 @@ class _AddDoctorBottomSheetState extends State<AddDoctorBottomSheet> {
       await _repo.activateDoctor(doctorId);
     });
     if (mounted) setState(() => _activatingIds.remove(doctorId));
+  }
+
+  Future<void> _remove(int doctorId) async {
+    if (_removingIds.contains(doctorId)) return;
+    setState(() => _removingIds.add(doctorId));
+    await _afterMutation(
+      () async {
+        await _repo.removeDoctor(
+          hospitalId: widget.hospitalId,
+          doctorId: doctorId,
+        );
+      },
+      successMessage: AppTexts.doctorRemovedFromHospital,
+    );
+    if (mounted) setState(() => _removingIds.remove(doctorId));
   }
 
   @override
@@ -323,8 +339,10 @@ class _AddDoctorBottomSheetState extends State<AddDoctorBottomSheet> {
         isAdmin: true,
         accepting: _acceptingIds.contains(d.id),
         activating: _activatingIds.contains(d.id),
+        removing: _removingIds.contains(d.id),
         onAccept: () => _accept(d.id),
         onActivate: () => _activate(d.id),
+        onRemove: () => _remove(d.id),
       ),
     );
   }

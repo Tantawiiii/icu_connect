@@ -7,6 +7,8 @@ import 'package:icu_connect/core/network/services/base_api_service.dart';
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
 import '../../../superAdmin/patients/models/patient_model.dart';
 import '../../patients/models/hospital_patients_page_result.dart';
+import '../enums/admission_activity_subject_type.dart';
+import '../models/admission_activity.dart';
 
 class HospitalAdmissionsRepository extends BaseApiService {
   const HospitalAdmissionsRepository() : super(UserRole.hospital);
@@ -40,6 +42,45 @@ class HospitalAdmissionsRepository extends BaseApiService {
       return PatientAdmissionModel.fromJson(
         data['data'] as Map<String, dynamic>,
       );
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  Future<List<AdmissionActivity>> fetchAdmissionActivity(
+    int admissionId, {
+    AdmissionActivitySubjectType? subjectType,
+  }) async {
+    try {
+      final queryParameters = <String, dynamic>{};
+      if (subjectType != null) {
+        queryParameters['subject_type'] = subjectType.apiValue;
+      }
+
+      final data = await get<Map<String, dynamic>>(
+        ApiConstants.admissionActivity(admissionId),
+        queryParameters:
+            queryParameters.isEmpty ? null : queryParameters,
+        cancelTag:
+            'hospital_admissions_activity_${admissionId}_${subjectType?.apiValue ?? 'all'}',
+      );
+
+      final raw = data['data'];
+      final List<dynamic> list;
+      if (raw is List) {
+        list = raw;
+      } else if (raw is Map<String, dynamic>) {
+        list = raw['activities'] as List<dynamic>? ??
+            raw['activity'] as List<dynamic>? ??
+            const [];
+      } else {
+        list = const [];
+      }
+
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(AdmissionActivity.fromJson)
+          .toList();
     } on NetworkException {
       rethrow;
     }
@@ -87,6 +128,25 @@ class HospitalAdmissionsRepository extends BaseApiService {
       await delete<Map<String, dynamic>>(
         ApiConstants.admissionById(id),
         cancelTag: 'hospital_admissions_delete_$id',
+      );
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  Future<void> swapBeds({
+    required int firstAdmissionId,
+    required int secondAdmissionId,
+  }) async {
+    try {
+      await post<Map<String, dynamic>>(
+        ApiConstants.admissionsSwapBeds,
+        data: {
+          'first_admission_id': firstAdmissionId,
+          'second_admission_id': secondAdmissionId,
+        },
+        cancelTag:
+            'hospital_admissions_swap_${firstAdmissionId}_$secondAdmissionId',
       );
     } on NetworkException {
       rethrow;

@@ -113,5 +113,18 @@ class HospitalDoctorsRepository extends BaseApiService {
     }
   }
 
+  Future<void> removeDoctor({
+    required int hospitalId,
+    required int doctorId,
+  }) async {
+    try {
+      await deleteWithoutBody(
+        ApiConstants.hospitalDoctorById(hospitalId, doctorId),
+        cancelTag: 'hospital_remove_doctor_${hospitalId}_$doctorId',
+      );
+    } on NetworkException {
+      rethrow;
+    }
+  }
 }
 

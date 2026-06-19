@@ -63,6 +63,10 @@ class HospitalGroupBedCard extends StatelessWidget {
     required this.patientNameByBedKey,
     required this.onBedTap,
     this.searchQuery = '',
+    this.swapMode = false,
+    this.firstSwapBedKey,
+    this.secondSwapBedKey,
+    this.onOccupiedBedLongPress,
   });
 
   final int totalBeds;
@@ -76,6 +80,15 @@ class HospitalGroupBedCard extends StatelessWidget {
     int? hospitalGroupId,
     int? admissionIdIfOccupied,
   ) onBedTap;
+  final bool swapMode;
+  final String? firstSwapBedKey;
+  final String? secondSwapBedKey;
+  final void Function(
+    String bedNumber,
+    int? hospitalGroupId,
+    int admissionId,
+    String patientName,
+  )? onOccupiedBedLongPress;
 
   static const Color _bedRowBackground = Color(0xFFDFF5E3);
   static const Color _bedIconColor = Color(0xFF4CAF50);
@@ -156,6 +169,10 @@ class HospitalGroupBedCard extends StatelessWidget {
               admissionIdByBedKey: admissionIdByBedKey,
               patientNameByBedKey: patientNameByBedKey,
               onBedTap: onBedTap,
+              swapMode: swapMode,
+              firstSwapBedKey: firstSwapBedKey,
+              secondSwapBedKey: secondSwapBedKey,
+              onOccupiedBedLongPress: onOccupiedBedLongPress,
               backgroundColor: _bedRowBackground,
               iconColor: _bedIconColor,
             ),
@@ -176,6 +193,10 @@ class _BedRow extends StatelessWidget {
     required this.onBedTap,
     required this.backgroundColor,
     required this.iconColor,
+    this.swapMode = false,
+    this.firstSwapBedKey,
+    this.secondSwapBedKey,
+    this.onOccupiedBedLongPress,
   });
 
   final String bedLabel;
@@ -190,6 +211,15 @@ class _BedRow extends StatelessWidget {
   ) onBedTap;
   final Color backgroundColor;
   final Color iconColor;
+  final bool swapMode;
+  final String? firstSwapBedKey;
+  final String? secondSwapBedKey;
+  final void Function(
+    String bedNumber,
+    int? hospitalGroupId,
+    int admissionId,
+    String patientName,
+  )? onOccupiedBedLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -198,55 +228,167 @@ class _BedRow extends StatelessWidget {
         ? lookupAdmissionId(admissionIdByBedKey, groupId, bedLabel)
         : null;
     final patientName =
-        lookupPatientName(patientNameByBedKey, groupId, bedLabel);
+        lookupPatientName(patientNameByBedKey, groupId, bedLabel) ?? '';
+    final bedKey = bedOccupancyLookupKey(groupId, bedLabel);
+    final isFirstSelected = firstSwapBedKey == bedKey;
+    final isSecondSelected = secondSwapBedKey == bedKey;
+    final isSelected = isFirstSelected || isSecondSelected;
 
-    return Material(
-      color: backgroundColor,
+    Color rowBackground = backgroundColor;
+    Color borderColor = Colors.transparent;
+    double borderWidth = 0;
+
+    if (swapMode) {
+      if (!isOccupied) {
+        rowBackground = backgroundColor.withValues(alpha: 0.35);
+      } else if (isFirstSelected) {
+        rowBackground = AppColors.primary.withValues(alpha: 0.14);
+        borderColor = AppColors.primary;
+        borderWidth = 2.2;
+      } else if (isSecondSelected) {
+        rowBackground = const Color(0xFFFFF3E0);
+        borderColor = const Color(0xFFFF9800);
+        borderWidth = 2.2;
+      } else {
+        borderColor = AppColors.primary.withValues(alpha: 0.35);
+        borderWidth = 1.4;
+      }
+    }
+
+    Widget row = Material(
+      color: rowBackground,
       borderRadius: BorderRadius.circular(999),
       clipBehavior: Clip.antiAlias,
-      child: Bounce(
-        onTap: () {
-          if (isOccupied && admissionIdIfOccupied == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Could not open admission for this bed.'),
-              ),
-            );
-            return;
-          }
-          onBedTap(bedLabel, groupId, admissionIdIfOccupied);
-        },
-        child: Padding(
+      child: GestureDetector(
+        onLongPress: swapMode || !isOccupied || onOccupiedBedLongPress == null
+            ? null
+            : () {
+                if (admissionIdIfOccupied == null) return;
+                onOccupiedBedLongPress!(
+                  bedLabel,
+                  groupId,
+                  admissionIdIfOccupied,
+                  patientName,
+                );
+              },
+        child: Bounce(
+          onTap: () {
+            if (swapMode) {
+              if (!isOccupied) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(AppTexts.swapBedsEmptyBedHint),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                return;
+              }
+              if (admissionIdIfOccupied == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Could not select admission for this bed.'),
+                  ),
+                );
+                return;
+              }
+            } else if (isOccupied && admissionIdIfOccupied == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Could not open admission for this bed.'),
+                ),
+              );
+              return;
+            }
+            onBedTap(bedLabel, groupId, admissionIdIfOccupied);
+          },
+          child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(
             children: [
+              if (swapMode && isSelected) ...[
+                _SelectionBadge(
+                  label: isFirstSelected ? '1' : '2',
+                  color: isFirstSelected
+                      ? AppColors.primary
+                      : const Color(0xFFFF9800),
+                ),
+                const SizedBox(width: 10),
+              ],
               Text(
                 bedLabel,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+                  color: swapMode && !isOccupied
+                      ? AppColors.textPrimary.withValues(alpha: 0.45)
+                      : AppColors.textPrimary,
                 ),
               ),
               const SizedBox(width: 10),
-              Icon(Icons.bed_rounded, size: 22, color: iconColor),
+              Icon(
+                Icons.bed_rounded,
+                size: 22,
+                color: swapMode && !isOccupied
+                    ? iconColor.withValues(alpha: 0.45)
+                    : iconColor,
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  patientName ?? '',
+                  patientName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: swapMode && !isOccupied
+                        ? AppColors.textPrimary.withValues(alpha: 0.4)
+                        : AppColors.textPrimary,
                     height: 1.2,
                   ),
                 ),
               ),
             ],
           ),
+        ),
+        ),
+      ),
+    );
+
+    if (borderWidth > 0) {
+      row = DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: borderColor, width: borderWidth),
+        ),
+        child: row,
+      );
+    }
+
+    return row;
+  }
+}
+
+class _SelectionBadge extends StatelessWidget {
+  const _SelectionBadge({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 26,
+      height: 26,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+          fontSize: 13,
         ),
       ),
     );

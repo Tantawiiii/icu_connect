@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:printing/printing.dart';
 
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
@@ -10,8 +11,12 @@ import 'package:icu_connect/core/widgets/app_button.dart';
 
 import '../../../superAdmin/patients/models/admission_request_model.dart';
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
+import '../enums/admission_activity_subject_type.dart';
+import '../models/admission_activity.dart';
 import '../enums/admission_status.dart';
 import '../repository/hospital_admissions_repository.dart';
+import '../services/admission_pdf_builder.dart';
+import '../widgets/admission_details_activity_section.dart';
 import '../widgets/admission_details_culture_card.dart';
 import '../widgets/admission_details_empty_hint.dart';
 import '../widgets/admission_details_formatters.dart';
@@ -38,7 +43,10 @@ class AdmissionDetailsScreen extends StatefulWidget {
 
 class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
   late Future<PatientAdmissionModel> _admissionFuture;
+  late Future<List<AdmissionActivity>> _activityFuture;
   final _repo = const HospitalAdmissionsRepository();
+  AdmissionActivitySubjectType? _activityFilter;
+  bool _exportingPdf = false;
 
 
   final _patientEditFormKey = GlobalKey<FormState>();
@@ -98,6 +106,7 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
   void initState() {
     super.initState();
     _loadAdmission();
+    _loadActivity();
     _loadTitles();
   }
 
@@ -133,14 +142,71 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     setState(() {
       _admissionFuture = _repo.getAdmission(widget.admissionId);
     });
+    _loadActivity();
+  }
+
+  void _loadActivity() {
+    setState(() {
+      _activityFuture = _repo.fetchAdmissionActivity(
+        widget.admissionId,
+        subjectType: _activityFilter,
+      );
+    });
+  }
+
+  void _onActivityFilterChanged(AdmissionActivitySubjectType? filter) {
+    if (_activityFilter == filter) return;
+    setState(() => _activityFilter = filter);
+    _loadActivity();
   }
 
   Future<void> _refreshAdmission() async {
     if (_editingPatient) _cancelPatientEdit();
     if (_editingAdmission) _cancelAdmissionEdit();
     final f = _repo.getAdmission(widget.admissionId);
-    setState(() => _admissionFuture = f);
-    await f;
+    final activity = _repo.fetchAdmissionActivity(
+      widget.admissionId,
+      subjectType: _activityFilter,
+    );
+    setState(() {
+      _admissionFuture = f;
+      _activityFuture = activity;
+    });
+    await Future.wait([f, activity]);
+  }
+
+  Future<void> _exportAdmissionPdf(PatientAdmissionModel admission) async {
+    if (_exportingPdf) return;
+    setState(() => _exportingPdf = true);
+
+    try {
+      List<AdmissionActivity> activities = const [];
+      try {
+        activities = await _activityFuture;
+      } catch (_) {}
+
+      final bytes = await AdmissionPdfBuilder.build(
+        admission: admission,
+        activities: activities,
+      );
+
+      final patientName = admission.patient?.name.trim();
+      final slug = (patientName != null && patientName.isNotEmpty)
+          ? patientName.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_')
+          : 'admission';
+      final fileName = '${slug}_${admission.id}.pdf';
+
+      if (!mounted) return;
+      await Printing.sharePdf(bytes: bytes, filename: fileName);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AppTexts.admissionPdfExportFailed)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exportingPdf = false);
+    }
   }
 
   Future<void> _loadTitles() async {
@@ -600,34 +666,68 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
             builder: (context, snapshot) {
               if (!snapshot.hasData) return const SizedBox.shrink();
               final admission = snapshot.data!;
-              return PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: AppColors.textPrimary),
-                onSelected: (val) {
-                  if (val == 'edit_patient') {
-                    final p = admission.patient;
-                    if (p != null) _beginPatientEdit(p);
-                  } else if (val == 'edit_admission') {
-                    _beginAdmissionEdit(admission);
-                  } else if (val == 'delete') {
-                    _deleteAdmission();
-                  }
-                },
-                itemBuilder: (ctx) => [
-                  if (admission.patient != null)
-                    PopupMenuItem(
-                      value: 'edit_patient',
-                      child: Text(AppTexts.editPatientAdmin),
-                    ),
-                  PopupMenuItem(
-                    value: 'edit_admission',
-                    child: Text(AppTexts.editAdmission),
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: AppTexts.exportAdmissionPdf,
+                    onPressed: _exportingPdf
+                        ? null
+                        : () => _exportAdmissionPdf(admission),
+                    icon: _exportingPdf
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.primary,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.picture_as_pdf_outlined,
+                            color: AppColors.primary,
+                          ),
                   ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Text(
-                      'Delete',
-                      style: TextStyle(color: AppColors.error),
+                  PopupMenuButton<String>(
+                    icon: const Icon(
+                      Icons.more_vert,
+                      color: AppColors.textPrimary,
                     ),
+                    onSelected: (val) {
+                      if (val == 'export_pdf') {
+                        _exportAdmissionPdf(admission);
+                      } else if (val == 'edit_patient') {
+                        final p = admission.patient;
+                        if (p != null) _beginPatientEdit(p);
+                      } else if (val == 'edit_admission') {
+                        _beginAdmissionEdit(admission);
+                      } else if (val == 'delete') {
+                        _deleteAdmission();
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      PopupMenuItem(
+                        value: 'export_pdf',
+                        enabled: !_exportingPdf,
+                        child: Text(AppTexts.exportAdmissionPdf),
+                      ),
+                      if (admission.patient != null)
+                        PopupMenuItem(
+                          value: 'edit_patient',
+                          child: Text(AppTexts.editPatientAdmin),
+                        ),
+                      PopupMenuItem(
+                        value: 'edit_admission',
+                        child: Text(AppTexts.editAdmission),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(color: AppColors.error),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               );
@@ -1282,6 +1382,13 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                           height: 1.5,
                         ),
                       ),
+                    ),
+
+                    AdmissionDetailsActivitySection(
+                      activitiesFuture: _activityFuture,
+                      selectedFilter: _activityFilter,
+                      onFilterChanged: _onActivityFilterChanged,
+                      onRetry: _loadActivity,
                     ),
 
                     const SizedBox(height: 24),

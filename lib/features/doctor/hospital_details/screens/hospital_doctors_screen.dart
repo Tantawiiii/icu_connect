@@ -7,6 +7,7 @@ import 'package:icu_connect/core/widgets/app_button.dart';
 import '../../home/models/doctor_hospital.dart';
 import '../cubit/hospital_doctors_cubit.dart';
 import '../cubit/hospital_doctors_state.dart';
+import '../models/hospital_doctor.dart';
 import '../repository/hospital_doctors_repository.dart';
 import '../widgets/add_doctor_bottom_sheet.dart';
 import '../widgets/doctor_card.dart';
@@ -122,12 +123,14 @@ class _HospitalDoctorsView extends StatelessWidget {
                   isAdmin: isAdmin,
                   accepting: ready.acceptingIds.contains(d.id),
                   activating: ready.activatingIds.contains(d.id),
+                  removing: ready.removingIds.contains(d.id),
                   onAccept: () => context
                       .read<HospitalDoctorsCubit>()
                       .acceptDoctor(hospitalId: hospital.id, doctorId: d.id),
                   onActivate: () => context
                       .read<HospitalDoctorsCubit>()
                       .activateDoctor(hospitalId: hospital.id, doctorId: d.id),
+                  onRemove: () => _confirmRemoveDoctor(context, d),
                 );
               },
             ),
@@ -152,6 +155,47 @@ class _HospitalDoctorsView extends StatelessWidget {
       builder: (ctx) => AddDoctorBottomSheet(
         hospitalId: hospitalId,
         onListsChanged: () => cubit.refresh(hospitalId),
+      ),
+    );
+  }
+
+  Future<void> _confirmRemoveDoctor(
+    BuildContext context,
+    HospitalDoctor doctor,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(AppTexts.removeDoctorFromHospital),
+        content: Text(
+          '${AppTexts.removeDoctorConfirmation}\n\n${doctor.name}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(AppTexts.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(AppTexts.remove),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    await context.read<HospitalDoctorsCubit>().removeDoctor(
+      hospitalId: hospital.id,
+      doctorId: doctor.id,
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppTexts.doctorRemovedFromHospital),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
