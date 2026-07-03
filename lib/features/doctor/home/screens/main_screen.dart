@@ -7,6 +7,7 @@ import '../cubit/doctor_hospitals_cubit.dart';
 import '../repository/doctor_hospitals_repository.dart';
 import '../widgets/doctor_hospitals_section.dart';
 import '../../session/doctor_session_display.dart';
+import '../screens/request_hospital_screen.dart';
 import '../widgets/side_drawer.dart';
 
 
@@ -51,11 +52,27 @@ class _MainViewState extends State<_MainView> {
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
       drawer: const SideDrawer(),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openRequestHospital(context),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_business_outlined),
+        label: const Text(AppTexts.requestNewHospital),
+      ),
       body: RefreshIndicator(
         onRefresh: () => context.read<DoctorHospitalsCubit>().refresh(),
         child: DoctorHospitalsSection(),
       ),
     );
+  }
+
+  Future<void> _openRequestHospital(BuildContext context) async {
+    final submitted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const RequestHospitalScreen()),
+    );
+    if (submitted == true && context.mounted) {
+      await context.read<DoctorHospitalsCubit>().refresh();
+    }
   }
 }
 

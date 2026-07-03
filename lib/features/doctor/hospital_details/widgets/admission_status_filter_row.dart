@@ -28,7 +28,7 @@ class AdmissionStatusFilterRow extends StatelessWidget {
           final isSelected = s == selected;
           return ChoiceChip(
             selected: isSelected,
-            label: Text(s.label),
+            label: Text(s.displayLabel),
             onSelected: (_) => onSelected(s),
             selectedColor: AppColors.primary.withValues(alpha: 0.18),
             labelStyle: TextStyle(

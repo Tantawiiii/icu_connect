@@ -1,11 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
 class NetworkStatusOverlay extends StatefulWidget {
-  final Widget child;
-
   const NetworkStatusOverlay({super.key, required this.child});
+
+  final Widget child;
 
   @override
   State<NetworkStatusOverlay> createState() => _NetworkStatusOverlayState();
@@ -15,7 +16,11 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
     with SingleTickerProviderStateMixin {
   final InternetConnection _internetConnection = InternetConnection();
 
-  late StreamSubscription<InternetStatus> _subscription;
+  StreamSubscription<InternetStatus>? _subscription;
+  late final AppLifecycleListener _lifecycleListener;
+  Timer? _disconnectDebounce;
+  Timer? _resumeRecheckDebounce;
+
   bool _isConnected = true;
   bool _isInitialized = false;
   bool _isChecking = false;
@@ -26,26 +31,58 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
   void initState() {
     super.initState();
     _pulseController = AnimationController(
-       vsync: this,
-       duration: const Duration(seconds: 2),
+      vsync: this,
+      duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
     _scaleAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    _subscription = _internetConnection.onStatusChange.listen((status) {
-      if (!_isInitialized) return;
+    _lifecycleListener = AppLifecycleListener(
+      onPause: _stopListening,
+      onResume: _onAppResumed,
+    );
 
-      final isConnectedNow = status == InternetStatus.connected;
-      if (_isConnected != isConnectedNow && mounted) {
-        setState(() {
-          _isConnected = isConnectedNow;
-        });
-      }
-    });
-
+    _startListening();
     _checkInitialConnection();
+  }
+
+  void _startListening() {
+    _subscription?.cancel();
+    _subscription = _internetConnection.onStatusChange.listen(_onStatusChanged);
+  }
+
+  void _stopListening() {
+    _disconnectDebounce?.cancel();
+    _disconnectDebounce = null;
+    _subscription?.cancel();
+    _subscription = null;
+  }
+
+  void _onAppResumed() {
+    _resumeRecheckDebounce?.cancel();
+    _resumeRecheckDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      _startListening();
+      _verifyConnection(maxAttempts: 5);
+    });
+  }
+
+  void _onStatusChanged(InternetStatus status) {
+    if (!_isInitialized) return;
+
+    if (status == InternetStatus.connected) {
+      _disconnectDebounce?.cancel();
+      _disconnectDebounce = null;
+      _verifyConnection(maxAttempts: 2, preferConnected: true);
+      return;
+    }
+
+    _disconnectDebounce?.cancel();
+    _disconnectDebounce = Timer(const Duration(milliseconds: 1200), () {
+      _verifyConnection(maxAttempts: 3);
+    });
   }
 
   Future<bool> _resolveConnectionStatus({int maxAttempts = 3}) async {
@@ -55,15 +92,34 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
       }
 
       if (attempt < maxAttempts - 1) {
-        await Future.delayed(Duration(milliseconds: 400 * (attempt + 1)));
+        await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
       }
     }
 
     return false;
   }
 
+  Future<void> _verifyConnection({
+    int maxAttempts = 3,
+    bool preferConnected = false,
+  }) async {
+    final hasInternet = await _resolveConnectionStatus(maxAttempts: maxAttempts);
+    if (!mounted) return;
+
+    if (hasInternet) {
+      if (!_isConnected) {
+        setState(() => _isConnected = true);
+      }
+      return;
+    }
+
+    if (preferConnected) return;
+
+    setState(() => _isConnected = false);
+  }
+
   Future<void> _checkInitialConnection() async {
-    final hasInternet = await _resolveConnectionStatus();
+    final hasInternet = await _resolveConnectionStatus(maxAttempts: 4);
 
     if (mounted) {
       setState(() {
@@ -75,12 +131,10 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
 
   Future<void> _checkConnectionManually() async {
     if (!mounted) return;
-    setState(() {
-      _isChecking = true;
-    });
+    setState(() => _isChecking = true);
 
-    final hasInternet = await _resolveConnectionStatus();
-    await Future.delayed(const Duration(milliseconds: 800));
+    final hasInternet = await _resolveConnectionStatus(maxAttempts: 5);
+    await Future.delayed(const Duration(milliseconds: 600));
 
     if (mounted) {
       setState(() {
@@ -92,7 +146,10 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
 
   @override
   void dispose() {
-    _subscription.cancel();
+    _disconnectDebounce?.cancel();
+    _resumeRecheckDebounce?.cancel();
+    _subscription?.cancel();
+    _lifecycleListener.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -101,10 +158,7 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // The rest of the app
         widget.child,
-        
-        // Full screen interactive overlay
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 600),
           switchInCurve: Curves.easeOutBack,
@@ -158,8 +212,8 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
                       width: 110,
                       height: 110,
                       decoration: BoxDecoration(
-                         color: colorScheme.error.withValues(alpha: 0.1),
-                         shape: BoxShape.circle,
+                        color: colorScheme.error.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
                       ),
                       child: Icon(
                         Icons.wifi_off_rounded,
@@ -172,7 +226,7 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
               ),
               const SizedBox(height: 50),
               Text(
-                "Whoops!",
+                'Whoops!',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
@@ -180,9 +234,9 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
               ),
               const SizedBox(height: 16),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Text(
-                  "No internet connection was found. Please check your network settings and try again.",
+                  'No internet connection was found. Please check your network settings and try again.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: isDark ? Colors.white70 : Colors.black54,
@@ -198,7 +252,9 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
                 child: ElevatedButton(
                   onPressed: _isChecking ? null : _checkConnectionManually,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isChecking ? colorScheme.surfaceContainerHighest : colorScheme.primary,
+                    backgroundColor: _isChecking
+                        ? colorScheme.surfaceContainerHighest
+                        : colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
                     elevation: _isChecking ? 0 : 8,
                     shadowColor: colorScheme.primary.withValues(alpha: 0.4),
@@ -217,7 +273,7 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
                           ),
                         )
                       : const Text(
-                          "Try Again",
+                          'Try Again',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

@@ -6,10 +6,12 @@ import 'package:icu_connect/core/network/network_exceptions.dart';
 import 'package:icu_connect/core/network/token_storage.dart';
 
 import '../../auth/login/screens/login_screen.dart';
-import '../../patients/screens/patient_list_screen.dart';
 import '../../profile/repository/doctor_profile_repository.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../session/doctor_session_display.dart';
+import '../data/drawer_info_pages.dart';
+import '../screens/doctor_hospital_requests_screen.dart';
+import '../screens/drawer_info_screen.dart';
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
@@ -38,6 +40,13 @@ class SideDrawer extends StatelessWidget {
     return t.length == 1
         ? t.toUpperCase()
         : '${t[0].toUpperCase()}${t.substring(1).toLowerCase()}';
+  }
+
+  void _openInfoPage(BuildContext context, DrawerInfoPage page) {
+    Navigator.pop(context);
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => DrawerInfoScreen(page: page)),
+    );
   }
 
   @override
@@ -99,32 +108,51 @@ class SideDrawer extends StatelessWidget {
             ),
             _buildDrawerItem(
               context,
-              AppTexts.patientsLabel,
-              Icons.people_outline,
+              AppTexts.myHospitalRequests,
+              Icons.pending_actions_outlined,
               onTap: () {
                 Navigator.pop(context);
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PatientListScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const DoctorHospitalRequestsScreen(),
+                  ),
                 );
               },
             ),
-            // _buildDrawerItem(context, AppTexts.statistics, Icons.bar_chart),
-            // _buildDrawerItem(context, AppTexts.aboutUs, Icons.info_outline),
-            // _buildDrawerItem(
-            //   context,
-            //   AppTexts.reportProblem,
-            //   Icons.report_problem_outlined,
-            // ),
-            // _buildDrawerItem(
-            //   context,
-            //   AppTexts.setting,
-            //   Icons.settings_outlined,
-            // ),
-            // _buildDrawerItem(context, AppTexts.trash, Icons.delete_outline),
-
+            _buildDrawerItem(
+              context,
+              AppTexts.aboutUs,
+              Icons.info_outline,
+              onTap: () => _openInfoPage(context, DrawerInfoPages.aboutUs),
+            ),
+            _buildDrawerItem(
+              context,
+              AppTexts.helpAndSupport,
+              Icons.help_outline,
+              onTap: () =>
+                  _openInfoPage(context, DrawerInfoPages.helpAndSupport),
+            ),
+            _buildDrawerItem(
+              context,
+              AppTexts.privacyPolicy,
+              Icons.privacy_tip_outlined,
+              onTap: () =>
+                  _openInfoPage(context, DrawerInfoPages.privacyPolicy),
+            ),
+            _buildDrawerItem(
+              context,
+              AppTexts.termsOfUse,
+              Icons.description_outlined,
+              onTap: () => _openInfoPage(context, DrawerInfoPages.termsOfUse),
+            ),
+            _buildDrawerItem(
+              context,
+              AppTexts.reportProblem,
+              Icons.report_problem_outlined,
+              onTap: () =>
+                  _openInfoPage(context, DrawerInfoPages.reportProblem),
+            ),
             const Spacer(),
-
-            // Logout
             _buildDrawerItem(
               context,
               AppTexts.logOut,

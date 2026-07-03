@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
+import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
 import 'package:icu_connect/core/widgets/app_text_field.dart';
 import 'package:icu_connect/features/superAdmin/patients/models/patient_admission_models.dart';
 
 import '../enums/admission_status.dart';
+import '../utils/admission_update_validation.dart';
 import 'admission_details_formatters.dart';
-import 'admission_details_meta_chip.dart';
 import 'admission_details_section_container.dart';
 
 class AdmissionDetailsInfoSection extends StatelessWidget {
@@ -28,6 +29,7 @@ class AdmissionDetailsInfoSection extends StatelessWidget {
     required this.onClearDateLeave,
     required this.onPickDateOfDeath,
     required this.onClearDateOfDeath,
+    required this.onBeginEdit,
     required this.onCancel,
     required this.onSave,
   });
@@ -47,157 +49,211 @@ class AdmissionDetailsInfoSection extends StatelessWidget {
   final VoidCallback onClearDateLeave;
   final VoidCallback onPickDateOfDeath;
   final VoidCallback onClearDateOfDeath;
+  final VoidCallback onBeginEdit;
   final VoidCallback onCancel;
   final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
-    if (!editing) {
-      return AdmissionDetailsSectionContainer(
-        title: 'Admission Info',
-        child: Wrap(
-          spacing: 16,
-          runSpacing: 6,
-          children: [
-            AdmissionDetailsMetaChip(
-              label: 'Bed',
-              value: admission.bedNumber.isEmpty ? AppTexts.notAvailable : admission.bedNumber,
-              icon: Icons.bed_outlined,
-            ),
-            AdmissionDetailsMetaChip(
-              label: 'Status',
-              value: admission.status.isEmpty ? AppTexts.notAvailable : admission.status,
-              icon: Icons.info_outline,
-            ),
-            AdmissionDetailsMetaChip(
-              label: AppTexts.admitted,
-              value: admissionDetailsFormatDate(admission.dateComes),
-              icon: Icons.login,
-            ),
-            AdmissionDetailsMetaChip(
-              label: AppTexts.dischargedLabel,
-              value: admissionDetailsFormatDate(admission.dateLeave),
-              icon: Icons.logout,
-            ),
-            if (admission.dateOfDeath != null)
-              AdmissionDetailsMetaChip(
-                label: AppTexts.dateOfDeathLabel,
-                value: admissionDetailsFormatDate(admission.dateOfDeath),
-                icon: Icons.close,
-                color: Colors.red,
-              ),
-            AdmissionDetailsMetaChip(
-              label: 'Notes',
-              value: admission.notes.isEmpty ? AppTexts.notAvailable : admission.notes,
-              icon: Icons.description_outlined,
-            ),
-          ],
-        ),
-      );
-    }
-
     return AdmissionDetailsSectionContainer(
-      title: 'Edit Admission Info',
-      child: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppTextField(
-              controller: bedCtrl!,
-              hintText: 'Bed Number',
-              validator: (v) => (v?.trim() ?? '').isEmpty ? 'Required' : null,
+      title: AppTexts.status,
+      headerAction: editing
+          ? null
+          : IconButton(
+              tooltip: AppTexts.editAdmission,
+              onPressed: onBeginEdit,
+              icon: const Icon(
+                Icons.edit_outlined,
+                color: AppColors.primary,
+                size: 20,
+              ),
             ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<AdmissionStatus>(
-              value: editStatus,
-              decoration: const InputDecoration(
-                labelText: 'Status',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+      child: editing ? _buildEditing(context) : _buildStatusOnly(),
+    );
+  }
+
+  Widget _buildStatusOnly() {
+    final status = admission.status.isEmpty
+        ? AppTexts.notAvailable
+        : admissionStatusDisplayLabel(admission.status);
+    final color = admissionDetailsStatusColor(admission.status);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 20, color: color),
+          const SizedBox(width: 10),
+          Text(
+            status,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditing(BuildContext context) {
+    return Form(
+      key: formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          DropdownButtonFormField<AdmissionStatus>(
+            value: editStatus,
+            decoration: const InputDecoration(
+              labelText: AppTexts.status,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+            ),
+            items: AdmissionStatus.editable
+                .map(
+                  (s) => DropdownMenuItem(
+                    value: s,
+                    child: Text(s.displayLabel),
+                  ),
+                )
+                .toList(),
+            onChanged: saving ? null : onStatusChanged,
+          ),
+          const SizedBox(height: 10),
+          AppTextField(
+            controller: bedCtrl!,
+            hintText: 'Bed Number',
+            validator: AdmissionUpdateValidation.bedNumber,
+          ),
+          const SizedBox(height: 8),
+          _CompactDateRow(
+            label: AppTexts.admitted,
+            value: editDateComes != null
+                ? admissionDetailsSqlDateTime(editDateComes!)
+                : AppTexts.notAvailable,
+            icon: Icons.login,
+            editable: false,
+          ),
+          _CompactDateRow(
+            label: AppTexts.dischargedLabel,
+            value: editDateLeave != null
+                ? admissionDetailsSqlDateTime(editDateLeave!)
+                : 'Not set',
+            icon: Icons.logout,
+            editable: !saving,
+            onTap: onPickDateLeave,
+            onClear: editDateLeave != null ? onClearDateLeave : null,
+          ),
+          _CompactDateRow(
+            label: AppTexts.dateOfDeathLabel,
+            value: editDateOfDeath != null
+                ? admissionDetailsSqlDateTime(editDateOfDeath!)
+                : 'Not set',
+            icon: Icons.event_busy,
+            editable: !saving,
+            onTap: onPickDateOfDeath,
+            onClear: editDateOfDeath != null ? onClearDateOfDeath : null,
+          ),
+          const SizedBox(height: 8),
+          AppTextField(
+            controller: notesCtrl!,
+            hintText: 'Notes (optional)',
+            maxLines: 2,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: saving ? null : onCancel,
+                  child: Text(AppTexts.cancel),
                 ),
               ),
-              items: AdmissionStatus.values
-                  .map(
-                    (s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(s.label.toUpperCase()),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppButton(
+                  label: saving ? '…' : AppTexts.save,
+                  height: 44,
+                  onPressed: saving ? null : onSave,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactDateRow extends StatelessWidget {
+  const _CompactDateRow({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.editable = false,
+    this.onTap,
+    this.onClear,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final bool editable;
+  final VoidCallback? onTap;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: InkWell(
+        onTap: editable ? onTap : null,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: AppColors.textSecondary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  )
-                  .toList(),
-              onChanged: saving ? null : onStatusChanged,
-            ),
-            const SizedBox(height: 10),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Admission date', style: TextStyle(fontSize: 13)),
-              subtitle: Text(
-                editDateComes != null
-                    ? admissionDetailsSqlDateTime(editDateComes!)
-                    : AppTexts.notAvailable,
-              ),
-              leading: const Icon(Icons.event, size: 20),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Leave date', style: TextStyle(fontSize: 13)),
-              subtitle: Text(
-                editDateLeave != null
-                    ? admissionDetailsSqlDateTime(editDateLeave!)
-                    : 'Not set',
-              ),
-              leading: const Icon(Icons.event_available, size: 20),
-              trailing: editDateLeave != null
-                  ? IconButton(
-                      icon: const Icon(Icons.close, size: 18),
-                      onPressed: saving ? null : onClearDateLeave,
-                    )
-                  : null,
-              onTap: saving ? null : onPickDateLeave,
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Date of death', style: TextStyle(fontSize: 13)),
-              subtitle: Text(
-                editDateOfDeath != null
-                    ? admissionDetailsSqlDateTime(editDateOfDeath!)
-                    : 'Not set',
-              ),
-              leading: const Icon(Icons.event_busy, size: 20),
-              trailing: editDateOfDeath != null
-                  ? IconButton(
-                      icon: const Icon(Icons.close, size: 18),
-                      onPressed: saving ? null : onClearDateOfDeath,
-                    )
-                  : null,
-              onTap: saving ? null : onPickDateOfDeath,
-            ),
-            const SizedBox(height: 6),
-            AppTextField(
-              controller: notesCtrl!,
-              hintText: 'Notes (optional)',
-              maxLines: 3,
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: saving ? null : onCancel,
-                    child: Text(AppTexts.cancel),
-                  ),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: AppButton(
-                    label: saving ? '…' : 'Save',
-                    height: 48,
-                    onPressed: saving ? null : onSave,
-                  ),
+              ),
+              if (onClear != null && editable)
+                IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.close, size: 16),
+                  visualDensity: VisualDensity.compact,
                 ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

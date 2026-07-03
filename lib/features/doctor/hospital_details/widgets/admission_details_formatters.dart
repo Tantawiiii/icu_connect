@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 
+import '../enums/admission_status.dart';
+
 String admissionDetailsFormatDate(String? raw) {
   if (raw == null || raw.isEmpty) return AppTexts.notAvailable;
   final t = raw.indexOf('T');
@@ -28,14 +30,24 @@ String admissionDetailsSqlDateTime(DateTime d) =>
     '${d.minute.toString().padLeft(2, '0')}:'
     '${d.second.toString().padLeft(2, '0')}';
 
+String admissionStatusDisplayLabel(String? status) =>
+    AdmissionStatus.displayLabelFor(status);
+
 Color admissionDetailsStatusColor(String status) {
   switch (status.toLowerCase()) {
     case 'admitted':
+    case 'active':
       return AppColors.success;
     case 'discharged':
-      return Colors.orange;
+      return const Color(0xFF2E7D32);
+    case 'leaves_ama':
+      return Colors.deepOrange;
     case 'deceased':
       return AppColors.error;
+    case 'referred':
+      return AppColors.accent;
+    case 'inactive':
+      return AppColors.textSecondary;
     default:
       return AppColors.textSecondary;
   }

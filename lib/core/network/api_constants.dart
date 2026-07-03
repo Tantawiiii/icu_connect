@@ -45,6 +45,10 @@ class ApiConstants {
   static const String vitals = '/vitals';
   static const String labs = '/labs';
   static String labsByPatientId(String patientId) => '/patients/$patientId/labs';
+  static String patientVitalsTitles(int patientId) =>
+      '/patients/$patientId/vitals-titles';
+  static String patientLabsTitles(int patientId) =>
+      '/patients/$patientId/labs-titles';
   static String hospitalDoctors(int hospitalId) => '/hospitals/$hospitalId/doctors';
   static String hospitalDoctorsAdd(int hospitalId) =>
       '/hospitals/$hospitalId/doctors/add';
@@ -56,8 +60,12 @@ class ApiConstants {
 
   // ── Admin – management endpoints ─────────────────────────────────────────
   static const String hospitals = '/hospitals';
+  static const String hospitalsRequest = '/hospitals/request';
+  static const String hospitalsRequests = '/hospitals/requests';
   static String hospitalById(int id) => '/hospitals/$id';
   static String hospitalRestore(int id) => '/hospitals/$id/restore';
+  static String hospitalAccept(int id) => '/hospitals/$id/accept';
+  static String hospitalReject(int id) => '/hospitals/$id/reject';
   static const String users = '/users';
   static String userById(int id) => '/users/$id';
   static String userRestore(int id) => '/users/$id/restore';

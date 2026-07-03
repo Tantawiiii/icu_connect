@@ -3,8 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/utils/measurement_title_form_helpers.dart';
 import '../../../../core/widgets/app_button.dart';
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/measurement_title_form_fields.dart';
 import '../cubit/vitals_titles_cubit.dart';
 import '../cubit/vitals_titles_state.dart';
 import '../models/vital_title_model.dart';
@@ -38,6 +39,7 @@ class _VitalTitleFormViewState extends State<_VitalTitleFormView> {
   late final TextEditingController _unitCtrl;
   late final TextEditingController _minCtrl;
   late final TextEditingController _maxCtrl;
+  late String _valueType;
 
   bool get _isEdit => widget.vital != null;
 
@@ -50,6 +52,7 @@ class _VitalTitleFormViewState extends State<_VitalTitleFormView> {
         TextEditingController(text: widget.vital?.normalRangeMin ?? '');
     _maxCtrl =
         TextEditingController(text: widget.vital?.normalRangeMax ?? '');
+    _valueType = widget.vital?.valueType ?? 'numeric';
   }
 
   @override
@@ -66,17 +69,23 @@ class _VitalTitleFormViewState extends State<_VitalTitleFormView> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    final min = double.tryParse(_minCtrl.text.trim()) ?? 0;
-    final max = double.tryParse(_maxCtrl.text.trim()) ?? 0;
-    if (max <= min) return;
+    final values = MeasurementTitleFormValues.fromFields(
+      title: _titleCtrl.text,
+      unit: _unitCtrl.text,
+      min: _minCtrl.text,
+      max: _maxCtrl.text,
+      valueType: _valueType,
+    );
+    if (values == null) return;
 
     final request = VitalTitleRequest(
-      title: _titleCtrl.text.trim(),
-      unit: _unitCtrl.text.trim(),
-      normalRangeMin: min,
-      normalRangeMax: max,
+      title: values.title,
+      unit: values.unit,
+      valueType: values.valueType,
+      normalRangeMin: values.normalRangeMin,
+      normalRangeMax: values.normalRangeMax,
     );
 
     final cubit = context.read<VitalsTitlesCubit>();
@@ -113,88 +122,27 @@ class _VitalTitleFormViewState extends State<_VitalTitleFormView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppTextField(
-                    controller: _titleCtrl,
-                    labelText: AppTexts.name,
-                    prefixIcon: const Icon(Icons.monitor_heart_outlined),
-                    textInputAction: TextInputAction.next,
-                    enabled: !isLoading,
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Title is required';
-                      }
-                      return null;
-                    },
+                  Text(
+                    'Creates a global vitals title available across the hospital.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary.withValues(alpha: 0.95),
+                    ),
                   ),
-                  const SizedBox(height: 14),
-                  AppTextField(
-                    controller: _unitCtrl,
-                    labelText: AppTexts.unit,
-                    prefixIcon: const Icon(Icons.straighten_outlined),
-                    textInputAction: TextInputAction.next,
+                  const SizedBox(height: 16),
+                  MeasurementTitleFormFields(
+                    titleController: _titleCtrl,
+                    unitController: _unitCtrl,
+                    minController: _minCtrl,
+                    maxController: _maxCtrl,
                     enabled: !isLoading,
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Unit is required';
-                      }
-                      return null;
+                    showValueType: true,
+                    valueType: _valueType,
+                    onValueTypeChanged: (v) {
+                      if (v != null) setState(() => _valueType = v);
                     },
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppTextField(
-                          controller: _minCtrl,
-                          labelText: AppTexts.normalRangeMin,
-                          prefixIcon: const Icon(Icons.arrow_downward),
-                          keyboardType:
-                              const TextInputType.numberWithOptions(
-                                  decimal: true),
-                          textInputAction: TextInputAction.next,
-                          enabled: !isLoading,
-                          onChanged: (_) => _onRangeFieldChanged(),
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) {
-                              return 'Required';
-                            }
-                            if (double.tryParse(v.trim()) == null) {
-                              return 'Invalid';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: AppTextField(
-                          controller: _maxCtrl,
-                          labelText: AppTexts.normalRangeMax,
-                          prefixIcon: const Icon(Icons.arrow_upward),
-                          keyboardType:
-                              const TextInputType.numberWithOptions(
-                                  decimal: true),
-                          textInputAction: TextInputAction.done,
-                          enabled: !isLoading,
-                          onChanged: (_) => _onRangeFieldChanged(),
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) {
-                              return 'Required';
-                            }
-                            final maxVal = double.tryParse(v.trim());
-                            if (maxVal == null) {
-                              return 'Invalid';
-                            }
-                            final minVal =
-                                double.tryParse(_minCtrl.text.trim());
-                            if (minVal != null && maxVal <= minVal) {
-                              return AppTexts.normalRangeMaxMustExceedMin;
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
+                    onRangeFieldChanged: _onRangeFieldChanged,
+                    onSubmit: _submit,
                   ),
                   const SizedBox(height: 28),
                   AppButton(
@@ -220,4 +168,3 @@ class _VitalTitleFormViewState extends State<_VitalTitleFormView> {
     );
   }
 }
-

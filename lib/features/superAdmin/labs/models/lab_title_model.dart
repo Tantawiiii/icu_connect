@@ -20,7 +20,7 @@ class LabTitleModel extends Equatable {
   final String updatedAt;
 
   factory LabTitleModel.fromJson(Map<String, dynamic> json) => LabTitleModel(
-        id: json['id'] as int,
+        id: (json['id'] as num).toInt(),
         title: json['title'] as String,
         unit: json['unit'] as String? ?? '',
         normalRangeMin: json['normal_range_min']?.toString() ?? '',

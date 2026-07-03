@@ -4,6 +4,7 @@ import '../../../../core/network/network_exceptions.dart';
 import '../../../../core/network/services/base_api_service.dart';
 import '../models/hospital_model.dart';
 import '../models/hospital_request_model.dart';
+import '../models/hospital_requests_list_response.dart';
 import '../models/hospitals_list_response.dart';
 
 class HospitalsRepository extends BaseApiService {
@@ -74,6 +75,55 @@ class HospitalsRepository extends BaseApiService {
         cancelTag: 'hospital_restore_$id',
       );
       return HospitalModel.fromJson(data['data'] as Map<String, dynamic>);
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  /// GET /hospitals/requests?approval_status=pending|accepted|rejected
+  Future<HospitalRequestsListResponse> fetchHospitalRequests({
+    String? approvalStatus,
+    int perPage = 10,
+    int page = 1,
+  }) async {
+    try {
+      final query = <String, dynamic>{
+        'per_page': perPage,
+        'page': page,
+      };
+      if (approvalStatus != null && approvalStatus.trim().isNotEmpty) {
+        query['approval_status'] = approvalStatus.trim();
+      }
+      final data = await get<Map<String, dynamic>>(
+        ApiConstants.hospitalsRequests,
+        queryParameters: query,
+        cancelTag: 'hospital_requests_${approvalStatus ?? 'all'}_$page',
+      );
+      return HospitalRequestsListResponse.fromJson(data);
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  /// POST /hospitals/{id}/accept
+  Future<void> acceptHospitalRequest(int id) async {
+    try {
+      await post<dynamic>(
+        ApiConstants.hospitalAccept(id),
+        cancelTag: 'hospital_request_accept_$id',
+      );
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  /// POST /hospitals/{id}/reject
+  Future<void> rejectHospitalRequest(int id) async {
+    try {
+      await post<dynamic>(
+        ApiConstants.hospitalReject(id),
+        cancelTag: 'hospital_request_reject_$id',
+      );
     } on NetworkException {
       rethrow;
     }

@@ -70,6 +70,7 @@ class MeasurementTitleModel extends Equatable {
     required this.normalRangeMax,
     required this.createdAt,
     required this.updatedAt,
+    this.valueType = 'numeric',
   });
 
   final int id;
@@ -79,21 +80,33 @@ class MeasurementTitleModel extends Equatable {
   final String normalRangeMax;
   final String createdAt;
   final String updatedAt;
+  final String valueType;
+
+  bool get isNumericValueType => valueType.toLowerCase() != 'string';
 
   factory MeasurementTitleModel.fromJson(Map<String, dynamic> json) =>
       MeasurementTitleModel(
-        id: json['id'] as int,
+        id: (json['id'] as num).toInt(),
         title: json['title'] as String? ?? '',
         unit: json['unit'] as String? ?? '',
         normalRangeMin: json['normal_range_min']?.toString() ?? '',
         normalRangeMax: json['normal_range_max']?.toString() ?? '',
         createdAt: json['created_at'] as String? ?? '',
         updatedAt: json['updated_at'] as String? ?? '',
+        valueType: json['value_type'] as String? ?? 'numeric',
       );
 
   @override
-  List<Object?> get props =>
-      [id, title, unit, normalRangeMin, normalRangeMax, createdAt, updatedAt];
+  List<Object?> get props => [
+        id,
+        title,
+        unit,
+        normalRangeMin,
+        normalRangeMax,
+        createdAt,
+        updatedAt,
+        valueType,
+      ];
 }
 
 class ClinicalNoteModel extends Equatable {

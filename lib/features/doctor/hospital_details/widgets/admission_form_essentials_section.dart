@@ -16,7 +16,6 @@ class AdmissionFormEssentialsSection extends StatelessWidget {
     required this.isEdit,
     required this.submitting,
     required this.bedCtrl,
-    required this.notesCtrl,
     required this.status,
     required this.dateComes,
     required this.dateLeave,
@@ -39,7 +38,6 @@ class AdmissionFormEssentialsSection extends StatelessWidget {
   final bool isEdit;
   final bool submitting;
   final TextEditingController bedCtrl;
-  final TextEditingController notesCtrl;
   final AdmissionStatus status;
   final DateTime? dateComes;
   final DateTime? dateLeave;
@@ -174,11 +172,11 @@ class AdmissionFormEssentialsSection extends StatelessWidget {
                       borderRadius: BorderRadius.all(Radius.circular(12)),
                     ),
                   ),
-                  items: AdmissionStatus.values
+                  items: AdmissionStatus.editable
                       .map(
                         (item) => DropdownMenuItem(
                           value: item,
-                          child: Text(item.label.toUpperCase()),
+                          child: Text(item.displayLabel),
                         ),
                       )
                       .toList(),
@@ -216,12 +214,6 @@ class AdmissionFormEssentialsSection extends StatelessWidget {
                       : null,
                 ),
               ],
-              const SizedBox(height: 8),
-              AppTextField(
-                controller: notesCtrl,
-                hintText: '${AppTexts.notes} (${AppTexts.optional})',
-                maxLines: 3,
-              ),
             ],
           ),
         ),

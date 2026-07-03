@@ -5,21 +5,85 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
 import '../models/admission_activity.dart';
+import '../utils/admission_activity_formatter.dart';
 import '../widgets/admission_details_formatters.dart';
 
 class AdmissionPdfBuilder {
   AdmissionPdfBuilder._();
 
-  static final _primary = PdfColor.fromHex('#1A1F36');
-  static final _muted = PdfColor.fromHex('#8A8D9F');
-  static final _border = PdfColor.fromHex('#E0E0E0');
-  static final _surface = PdfColor.fromHex('#F5F6FA');
-  static final _accent = PdfColor.fromHex('#4CAF50');
-
   static Future<Uint8List> build({
     required PatientAdmissionModel admission,
     List<AdmissionActivity> activities = const [],
-  }) async {
+  }) {
+    return _AdmissionPdfRenderer(
+      admission: admission,
+      activities: activities,
+    ).render();
+  }
+}
+
+class _PdfFonts {
+  const _PdfFonts({
+    required this.base,
+    required this.bold,
+    required this.arabic,
+    required this.arabicBold,
+  });
+
+  final pw.Font base;
+  final pw.Font bold;
+  final pw.Font arabic;
+  final pw.Font arabicBold;
+
+  static Future<_PdfFonts> load() async {
+    Future<pw.Font> loadFont(String asset) async {
+      final data = await rootBundle.load(asset);
+      return pw.Font.ttf(data);
+    }
+
+    return _PdfFonts(
+      base: await loadFont('assets/fonts/OpenSans-Regular.ttf'),
+      bold: await loadFont('assets/fonts/OpenSans-Bold.ttf'),
+      arabic: await loadFont('assets/fonts/NotoNaskhArabic-Regular.ttf'),
+      arabicBold: await loadFont('assets/fonts/NotoNaskhArabic-Bold.ttf'),
+    );
+  }
+
+  pw.ThemeData get theme => pw.ThemeData.withFont(
+        base: base,
+        bold: bold,
+        fontFallback: [arabic],
+      );
+}
+
+final _arabicScript = RegExp(
+  r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]',
+);
+
+bool _containsArabic(String text) => _arabicScript.hasMatch(text);
+
+class _AdmissionPdfRenderer {
+  _AdmissionPdfRenderer({
+    required this.admission,
+    required this.activities,
+  });
+
+  final PatientAdmissionModel admission;
+  final List<AdmissionActivity> activities;
+
+  static final _primary = PdfColor.fromHex('#1A1F36');
+  static final _muted = PdfColor.fromHex('#8A8D9F');
+  static final _border = PdfColor.fromHex('#E8EAEF');
+  static final _surface = PdfColor.fromHex('#F5F7FB');
+  static final _accent = PdfColor.fromHex('#4CAF50');
+  static final _accentSoft = PdfColor.fromHex('#E8F5E9');
+  static final _heroMuted = PdfColor.fromHex('#B8BBCC');
+
+  late final _PdfFonts _fonts;
+
+  Future<Uint8List> render() async {
+    _fonts = await _PdfFonts.load();
+
     pw.ImageProvider? logo;
     try {
       final bytes = await rootBundle.load('assets/app_logo_without_back.png');
@@ -36,57 +100,56 @@ class AdmissionPdfBuilder {
     doc.addPage(
       pw.MultiPage(
         pageTheme: pw.PageTheme(
-          margin: const pw.EdgeInsets.fromLTRB(36, 36, 36, 48),
-          theme: pw.ThemeData.withFont(
-            base: pw.Font.helvetica(),
-            bold: pw.Font.helveticaBold(),
-          ),
+          margin: const pw.EdgeInsets.fromLTRB(32, 32, 32, 44),
+          theme: _fonts.theme,
         ),
         header: (context) => _pageHeader(
-          admission: admission,
           logo: logo,
           pageNumber: context.pageNumber,
           pagesCount: context.pagesCount,
         ),
-        footer: (context) => _pageFooter(context),
+        footer: (context) => _pageFooter(),
         build: (context) => [
-          _heroSummary(admission, generatedAt),
-          pw.SizedBox(height: 18),
+          _heroSummary(generatedAt),
+          pw.SizedBox(height: 20),
           if (admission.patient != null) ...[
             _sectionTitle('Patient'),
             pw.SizedBox(height: 8),
             _infoCard(_patientRows(admission.patient!)),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 18),
           ],
           _sectionTitle('Admission'),
           pw.SizedBox(height: 8),
           _infoCard(_admissionRows(admission)),
-          pw.SizedBox(height: 16),
+          pw.SizedBox(height: 18),
           if (admission.doctor != null) ...[
             _sectionTitle('Attending doctor'),
             pw.SizedBox(height: 8),
             _infoCard(_doctorRows(admission)),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 18),
           ],
           if (admission.notes.trim().isNotEmpty) ...[
             _sectionTitle(AppTexts.admissionNotesSection),
             pw.SizedBox(height: 8),
             _textCard(admission.notes),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 18),
           ],
-          ..._clinicalNotesSection(admission),
-          ..._treatmentPlansSection(admission),
-          ..._vitalsSection(admission),
-          ..._labsSection(admission),
-          ..._medicationsSection(admission),
-          ..._radiologySection(admission),
-          ..._simpleNotesSection('Echo', admission.echoes.map((e) => (e.text, e.createdAt)).toList()),
+          ..._clinicalNotesSection(),
+          ..._treatmentPlansSection(),
+          ..._vitalsSection(),
+          ..._labsSection(),
+          ..._medicationsSection(),
+          ..._radiologySection(),
+          ..._simpleNotesSection(
+            'Echo',
+            admission.echoes.map((e) => (e.text, e.createdAt)).toList(),
+          ),
           ..._simpleNotesSection(
             'Ultrasound',
             admission.ultrasounds.map((u) => (u.text, u.createdAt)).toList(),
           ),
-          ..._culturesSection(admission),
-          ..._activitySection(activities),
+          ..._culturesSection(),
+          ..._activitySection(),
         ],
       ),
     );
@@ -94,7 +157,36 @@ class AdmissionPdfBuilder {
     return doc.save();
   }
 
-  static String _documentTitle(PatientAdmissionModel admission) {
+  pw.TextStyle _style({
+    double fontSize = 10,
+    PdfColor? color,
+    bool bold = false,
+    double? lineSpacing,
+  }) {
+    return pw.TextStyle(
+      fontSize: fontSize,
+      color: color ?? _primary,
+      fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+      lineSpacing: lineSpacing,
+      fontFallback: bold ? [_fonts.arabicBold] : [_fonts.arabic],
+    );
+  }
+
+  pw.Widget _txt(
+    String text, {
+    pw.TextStyle? style,
+    pw.TextAlign? textAlign,
+  }) {
+    final rtl = _containsArabic(text);
+    return pw.Text(
+      text,
+      style: style,
+      textDirection: rtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+      textAlign: textAlign ?? (rtl ? pw.TextAlign.right : pw.TextAlign.left),
+    );
+  }
+
+  String _documentTitle(PatientAdmissionModel admission) {
     final name = admission.patient?.name.trim();
     if (name != null && name.isNotEmpty) {
       return '$name — Admission #${admission.id}';
@@ -102,15 +194,14 @@ class AdmissionPdfBuilder {
     return 'Admission #${admission.id}';
   }
 
-  static pw.Widget _pageHeader({
-    required PatientAdmissionModel admission,
+  pw.Widget _pageHeader({
     required pw.ImageProvider? logo,
     required int pageNumber,
     required int pagesCount,
   }) {
     return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 14),
-      padding: const pw.EdgeInsets.only(bottom: 10),
+      margin: const pw.EdgeInsets.only(bottom: 16),
+      padding: const pw.EdgeInsets.only(bottom: 12),
       decoration: pw.BoxDecoration(
         border: pw.Border(
           bottom: pw.BorderSide(color: _border, width: 1),
@@ -121,159 +212,188 @@ class AdmissionPdfBuilder {
         children: [
           if (logo != null)
             pw.Container(
-              height: 28,
-              width: 28,
-              margin: const pw.EdgeInsets.only(right: 10),
+              height: 32,
+              width: 32,
+              margin: const pw.EdgeInsets.only(right: 12),
               child: pw.Image(logo, fit: pw.BoxFit.contain),
             ),
           pw.Expanded(
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(
+                _txt(
                   'ICU Connect',
-                  style: pw.TextStyle(
-                    fontSize: 11,
-                    fontWeight: pw.FontWeight.bold,
-                    color: _primary,
-                  ),
+                  style: _style(fontSize: 12, bold: true, color: _primary),
                 ),
-                pw.Text(
+                pw.SizedBox(height: 2),
+                _txt(
                   admission.hospital?.name ?? 'Admission report',
-                  style: pw.TextStyle(fontSize: 9, color: _muted),
+                  style: _style(fontSize: 9, color: _muted),
                 ),
               ],
             ),
           ),
-          pw.Text(
-            'Page $pageNumber of $pagesCount',
-            style: pw.TextStyle(fontSize: 8, color: _muted),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: pw.BoxDecoration(
+              color: _surface,
+              borderRadius: pw.BorderRadius.circular(999),
+            ),
+            child: _txt(
+              'Page $pageNumber / $pagesCount',
+              style: _style(fontSize: 8, color: _muted),
+            ),
           ),
         ],
       ),
     );
   }
 
-  static pw.Widget _pageFooter(pw.Context context) {
+  pw.Widget _pageFooter() {
     return pw.Container(
-      alignment: pw.Alignment.centerRight,
-      margin: const pw.EdgeInsets.only(top: 8),
-      child: pw.Text(
-        'Confidential medical record · ICU Connect',
-        style: pw.TextStyle(fontSize: 8, color: _muted),
+      margin: const pw.EdgeInsets.only(top: 10),
+      padding: const pw.EdgeInsets.only(top: 8),
+      decoration: pw.BoxDecoration(
+        border: pw.Border(
+          top: pw.BorderSide(color: _border, width: 0.5),
+        ),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          _txt(
+            'Confidential medical record',
+            style: _style(fontSize: 8, color: _muted),
+          ),
+          _txt(
+            'ICU Connect',
+            style: _style(fontSize: 8, bold: true, color: _accent),
+          ),
+        ],
       ),
     );
   }
 
-  static pw.Widget _heroSummary(
-    PatientAdmissionModel admission,
-    DateTime generatedAt,
-  ) {
+  pw.Widget _heroSummary(DateTime generatedAt) {
     final patient = admission.patient;
     final patientName = patient?.name.trim().isNotEmpty == true
         ? patient!.name
         : 'Admission #${admission.id}';
     final status = admission.status.isEmpty
         ? AppTexts.notAvailable
-        : admission.status[0].toUpperCase() + admission.status.substring(1);
+        : admissionStatusDisplayLabel(admission.status);
 
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.all(18),
+      padding: const pw.EdgeInsets.fromLTRB(20, 20, 20, 18),
       decoration: pw.BoxDecoration(
         color: _primary,
-        borderRadius: pw.BorderRadius.circular(14),
+        borderRadius: pw.BorderRadius.circular(16),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(
-            patientName,
-            style: pw.TextStyle(
-              fontSize: 20,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.white,
-            ),
-          ),
-          pw.SizedBox(height: 6),
-          pw.Wrap(
-            spacing: 10,
-            runSpacing: 4,
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _heroChip('Bed ${admission.bedNumber.isEmpty ? '—' : admission.bedNumber}'),
-              _heroChip(status),
-              if (admission.hospitalGroup != null)
-                _heroChip(admission.hospitalGroup!.name),
+              pw.Expanded(
+                child: _txt(
+                  patientName,
+                  style: _style(
+                    fontSize: 22,
+                    bold: true,
+                    color: PdfColors.white,
+                  ),
+                ),
+              ),
+              pw.Container(
+                padding:
+                    const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: pw.BoxDecoration(
+                  color: _accent,
+                  borderRadius: pw.BorderRadius.circular(999),
+                ),
+                child: _txt(
+                  status,
+                  style: _style(
+                    fontSize: 9,
+                    bold: true,
+                    color: PdfColors.white,
+                  ),
+                ),
+              ),
             ],
           ),
           pw.SizedBox(height: 10),
-          pw.Text(
+          pw.Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _heroChip(
+                'Bed ${admission.bedNumber.isEmpty ? '—' : admission.bedNumber}',
+              ),
+              if (admission.hospitalGroup != null)
+                _heroChip(admission.hospitalGroup!.name),
+              if (admission.hospital != null) _heroChip(admission.hospital!.name),
+            ],
+          ),
+          pw.SizedBox(height: 12),
+          _txt(
             'Generated ${_formatGeneratedAt(generatedAt)}',
-            style: pw.TextStyle(
-              fontSize: 9,
-              color: PdfColor.fromHex('#B8BBCC'),
-            ),
+            style: _style(fontSize: 9, color: _heroMuted),
           ),
         ],
       ),
     );
   }
 
-  static pw.Widget _heroChip(String label) {
+  pw.Widget _heroChip(String label) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: pw.BoxDecoration(
         color: PdfColor.fromHex('#2A3150'),
         borderRadius: pw.BorderRadius.circular(999),
       ),
-      child: pw.Text(
+      child: _txt(
         label,
-        style: pw.TextStyle(
-          fontSize: 9,
-          fontWeight: pw.FontWeight.bold,
-          color: PdfColors.white,
-        ),
+        style: _style(fontSize: 9, color: PdfColors.white),
       ),
     );
   }
 
-  static pw.Widget _sectionTitle(String title) {
+  pw.Widget _sectionTitle(String title) {
     return pw.Row(
       children: [
         pw.Container(
           width: 4,
-          height: 16,
+          height: 18,
           decoration: pw.BoxDecoration(
             color: _accent,
             borderRadius: pw.BorderRadius.circular(2),
           ),
         ),
-        pw.SizedBox(width: 8),
-        pw.Text(
+        pw.SizedBox(width: 10),
+        _txt(
           title,
-          style: pw.TextStyle(
-            fontSize: 13,
-            fontWeight: pw.FontWeight.bold,
-            color: _primary,
-          ),
+          style: _style(fontSize: 14, bold: true, color: _primary),
         ),
       ],
     );
   }
 
-  static pw.Widget _infoCard(List<(String, String)> rows) {
+  pw.Widget _infoCard(List<(String, String)> rows) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.all(12),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: pw.BoxDecoration(
         color: _surface,
-        borderRadius: pw.BorderRadius.circular(10),
+        borderRadius: pw.BorderRadius.circular(12),
         border: pw.Border.all(color: _border),
       ),
       child: pw.Column(
         children: [
           for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) pw.Divider(color: _border, height: 12),
+            if (i > 0) pw.Divider(color: _border, height: 1),
             _infoRow(rows[i].$1, rows[i].$2),
           ],
         ],
@@ -281,48 +401,64 @@ class AdmissionPdfBuilder {
     );
   }
 
-  static pw.Widget _infoRow(String label, String value) {
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.SizedBox(
-          width: 120,
-          child: pw.Text(
-            label,
-            style: pw.TextStyle(
-              fontSize: 9,
-              fontWeight: pw.FontWeight.bold,
-              color: _muted,
+  pw.Widget _infoRow(String label, String value) {
+    final display = value.isEmpty ? AppTexts.notAvailable : value;
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 8),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(
+            width: 118,
+            child: _txt(
+              label,
+              style: _style(fontSize: 9, bold: true, color: _muted),
             ),
           ),
-        ),
-        pw.Expanded(
-          child: pw.Text(
-            value.isEmpty ? AppTexts.notAvailable : value,
-            style: pw.TextStyle(fontSize: 10, color: _primary),
+          pw.Expanded(
+            child: _txt(
+              display,
+              style: _style(fontSize: 10, color: _primary),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  static pw.Widget _textCard(String text) {
+  pw.Widget _textCard(String text) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.all(12),
+      padding: const pw.EdgeInsets.all(14),
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
-        borderRadius: pw.BorderRadius.circular(10),
+        borderRadius: pw.BorderRadius.circular(12),
         border: pw.Border.all(color: _border),
       ),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(fontSize: 10, color: _primary, lineSpacing: 1.4),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: 3,
+            height: 36,
+            margin: const pw.EdgeInsets.only(right: 12),
+            decoration: pw.BoxDecoration(
+              color: _accent,
+              borderRadius: pw.BorderRadius.circular(2),
+            ),
+          ),
+          pw.Expanded(
+            child: _txt(
+              text,
+              style: _style(fontSize: 10, color: _primary, lineSpacing: 1.45),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  static List<(String, String)> _patientRows(AdmissionPatientModel patient) {
+  List<(String, String)> _patientRows(AdmissionPatientModel patient) {
     return [
       ('Name', patient.name),
       ('National ID', patient.nationalId),
@@ -334,11 +470,11 @@ class AdmissionPdfBuilder {
     ];
   }
 
-  static List<(String, String)> _admissionRows(PatientAdmissionModel admission) {
+  List<(String, String)> _admissionRows(PatientAdmissionModel admission) {
     return [
       ('Admission ID', '#${admission.id}'),
       ('Bed', admission.bedNumber),
-      ('Status', admission.status),
+      ('Status', admissionStatusDisplayLabel(admission.status)),
       ('Admitted', admissionDetailsFormatDate(admission.dateComes)),
       ('Discharged', admissionDetailsFormatDate(admission.dateLeave)),
       if (admission.dateOfDeath != null && admission.dateOfDeath!.isNotEmpty)
@@ -349,7 +485,7 @@ class AdmissionPdfBuilder {
     ];
   }
 
-  static List<(String, String)> _doctorRows(PatientAdmissionModel admission) {
+  List<(String, String)> _doctorRows(PatientAdmissionModel admission) {
     final doctor = admission.doctor!;
     return [
       ('Name', doctor.name),
@@ -358,7 +494,7 @@ class AdmissionPdfBuilder {
     ];
   }
 
-  static List<pw.Widget> _clinicalNotesSection(PatientAdmissionModel admission) {
+  List<pw.Widget> _clinicalNotesSection() {
     if (admission.clinicalNotes.isEmpty) return [];
     return [
       _sectionTitle('Clinical notes'),
@@ -373,13 +509,11 @@ class AdmissionPdfBuilder {
           ),
         ),
       ),
-      pw.SizedBox(height: 8),
+      pw.SizedBox(height: 10),
     ];
   }
 
-  static List<pw.Widget> _treatmentPlansSection(
-    PatientAdmissionModel admission,
-  ) {
+  List<pw.Widget> _treatmentPlansSection() {
     if (admission.treatmentPlans.isEmpty) return [];
     return [
       _sectionTitle('Treatment plans'),
@@ -394,11 +528,11 @@ class AdmissionPdfBuilder {
           ),
         ),
       ),
-      pw.SizedBox(height: 8),
+      pw.SizedBox(height: 10),
     ];
   }
 
-  static List<pw.Widget> _vitalsSection(PatientAdmissionModel admission) {
+  List<pw.Widget> _vitalsSection() {
     if (admission.vitals.isEmpty) return [];
     return [
       _sectionTitle(AppTexts.vitalSigns),
@@ -412,11 +546,11 @@ class AdmissionPdfBuilder {
           return [title, value, admissionDetailsFormatDateTime(v.date)];
         }).toList(),
       ),
-      pw.SizedBox(height: 16),
+      pw.SizedBox(height: 18),
     ];
   }
 
-  static List<pw.Widget> _labsSection(PatientAdmissionModel admission) {
+  List<pw.Widget> _labsSection() {
     if (admission.labs.isEmpty) return [];
     return [
       _sectionTitle(AppTexts.labs),
@@ -430,11 +564,11 @@ class AdmissionPdfBuilder {
           return [title, value, admissionDetailsFormatDateTime(l.date)];
         }).toList(),
       ),
-      pw.SizedBox(height: 16),
+      pw.SizedBox(height: 18),
     ];
   }
 
-  static List<pw.Widget> _medicationsSection(PatientAdmissionModel admission) {
+  List<pw.Widget> _medicationsSection() {
     if (admission.medications.isEmpty) return [];
     return [
       _sectionTitle('Medications'),
@@ -454,11 +588,11 @@ class AdmissionPdfBuilder {
           ];
         }).toList(),
       ),
-      pw.SizedBox(height: 16),
+      pw.SizedBox(height: 18),
     ];
   }
 
-  static List<pw.Widget> _radiologySection(PatientAdmissionModel admission) {
+  List<pw.Widget> _radiologySection() {
     if (admission.radiologyImages.isEmpty) return [];
     return [
       _sectionTitle('Radiology'),
@@ -473,11 +607,11 @@ class AdmissionPdfBuilder {
           ),
         ),
       ),
-      pw.SizedBox(height: 8),
+      pw.SizedBox(height: 10),
     ];
   }
 
-  static List<pw.Widget> _culturesSection(PatientAdmissionModel admission) {
+  List<pw.Widget> _culturesSection() {
     if (admission.cultures.isEmpty) return [];
     return [
       _sectionTitle('Cultures'),
@@ -492,11 +626,11 @@ class AdmissionPdfBuilder {
           ),
         ),
       ),
-      pw.SizedBox(height: 8),
+      pw.SizedBox(height: 10),
     ];
   }
 
-  static List<pw.Widget> _simpleNotesSection(
+  List<pw.Widget> _simpleNotesSection(
     String title,
     List<(String text, String date)> items,
   ) {
@@ -514,24 +648,27 @@ class AdmissionPdfBuilder {
           ),
         ),
       ),
-      pw.SizedBox(height: 8),
+      pw.SizedBox(height: 10),
     ];
   }
 
-  static List<pw.Widget> _activitySection(List<AdmissionActivity> activities) {
+  List<pw.Widget> _activitySection() {
     if (activities.isEmpty) return [];
     return [
       _sectionTitle(AppTexts.activityHistorySection),
       pw.SizedBox(height: 8),
       ...activities.take(50).map(
-        (a) => pw.Padding(
+        (a) {
+          final changeLines = admissionActivityChangeLines(a);
+          return pw.Padding(
           padding: const pw.EdgeInsets.only(bottom: 6),
           child: pw.Container(
             width: double.infinity,
-            padding: const pw.EdgeInsets.all(10),
+            padding: const pw.EdgeInsets.all(12),
             decoration: pw.BoxDecoration(
+              color: PdfColors.white,
               border: pw.Border.all(color: _border),
-              borderRadius: pw.BorderRadius.circular(8),
+              borderRadius: pw.BorderRadius.circular(10),
             ),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -539,136 +676,194 @@ class AdmissionPdfBuilder {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text(
-                      a.subjectTypeEnum?.label ?? a.subjectType,
-                      style: pw.TextStyle(
-                        fontSize: 9,
-                        fontWeight: pw.FontWeight.bold,
-                        color: _primary,
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: pw.BoxDecoration(
+                        color: _accentSoft,
+                        borderRadius: pw.BorderRadius.circular(6),
+                      ),
+                      child: _txt(
+                        admissionActivityTitle(a),
+                        style: _style(
+                          fontSize: 8,
+                          bold: true,
+                          color: PdfColor.fromHex('#2E7D32'),
+                        ),
                       ),
                     ),
-                    pw.Text(
+                    _txt(
                       admissionDetailsFormatDateTime(a.createdAt),
-                      style: pw.TextStyle(fontSize: 8, color: _muted),
+                      style: _style(fontSize: 8, color: _muted),
                     ),
                   ],
                 ),
-                if (a.description.isNotEmpty) ...[
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    a.description,
-                    style: pw.TextStyle(fontSize: 9, color: _primary),
+                if (changeLines.isNotEmpty) ...[
+                  pw.SizedBox(height: 6),
+                  ...changeLines.map(
+                    (line) => pw.Padding(
+                      padding: const pw.EdgeInsets.only(bottom: 3),
+                      child: _txt(
+                        line,
+                        style: _style(fontSize: 9, color: _primary),
+                      ),
+                    ),
                   ),
-                ],
-                if (a.actorName != null && a.actorName!.isNotEmpty) ...[
-                  pw.SizedBox(height: 3),
-                  pw.Text(
-                    'By ${a.actorName}',
-                    style: pw.TextStyle(fontSize: 8, color: _muted),
+                ] else if (a.description.isNotEmpty) ...[
+                  pw.SizedBox(height: 6),
+                  _txt(
+                    a.description,
+                    style: _style(fontSize: 9, color: _primary),
                   ),
                 ],
               ],
             ),
           ),
-        ),
+        );
+        },
       ),
     ];
   }
 
-  static pw.Widget _recordCard({
+  pw.Widget _recordCard({
     required String title,
     required String subtitle,
     required String body,
   }) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.all(12),
+      padding: const pw.EdgeInsets.all(14),
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
-        borderRadius: pw.BorderRadius.circular(10),
+        borderRadius: pw.BorderRadius.circular(12),
         border: pw.Border.all(color: _border),
       ),
-      child: pw.Column(
+      child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                title,
-                style: pw.TextStyle(
-                  fontSize: 10,
-                  fontWeight: pw.FontWeight.bold,
-                  color: _primary,
-                ),
-              ),
-              pw.Text(
-                subtitle,
-                style: pw.TextStyle(fontSize: 8, color: _muted),
-              ),
-            ],
+          pw.Container(
+            width: 3,
+            margin: const pw.EdgeInsets.only(right: 12, top: 2),
+            decoration: pw.BoxDecoration(
+              color: _accent,
+              borderRadius: pw.BorderRadius.circular(2),
+            ),
+            child: pw.SizedBox(height: 40),
           ),
-          pw.SizedBox(height: 6),
-          pw.Text(
-            body,
-            style: pw.TextStyle(fontSize: 10, color: _primary, lineSpacing: 1.35),
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Expanded(
+                      child: _txt(
+                        title,
+                        style: _style(fontSize: 10, bold: true, color: _primary),
+                      ),
+                    ),
+                    pw.SizedBox(width: 8),
+                    _txt(
+                      subtitle,
+                      style: _style(fontSize: 8, color: _muted),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 6),
+                _txt(
+                  body,
+                  style: _style(
+                    fontSize: 10,
+                    color: _primary,
+                    lineSpacing: 1.4,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  static pw.Widget _measurementTable({
+  pw.Widget _measurementTable({
     required List<String> headers,
     required List<List<String>> rows,
   }) {
-    return pw.Table(
-      border: pw.TableBorder.all(color: _border, width: 0.5),
-      columnWidths: {
-        0: const pw.FlexColumnWidth(2.2),
-        1: const pw.FlexColumnWidth(2),
-        2: const pw.FlexColumnWidth(1.5),
-      },
-      children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: _primary),
-          children: headers
-              .map(
-                (h) => pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
-                  child: pw.Text(
-                    h,
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.white,
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-        ...rows.map(
-          (row) => pw.TableRow(
-            decoration: const pw.BoxDecoration(color: PdfColors.white),
-            children: row
-                .map(
-                  (cell) => pw.Padding(
-                    padding: const pw.EdgeInsets.all(6),
-                    child: pw.Text(
-                      cell.isEmpty ? AppTexts.notAvailable : cell,
-                      style: pw.TextStyle(fontSize: 9, color: _primary),
-                    ),
-                  ),
-                )
-                .toList(),
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        borderRadius: pw.BorderRadius.circular(12),
+        border: pw.Border.all(color: _border),
+      ),
+      child: pw.ClipRRect(
+        horizontalRadius: 12,
+        verticalRadius: 12,
+        child: pw.Table(
+          border: pw.TableBorder(
+            horizontalInside: pw.BorderSide(color: _border, width: 0.5),
+            verticalInside: pw.BorderSide(color: _border, width: 0.5),
           ),
+          columnWidths: {
+            0: const pw.FlexColumnWidth(2.2),
+            1: const pw.FlexColumnWidth(2),
+            2: const pw.FlexColumnWidth(1.5),
+          },
+          children: [
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: _primary),
+              children: headers
+                  .map(
+                    (h) => pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      child: _txt(
+                        h,
+                        style: _style(
+                          fontSize: 9,
+                          bold: true,
+                          color: PdfColors.white,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+            ...rows.asMap().entries.map(
+              (entry) {
+                final isEven = entry.key.isEven;
+                return pw.TableRow(
+                  decoration: pw.BoxDecoration(
+                    color: isEven ? PdfColors.white : _surface,
+                  ),
+                  children: entry.value
+                      .map(
+                        (cell) => pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 7,
+                          ),
+                          child: _txt(
+                            cell.isEmpty ? AppTexts.notAvailable : cell,
+                            style: _style(fontSize: 9, color: _primary),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  static String _formatGeneratedAt(DateTime dt) {
+  String _formatGeneratedAt(DateTime dt) {
     final y = dt.year.toString().padLeft(4, '0');
     final m = dt.month.toString().padLeft(2, '0');
     final d = dt.day.toString().padLeft(2, '0');

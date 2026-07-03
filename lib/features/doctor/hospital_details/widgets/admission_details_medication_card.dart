@@ -4,16 +4,19 @@ import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/features/superAdmin/patients/models/patient_admission_models.dart';
 
 import 'admission_details_formatters.dart';
+import 'admission_details_item_actions.dart';
 import 'admission_details_type_badge.dart';
 
 class AdmissionDetailsMedicationCard extends StatelessWidget {
   const AdmissionDetailsMedicationCard({
     super.key,
     required this.med,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final MedicationModel med;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -34,15 +37,7 @@ class AdmissionDetailsMedicationCard extends StatelessWidget {
             children: [
               AdmissionDetailsTypeBadge(type: med.type),
               const Spacer(),
-              IconButton(
-                onPressed: onDelete,
-                icon: const Icon(
-                  Icons.delete_outline,
-                  size: 18,
-                  color: Colors.redAccent,
-                ),
-                visualDensity: VisualDensity.compact,
-              ),
+              AdmissionDetailsItemActions(onEdit: onEdit, onDelete: onDelete),
             ],
           ),
           const SizedBox(height: 8),
