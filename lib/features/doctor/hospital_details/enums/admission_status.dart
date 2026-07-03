@@ -8,7 +8,7 @@ enum AdmissionStatus {
   admitted('admitted', 'Admitted'),
   discharged('discharged', 'Improved'),
   leavesAma('leaves_ama', 'DAMA'),
-  deceased('deceased', 'Dia'),
+  deceased('deceased', 'Die'),
   referred('referred', 'Referred');
 
   const AdmissionStatus(this.apiValue, this.displayLabel);

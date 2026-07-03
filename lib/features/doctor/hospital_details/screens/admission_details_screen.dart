@@ -11,13 +11,14 @@ import 'package:icu_connect/core/widgets/app_button.dart';
 
 import '../../../superAdmin/patients/models/admission_request_model.dart';
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
-import '../enums/admission_activity_subject_type.dart';
 import '../models/admission_activity.dart';
 import '../enums/admission_status.dart';
 import '../utils/admission_update_validation.dart';
 import '../repository/hospital_admissions_repository.dart';
 import '../services/admission_pdf_builder.dart';
-import '../widgets/admission_details_activity_section.dart';
+import 'admission_activity_history_screen.dart';
+import '../widgets/admission_exit_outcome_sheet.dart';
+import '../widgets/add_patient_measurement_title_sheet.dart';
 import '../widgets/admission_details_culture_card.dart';
 import '../widgets/admission_details_empty_hint.dart';
 import '../widgets/admission_details_formatters.dart';
@@ -46,10 +47,9 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
   PatientAdmissionModel? _admission;
   bool _loadingAdmission = true;
   Object? _admissionError;
-  late Future<List<AdmissionActivity>> _activityFuture;
   final _repo = const HospitalAdmissionsRepository();
-  AdmissionActivitySubjectType? _activityFilter;
   bool _exportingPdf = false;
+  bool _exitingAdmission = false;
 
 
   final _patientEditFormKey = GlobalKey<FormState>();
@@ -76,12 +76,14 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
 
   bool _addingVital = false;
   bool _savingVital = false;
+  bool _addingVitalTitle = false;
   PendingMeasurementColumnEntry? _pendingVital;
   List<MeasurementTitleModel> _vitalsTitles = [];
 
 
   bool _addingLab = false;
   bool _savingLab = false;
+  bool _addingLabTitle = false;
   PendingMeasurementColumnEntry? _pendingLab;
   List<MeasurementTitleModel> _labsTitles = [];
 
@@ -111,8 +113,6 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
   void initState() {
     super.initState();
     _fetchAdmission(silent: false);
-    _loadActivity();
-    _loadTitles();
   }
 
   @override
@@ -159,6 +159,7 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
         _loadingAdmission = false;
         _admissionError = null;
       });
+      _loadTitles(data.patientId);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -174,35 +175,17 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
 
   Future<void> _silentRefreshAdmission() async {
     await _fetchAdmission(silent: true);
-    await _silentRefreshActivity();
   }
 
-  Future<void> _silentRefreshActivity() async {
-    try {
-      final list = await _repo.fetchAdmissionActivity(
-        widget.admissionId,
-        subjectType: _activityFilter,
-      );
-      if (!mounted) return;
-      setState(() {
-        _activityFuture = Future.value(list);
-      });
-    } catch (_) {}
-  }
-
-  void _loadActivity() {
-    setState(() {
-      _activityFuture = _repo.fetchAdmissionActivity(
-        widget.admissionId,
-        subjectType: _activityFilter,
-      );
-    });
-  }
-
-  void _onActivityFilterChanged(AdmissionActivitySubjectType? filter) {
-    if (_activityFilter == filter) return;
-    setState(() => _activityFilter = filter);
-    _loadActivity();
+  void _openActivityHistory() {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => AdmissionActivityHistoryScreen(
+          admissionId: widget.admissionId,
+        ),
+      ),
+    );
   }
 
   Future<void> _refreshAdmission() async {
@@ -222,7 +205,7 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     try {
       List<AdmissionActivity> activities = const [];
       try {
-        activities = await _activityFuture;
+        activities = await _repo.fetchAdmissionActivity(widget.admissionId);
       } catch (_) {}
 
       final bytes = await AdmissionPdfBuilder.build(
@@ -249,10 +232,10 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     }
   }
 
-  Future<void> _loadTitles() async {
+  Future<void> _loadTitles(int patientId) async {
     try {
-      final v = await _repo.listVitalsTitles();
-      final l = await _repo.listLabsTitles();
+      final v = await _repo.listPatientVitalsTitles(patientId);
+      final l = await _repo.listPatientLabsTitles(patientId);
       if (mounted) {
         setState(() {
           _vitalsTitles = v;
@@ -262,7 +245,74 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     } catch (_) {}
   }
 
-  // ── Generic Section Add ──────────────────────────────────────────────────
+  Future<void> _addPatientVitalTitle(int patientId) async {
+    final values = await AddPatientMeasurementTitleSheet.show(
+      context,
+      isLabs: false,
+    );
+    if (values == null || !mounted) return;
+
+    setState(() => _addingVitalTitle = true);
+    try {
+      final created = await _repo.createPatientVitalTitle(
+        patientId: patientId,
+        title: values.title,
+        unit: values.unit,
+        valueType: values.valueType,
+        normalRangeMin: values.normalRangeMin,
+        normalRangeMax: values.normalRangeMax,
+      );
+      if (!mounted) return;
+      setState(() {
+        _vitalsTitles = [..._vitalsTitles, created];
+        _pendingVital?.controllers.putIfAbsent(
+          created.id,
+          () => TextEditingController(),
+        );
+      });
+      _showSnack(AppTexts.vitalTitleCreated);
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _addingVitalTitle = false);
+    }
+  }
+
+  Future<void> _addPatientLabTitle(int patientId) async {
+    final values = await AddPatientMeasurementTitleSheet.show(
+      context,
+      isLabs: true,
+    );
+    if (values == null || !mounted) return;
+
+    setState(() => _addingLabTitle = true);
+    try {
+      final created = await _repo.createPatientLabTitle(
+        patientId: patientId,
+        title: values.title,
+        unit: values.unit,
+        normalRangeMin: values.normalRangeMin,
+        normalRangeMax: values.normalRangeMax,
+      );
+      if (!mounted) return;
+      setState(() {
+        _labsTitles = [..._labsTitles, created];
+        _pendingLab?.controllers.putIfAbsent(
+          created.id,
+          () => TextEditingController(),
+        );
+      });
+      _showSnack(AppTexts.labTitleCreated);
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _addingLabTitle = false);
+    }
+  }
+
+  
   void _startAddGeneric(String section, {String? defaultType}) {
     _cancelEditGeneric();
     for (var c in _genericCtrls.values) {
@@ -777,19 +827,23 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     for (final title in _vitalsTitles) {
       final text = pending.controllers[title.id]?.text.trim() ?? '';
       if (text.isEmpty) continue;
-      final valueError = AdmissionUpdateValidation.numericValue(
-        text,
+      final valueError = AdmissionUpdateValidation.measurementValue(
+        raw: text,
         field: title.title,
+        isNumeric: title.isNumericValueType,
       );
       if (valueError != null) {
         _showSnack(valueError, isError: true);
         return;
       }
+      final parsedValue = title.isNumericValueType
+          ? (double.tryParse(text) ?? 0)
+          : text;
       items.add({
         if (pending.recordIdsByTitleId[title.id] != null)
           'id': pending.recordIdsByTitleId[title.id],
         'vitals_title_id': title.id,
-        'value': double.tryParse(text) ?? 0,
+        'value': parsedValue,
         'date': admissionDetailsSqlDateTime(pending.date),
       });
     }
@@ -904,12 +958,73 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     }
   }
 
-  void _deleteAdmission() async {
+  Future<DateTime?> _pickDateTimeValue({DateTime? initial}) async {
+    final base = initial ?? DateTime.now();
+    final d = await showDatePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      initialDate: DateTime(base.year, base.month, base.day),
+    );
+    if (d == null || !mounted) return null;
+    final t = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(base),
+    );
+    if (t == null || !mounted) return null;
+    return DateTime(d.year, d.month, d.day, t.hour, t.minute);
+  }
+
+  Future<void> _pickDateTime({
+    required DateTime? initial,
+    required void Function(DateTime) onPick,
+  }) async {
+    final picked = await _pickDateTimeValue(initial: initial);
+    if (picked != null) onPick(picked);
+  }
+
+  Future<void> _exitAdmission(PatientAdmissionModel admission) async {
+    if (_exitingAdmission) return;
+    if (AdmissionStatus.isDischargedOutcome(admission.status)) {
+      _showSnack('This admission is already closed.', isError: true);
+      return;
+    }
+
+    final status = await AdmissionExitOutcomeSheet.show(context);
+    if (status == null || !mounted) return;
+
+    DateTime? dateLeave;
+    DateTime? dateOfDeath;
+
+    if (status.requiresLeaveDate) {
+      dateLeave = await _pickDateTimeValue(initial: DateTime.now());
+      if (dateLeave == null || !mounted) return;
+    } else if (status.requiresDeathDate) {
+      dateOfDeath = await _pickDateTimeValue(initial: DateTime.now());
+      if (dateOfDeath == null || !mounted) return;
+    }
+
+    final dateComes = admission.dateComes != null
+        ? DateTime.tryParse(admission.dateComes!)
+        : null;
+    final dateError = AdmissionUpdateValidation.admissionStatusDates(
+      status: status,
+      dateComes: dateComes,
+      dateLeave: dateLeave,
+      dateOfDeath: dateOfDeath,
+    );
+    if (dateError != null) {
+      _showSnack(dateError, isError: true);
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Admission'),
-        content: const Text('Are you sure? This cannot be undone.'),
+        title: const Text('Confirm exit'),
+        content: Text(
+          'Mark this patient as ${status.dischargedScreenLabel}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -917,23 +1032,36 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: AppColors.error),
+            child: Text(
+              status.dischargedScreenLabel,
+              style: const TextStyle(color: AppColors.primary),
             ),
           ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
+
+    setState(() => _exitingAdmission = true);
     try {
-      await _repo.deleteAdmission(widget.admissionId);
+      await _repo.updateAdmissionRaw(admission.id, {
+        'status': status.apiValue,
+        if (dateLeave != null)
+          'date_leave': admissionDetailsSqlDateTime(dateLeave),
+        if (dateOfDeath != null)
+          'date_of_death': admissionDetailsSqlDateTime(dateOfDeath),
+      });
       if (!mounted) return;
-      _showSnack('Admission deleted');
+      _showSnack('Patient marked as ${status.dischargedScreenLabel}');
       Navigator.pop(context, true);
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message, isError: true);
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Failed to delete: $e', isError: true);
+      _showSnack('Failed to update admission: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _exitingAdmission = false);
     }
   }
 
@@ -944,26 +1072,6 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
         backgroundColor: isError ? AppColors.error : AppColors.success,
       ),
     );
-  }
-
-  Future<void> _pickDateTime({
-    required DateTime? initial,
-    required void Function(DateTime) onPick,
-  }) async {
-    final base = initial ?? DateTime.now();
-    final d = await showDatePicker(
-      context: context,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      initialDate: DateTime(base.year, base.month, base.day),
-    );
-    if (d == null || !mounted) return;
-    final t = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(base),
-    );
-    if (t == null || !mounted) return;
-    onPick(DateTime(d.year, d.month, d.day, t.hour, t.minute));
   }
 
   @override
@@ -1018,18 +1126,24 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                     color: AppColors.textPrimary,
                   ),
                   onSelected: (val) {
-                    if (val == 'export_pdf') {
+                    if (val == 'activity_history') {
+                      _openActivityHistory();
+                    } else if (val == 'export_pdf') {
                       _exportAdmissionPdf(admission);
                     } else if (val == 'edit_patient') {
                       final p = admission.patient;
                       if (p != null) _beginPatientEdit(p);
                     } else if (val == 'edit_admission') {
                       _beginAdmissionEdit(admission);
-                    } else if (val == 'delete') {
-                      _deleteAdmission();
+                    } else if (val == 'exit') {
+                      _exitAdmission(admission);
                     }
                   },
                   itemBuilder: (ctx) => [
+                    PopupMenuItem(
+                      value: 'activity_history',
+                      child: Text(AppTexts.activityHistorySection),
+                    ),
                     PopupMenuItem(
                       value: 'export_pdf',
                       enabled: !_exportingPdf,
@@ -1044,13 +1158,14 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                       value: 'edit_admission',
                       child: Text(AppTexts.editAdmission),
                     ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text(
-                        'Delete',
-                        style: TextStyle(color: AppColors.error),
+                    if (!AdmissionStatus.isDischargedOutcome(admission.status))
+                      PopupMenuItem(
+                        value: 'exit',
+                        enabled: !_exitingAdmission,
+                        child: Text(
+                          _exitingAdmission ? 'Exiting…' : 'Exit',
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -1148,39 +1263,38 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                           : null,
                     ),
                     const Divider(height: 24),
-
-                    // ── Admission info (inline edit) ─────────────────────────
-                    AdmissionDetailsInfoSection(
-                      admission: admission,
-                      editing: _editingAdmission,
-                      saving: _savingAdmission,
-                      formKey: _admissionEditFormKey,
-                      bedCtrl: _bedCtrl,
-                      notesCtrl: _admissionNotesCtrl,
-                      editStatus: _editStatus,
-                      editDateComes: _editDateComes,
-                      editDateLeave: _editDateLeave,
-                      editDateOfDeath: _editDateOfDeath,
-                      onStatusChanged: (v) => setState(
-                        () => _editStatus = v ?? AdmissionStatus.admitted,
-                      ),
-                      onPickDateLeave: () => _pickDateTime(
-                        initial: _editDateLeave,
-                        onPick: (d) => setState(() => _editDateLeave = d),
-                      ),
-                      onClearDateLeave: () =>
-                          setState(() => _editDateLeave = null),
-                      onPickDateOfDeath: () => _pickDateTime(
-                        initial: _editDateOfDeath,
-                        onPick: (d) => setState(() => _editDateOfDeath = d),
-                      ),
-                      onClearDateOfDeath: () =>
-                          setState(() => _editDateOfDeath = null),
-                      onBeginEdit: () => _beginAdmissionEdit(admission),
-                      onCancel: _cancelAdmissionEdit,
-                      onSave: () => _saveAdmissionEdit(admission),
-                    ),
-                    const SizedBox(height: 8),
+                    //
+                    // AdmissionDetailsInfoSection(
+                    //   admission: admission,
+                    //   editing: _editingAdmission,
+                    //   saving: _savingAdmission,
+                    //   formKey: _admissionEditFormKey,
+                    //   bedCtrl: _bedCtrl,
+                    //   notesCtrl: _admissionNotesCtrl,
+                    //   editStatus: _editStatus,
+                    //   editDateComes: _editDateComes,
+                    //   editDateLeave: _editDateLeave,
+                    //   editDateOfDeath: _editDateOfDeath,
+                    //   onStatusChanged: (v) => setState(
+                    //     () => _editStatus = v ?? AdmissionStatus.admitted,
+                    //   ),
+                    //   onPickDateLeave: () => _pickDateTime(
+                    //     initial: _editDateLeave,
+                    //     onPick: (d) => setState(() => _editDateLeave = d),
+                    //   ),
+                    //   onClearDateLeave: () =>
+                    //       setState(() => _editDateLeave = null),
+                    //   onPickDateOfDeath: () => _pickDateTime(
+                    //     initial: _editDateOfDeath,
+                    //     onPick: (d) => setState(() => _editDateOfDeath = d),
+                    //   ),
+                    //   onClearDateOfDeath: () =>
+                    //       setState(() => _editDateOfDeath = null),
+                    //   onBeginEdit: () => _beginAdmissionEdit(admission),
+                    //   onCancel: _cancelAdmissionEdit,
+                    //   onSave: () => _saveAdmissionEdit(admission),
+                    // ),
+                    // const SizedBox(height: 8),
 
                     // ── Clinical Notes ───────────────────────────────────────
                     AdmissionDetailsSectionContainer(
@@ -1362,42 +1476,71 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                             const AdmissionDetailsEmptyHint(
                               'No radiology images recorded.',
                             )
-                          else
-                            ...admission.radiologyImages.map(
-                              (img) {
-                                if (_isEditingItem('radiology', img.id)) {
-                                  return _buildGenericEditForm(
-                                    section: 'radiology',
-                                    title: 'Edit Radiology Record',
-                                    fields: [
-                                      AdmissionDetailsFormFieldSpec(
-                                        hint: 'Title (e.g. Chest X-Ray)',
-                                        controller: _getCtrl('title'),
-                                        isRequired: true,
-                                      ),
-                                      AdmissionDetailsFormFieldSpec(
-                                        hint: 'Report text',
-                                        controller: _getCtrl('report'),
-                                        maxLines: 3,
-                                      ),
-                                    ],
-                                  );
-                                }
-                                return AdmissionDetailsRadiologyCard(
-                                  image: img,
-                                  onEdit: () => _beginEditItem(
-                                    'radiology',
-                                    img.id,
-                                    fields: {
-                                      'title': img.title,
-                                      'report': img.report,
-                                    },
+                          else ...[
+                            ...admission.radiologyImages
+                                .where((img) => _isEditingItem('radiology', img.id))
+                                .map(
+                              (img) => _buildGenericEditForm(
+                                section: 'radiology',
+                                title: 'Edit Radiology Record',
+                                fields: [
+                                  AdmissionDetailsFormFieldSpec(
+                                    hint: 'Title (e.g. Chest X-Ray)',
+                                    controller: _getCtrl('title'),
+                                    isRequired: true,
                                   ),
-                                  onDelete: () =>
-                                      _deleteItem('radiology_images', img.id),
-                                );
-                              },
+                                  AdmissionDetailsFormFieldSpec(
+                                    hint: 'Report text',
+                                    controller: _getCtrl('report'),
+                                    maxLines: 3,
+                                  ),
+                                ],
+                              ),
                             ),
+                            if (admission.radiologyImages.any(
+                              (img) => !_isEditingItem('radiology', img.id),
+                            ))
+                              SizedBox(
+                                height: 280,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: admission.radiologyImages
+                                      .where(
+                                        (img) =>
+                                            !_isEditingItem('radiology', img.id),
+                                      )
+                                      .length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(width: 0),
+                                  itemBuilder: (context, index) {
+                                    final img = admission.radiologyImages
+                                        .where(
+                                          (img) => !_isEditingItem(
+                                            'radiology',
+                                            img.id,
+                                          ),
+                                        )
+                                        .elementAt(index);
+                                    return AdmissionDetailsRadiologyCard(
+                                      image: img,
+                                      compact: true,
+                                      onEdit: () => _beginEditItem(
+                                        'radiology',
+                                        img.id,
+                                        fields: {
+                                          'title': img.title,
+                                          'report': img.report,
+                                        },
+                                      ),
+                                      onDelete: () => _deleteItem(
+                                        'radiology_images',
+                                        img.id,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
                         ],
                       ),
                     ),
@@ -1480,10 +1623,12 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                       addingColumn: _addingVital,
                       saving: _savingVital,
                       pendingColumn: _pendingVital,
+                      addingTitle: _addingVitalTitle,
                       onStartAddColumn: _startAddVitalColumn,
                       onCancelAddColumn: _cancelAddVitalColumn,
                       onSaveColumn: _saveVitalColumn,
                       onEditColumn: _editVitalColumn,
+                      onAddTitle: () => _addPatientVitalTitle(admission.patientId),
                       onPickColumnDate: () => _pickDateTime(
                         initial: _pendingVital?.date,
                         onPick: (d) => setState(() => _pendingVital?.date = d),
@@ -1499,17 +1644,18 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                       addingColumn: _addingLab,
                       saving: _savingLab,
                       pendingColumn: _pendingLab,
+                      addingTitle: _addingLabTitle,
                       onStartAddColumn: _startAddLabColumn,
                       onCancelAddColumn: _cancelAddLabColumn,
                       onSaveColumn: _saveLabColumn,
                       onEditColumn: _editLabColumn,
+                      onAddTitle: () => _addPatientLabTitle(admission.patientId),
                       onPickColumnDate: () => _pickDateTime(
                         initial: _pendingLab?.date,
                         onPick: (d) => setState(() => _pendingLab?.date = d),
                       ),
                     ),
 
-                    // ── Medications ──────────────────────────────────────────
                     AdmissionDetailsSectionContainer(
                       title: 'Medications',
                       headerAction: _addingSection == 'med' ||
@@ -1615,7 +1761,6 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                       ),
                     ),
 
-                    // ── Echo ─────────────────────────────────────────────────
                     AdmissionDetailsSectionContainer(
                       title: 'Echo',
                       headerAction: _addingSection == 'echo' ||
@@ -1683,8 +1828,6 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                         ],
                       ),
                     ),
-
-                    // ── Ultrasound ───────────────────────────────────────────
                     AdmissionDetailsSectionContainer(
                       title: 'Ultrasound',
                       headerAction: _addingSection == 'us' ||
@@ -1753,8 +1896,6 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                         ],
                       ),
                     ),
-
-                    // ── Cultures ─────────────────────────────────────────────
                     AdmissionDetailsSectionContainer(
                       title: 'Cultures',
                       headerAction: _addingSection == 'culture' ||
@@ -1833,7 +1974,6 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                       ),
                     ),
 
-                    // ── Doctor info ──────────────────────────────────────────
                     if (admission.doctor != null)
                       AdmissionDetailsSectionContainer(
                         title: 'Doctor',
@@ -1861,8 +2001,6 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                           ],
                         ),
                       ),
-
-                    // ── Hospital Group ───────────────────────────────────────
                     if (admission.hospitalGroup != null)
                       AdmissionDetailsSectionContainer(
                         title: 'Ward / Group',
@@ -1889,8 +2027,6 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                           ],
                         ),
                       ),
-
-                    // ── Admission Notes ──────────────────────────────────────
                     AdmissionDetailsSectionContainer(
                       title: AppTexts.admissionNotesSection,
                       child: Text(
@@ -1902,13 +2038,6 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                           height: 1.5,
                         ),
                       ),
-                    ),
-
-                    AdmissionDetailsActivitySection(
-                      activitiesFuture: _activityFuture,
-                      selectedFilter: _activityFilter,
-                      onFilterChanged: _onActivityFilterChanged,
-                      onRetry: _loadActivity,
                     ),
 
       const SizedBox(height: 24),

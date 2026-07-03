@@ -9,10 +9,14 @@ class AdmissionDetailsInlineImage extends StatelessWidget {
     super.key,
     required this.url,
     required this.title,
+    this.width = double.infinity,
+    this.height = 200,
   });
 
   final String url;
   final String title;
+  final double width;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +51,12 @@ class AdmissionDetailsInlineImage extends StatelessWidget {
       ),
       child: StorageNetworkImage(
         url: url,
-        width: double.infinity,
-        height: 200,
+        width: width,
+        height: height,
         fit: BoxFit.cover,
         errorBuilder: (_) => Container(
-          height: 200,
+          width: width == double.infinity ? null : width,
+          height: height,
           color: AppColors.border,
           child: const Center(
             child: Icon(
@@ -67,9 +72,14 @@ class AdmissionDetailsInlineImage extends StatelessWidget {
 }
 
 class AdmissionDetailsInlineVideoPlayer extends StatefulWidget {
-  const AdmissionDetailsInlineVideoPlayer({super.key, required this.url});
+  const AdmissionDetailsInlineVideoPlayer({
+    super.key,
+    required this.url,
+    this.height = 200,
+  });
 
   final String url;
+  final double height;
 
   @override
   State<AdmissionDetailsInlineVideoPlayer> createState() =>
@@ -125,7 +135,7 @@ class _AdmissionDetailsInlineVideoPlayerState
   Widget build(BuildContext context) {
     if (_error) {
       return Container(
-        height: 200,
+        height: widget.height,
         color: Colors.black,
         child: const Center(
           child: Icon(Icons.videocam_off, color: Colors.white54),
@@ -134,19 +144,28 @@ class _AdmissionDetailsInlineVideoPlayerState
     }
     if (!_initialized || _ctrl == null) {
       return Container(
-        height: 200,
+        height: widget.height,
         color: Colors.black,
         child: const Center(child: CircularProgressIndicator()),
       );
     }
     final ctrl = _ctrl!;
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        AspectRatio(
-          aspectRatio: ctrl.value.aspectRatio,
-          child: VideoPlayer(ctrl),
-        ),
+    return SizedBox(
+      height: widget.height,
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          ClipRect(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: ctrl.value.size.width,
+                height: ctrl.value.size.height,
+                child: VideoPlayer(ctrl),
+              ),
+            ),
+          ),
         GestureDetector(
           onTap: () => setState(() {
             ctrl.value.isPlaying ? ctrl.pause() : ctrl.play();
@@ -164,6 +183,7 @@ class _AdmissionDetailsInlineVideoPlayerState
           ),
         ),
       ],
+      ),
     );
   }
 }

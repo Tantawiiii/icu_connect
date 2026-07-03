@@ -14,11 +14,16 @@ class AdmissionDetailsRadiologyCard extends StatelessWidget {
     required this.image,
     required this.onEdit,
     required this.onDelete,
+    this.compact = false,
   });
 
   final RadiologyImageModel image;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final bool compact;
+
+  static const _compactWidth = 260.0;
+  static const _compactMediaHeight = 150.0;
 
   static bool _isVideo(String path) {
     final lower = path.toLowerCase();
@@ -35,9 +40,12 @@ class AdmissionDetailsRadiologyCard extends StatelessWidget {
     final path = cleanRadiologyStoragePath(image.imagePath);
     final mediaUrl = resolveStorageMediaUrl(path);
     final isVideo = _isVideo(path);
+    final mediaHeight = compact ? _compactMediaHeight : 200.0;
+    final mediaWidth = compact ? _compactWidth : double.infinity;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      width: compact ? _compactWidth : null,
+      margin: EdgeInsets.only(bottom: compact ? 0 : 10, right: compact ? 12 : 0),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -45,12 +53,21 @@ class AdmissionDetailsRadiologyCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             child: isVideo
-                ? AdmissionDetailsInlineVideoPlayer(url: mediaUrl)
-                : AdmissionDetailsInlineImage(url: mediaUrl, title: image.title),
+                ? AdmissionDetailsInlineVideoPlayer(
+                    url: mediaUrl,
+                    height: mediaHeight,
+                  )
+                : AdmissionDetailsInlineImage(
+                    url: mediaUrl,
+                    title: image.title,
+                    width: mediaWidth,
+                    height: mediaHeight,
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.all(12),
@@ -65,9 +82,11 @@ class AdmissionDetailsRadiologyCard extends StatelessWidget {
                       color: AppColors.textSecondary,
                     ),
                     const SizedBox(width: 4),
-                    Flexible(
+                    Expanded(
                       child: Text(
                         image.title,
+                        maxLines: compact ? 1 : null,
+                        overflow: compact ? TextOverflow.ellipsis : null,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -82,6 +101,8 @@ class AdmissionDetailsRadiologyCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     image.report,
+                    maxLines: compact ? 2 : null,
+                    overflow: compact ? TextOverflow.ellipsis : null,
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,

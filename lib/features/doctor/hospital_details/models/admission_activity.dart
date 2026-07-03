@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../enums/admission_activity_subject_type.dart';
+import 'admission_activity_change.dart';
 
 class AdmissionActivity extends Equatable {
   const AdmissionActivity({
@@ -11,6 +12,7 @@ class AdmissionActivity extends Equatable {
     required this.description,
     this.actorName,
     required this.createdAt,
+    this.changes = const [],
   });
 
   final int id;
@@ -20,6 +22,7 @@ class AdmissionActivity extends Equatable {
   final String description;
   final String? actorName;
   final String createdAt;
+  final List<AdmissionActivityChange> changes;
 
   AdmissionActivitySubjectType? get subjectTypeEnum =>
       AdmissionActivitySubjectType.fromApiValue(subjectType);
@@ -52,6 +55,7 @@ class AdmissionActivity extends Equatable {
       createdAt: json['created_at'] as String? ??
           json['performed_at'] as String? ??
           '',
+      changes: parseAdmissionActivityChanges(json),
     );
   }
 
@@ -64,5 +68,6 @@ class AdmissionActivity extends Equatable {
         description,
         actorName,
         createdAt,
+        changes,
       ];
 }

@@ -7,6 +7,7 @@ import '../../admins/models/pagination_model.dart';
 import '../cubit/hospitals_cubit.dart';
 import '../cubit/hospitals_state.dart';
 import '../models/hospital_model.dart';
+import '../widgets/hospital_requests_tab.dart';
 import 'hospital_form_screen.dart';
 
 class HospitalsListScreen extends StatelessWidget {
@@ -38,12 +39,24 @@ class _HospitalsListView extends StatefulWidget {
   State<_HospitalsListView> createState() => _HospitalsListViewState();
 }
 
-class _HospitalsListViewState extends State<_HospitalsListView> {
+class _HospitalsListViewState extends State<_HospitalsListView>
+    with SingleTickerProviderStateMixin {
   final _searchController = TextEditingController();
   String _searchQuery = '';
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) setState(() {});
+    });
+  }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -64,120 +77,140 @@ class _HospitalsListViewState extends State<_HospitalsListView> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: const Color(0xCCFFFFFF),
+          tabs: const [
+            Tab(text: AppTexts.hospitalsLabel),
+            Tab(text: AppTexts.hospitalRequestsTab),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_outlined, color: Colors.white),
             onPressed: () {
-              final state = context.read<HospitalsCubit>().state;
-              final page =
-                  state is HospitalsLoaded ? state.pagination.currentPage : 1;
-              context.read<HospitalsCubit>().fetchHospitals(page: page);
+              if (_tabController.index == 0) {
+                final state = context.read<HospitalsCubit>().state;
+                final page =
+                    state is HospitalsLoaded ? state.pagination.currentPage : 1;
+                context.read<HospitalsCubit>().fetchHospitals(page: page);
+              }
             },
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.local_hospital_outlined),
-        label: const Text(AppTexts.addHospital),
-        onPressed: () => _openForm(context, hospital: null),
-      ),
-      body: Column(
+      floatingActionButton: _tabController.index == 0
+          ? FloatingActionButton.extended(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.local_hospital_outlined),
+              label: const Text(AppTexts.addHospital),
+              onPressed: () => _openForm(context, hospital: null),
+            )
+          : null,
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              textInputAction: TextInputAction.search,
-              onChanged: (_) => setState(() {}),
-              onSubmitted: (_) => _applySearch(),
-              decoration: InputDecoration(
-                hintText: 'Search hospitals',
-                prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _applySearch();
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: TextField(
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  onChanged: (_) => setState(() {}),
+                  onSubmitted: (_) => _applySearch(),
+                  decoration: InputDecoration(
+                    hintText: 'Search hospitals',
+                    prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              _applySearch();
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          Expanded(
-            child: BlocConsumer<HospitalsCubit, HospitalsState>(
-              listener: (context, state) {
-                if (state is HospitalsActionSuccess) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.message),
-                      backgroundColor: AppColors.success,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-                if (state is HospitalsActionFailure) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.message),
-                      backgroundColor: AppColors.error,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
-              builder: (context, state) {
-                if (state is HospitalsLoading || state is HospitalsInitial) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  );
-                }
-                if (state is HospitalsFailure) {
-                  return _ErrorView(
-                    message: state.message,
-                    onRetry: () => context.read<HospitalsCubit>().fetchHospitals(
-                          page: 1,
+              Expanded(
+                child: BlocConsumer<HospitalsCubit, HospitalsState>(
+                  listener: (context, state) {
+                    if (state is HospitalsActionSuccess) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(state.message),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
                         ),
-                  );
-                }
-                if (state is HospitalsActionLoading) {
-                  return Stack(
-                    children: [
-                      _HospitalsList(
+                      );
+                    }
+                    if (state is HospitalsActionFailure) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(state.message),
+                          backgroundColor: AppColors.error,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  builder: (context, state) {
+                    if (state is HospitalsLoading || state is HospitalsInitial) {
+                      return const Center(
+                        child: CircularProgressIndicator(color: AppColors.primary),
+                      );
+                    }
+                    if (state is HospitalsFailure) {
+                      return _ErrorView(
+                        message: state.message,
+                        onRetry: () => context.read<HospitalsCubit>().fetchHospitals(
+                              page: 1,
+                            ),
+                      );
+                    }
+                    if (state is HospitalsActionLoading) {
+                      return Stack(
+                        children: [
+                          _HospitalsList(
+                            hospitals: state.hospitals,
+                            pagination: state.pagination,
+                            searchQuery: _searchQuery,
+                          ),
+                          const ColoredBox(
+                            color: Color(0x55000000),
+                            child: Center(
+                              child:
+                                  CircularProgressIndicator(color: AppColors.primary),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    if (state is HospitalsLoaded) {
+                      return _HospitalsList(
                         hospitals: state.hospitals,
                         pagination: state.pagination,
                         searchQuery: _searchQuery,
-                      ),
-                      const ColoredBox(
-                        color: Color(0x55000000),
-                        child: Center(
-                          child:
-                              CircularProgressIndicator(color: AppColors.primary),
-                        ),
-                      ),
-                    ],
-                  );
-                }
-                if (state is HospitalsLoaded) {
-                  return _HospitalsList(
-                    hospitals: state.hospitals,
-                    pagination: state.pagination,
-                    searchQuery: _searchQuery,
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ],
           ),
+          const HospitalRequestsTab(),
         ],
       ),
     );

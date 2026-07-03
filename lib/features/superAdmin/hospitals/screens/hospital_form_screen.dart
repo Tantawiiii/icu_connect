@@ -57,7 +57,6 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
             id: g.id,
             name: g.name,
             totalBeds: g.totalBeds.toString(),
-            availableBeds: g.availableBeds.toString(),
           ),
         );
       }
@@ -80,17 +79,18 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
     if (!_formKey.currentState!.validate()) return;
     final groups = _groups
         .map(
-          (g) => HospitalGroupRequest(
-            id: g.id,
-            delete: g.markedForDeletion,
-            name: g.markedForDeletion ? null : g.nameCtrl.text.trim(),
-            totalBeds: g.markedForDeletion
+          (g) {
+            final total = g.markedForDeletion
                 ? null
-                : int.tryParse(g.totalBedsCtrl.text.trim()) ?? 0,
-            availableBeds: g.markedForDeletion
-                ? null
-                : int.tryParse(g.availableBedsCtrl.text.trim()) ?? 0,
-          ),
+                : int.tryParse(g.totalBedsCtrl.text.trim()) ?? 0;
+            return HospitalGroupRequest(
+              id: g.id,
+              delete: g.markedForDeletion,
+              name: g.markedForDeletion ? null : g.nameCtrl.text.trim(),
+              totalBeds: total,
+              availableBeds: total,
+            );
+          },
         )
         .toList();
 
@@ -117,11 +117,8 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
       0,
       (sum, g) => sum + (int.tryParse(g.totalBedsCtrl.text.trim()) ?? 0),
     );
-    final int availableBedsSum = activeGroups.fold<int>(
-      0,
-      (sum, g) => sum + (int.tryParse(g.availableBedsCtrl.text.trim()) ?? 0),
-    );
-    final int occupiedBeds = (totalBedsSum - availableBedsSum).clamp(0, totalBedsSum);
+    final int availableBedsSum = totalBedsSum;
+    const int occupiedBeds = 0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -231,6 +228,7 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
                             draft: draft,
                             enabled: !isLoading,
                             canRemove: activeGroups.length > 1,
+                            onTotalBedsChanged: () => setState(() {}),
                             onRemove: () {
                               setState(() {
                                 final group = _groups[sourceIndex];
@@ -326,21 +324,17 @@ class _GroupDraft {
     this.id,
     String name = '',
     String totalBeds = '',
-    String availableBeds = '',
   })  : nameCtrl = TextEditingController(text: name),
-        totalBedsCtrl = TextEditingController(text: totalBeds),
-        availableBedsCtrl = TextEditingController(text: availableBeds);
+        totalBedsCtrl = TextEditingController(text: totalBeds);
 
   final int? id;
   bool markedForDeletion = false;
   final TextEditingController nameCtrl;
   final TextEditingController totalBedsCtrl;
-  final TextEditingController availableBedsCtrl;
 
   void dispose() {
     nameCtrl.dispose();
     totalBedsCtrl.dispose();
-    availableBedsCtrl.dispose();
   }
 }
 
@@ -351,12 +345,14 @@ class _GroupCard extends StatelessWidget {
     required this.enabled,
     required this.canRemove,
     required this.onRemove,
+    this.onTotalBedsChanged,
   });
 
   final _GroupDraft draft;
   final bool enabled;
   final bool canRemove;
   final VoidCallback onRemove;
+  final VoidCallback? onTotalBedsChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -387,8 +383,9 @@ class _GroupCard extends StatelessWidget {
               labelText: AppTexts.totalBeds,
               prefixIcon: const Icon(Icons.bed_outlined),
               keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.next,
+              textInputAction: TextInputAction.done,
               enabled: enabled,
+              onChanged: enabled ? (_) => onTotalBedsChanged?.call() : null,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) {
                   return 'Total beds is required';
@@ -396,29 +393,6 @@ class _GroupCard extends StatelessWidget {
                 final n = int.tryParse(v.trim());
                 if (n == null || n < 0) {
                   return 'Enter a valid number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            AppTextField(
-              controller: draft.availableBedsCtrl,
-              labelText: AppTexts.availableBeds,
-              prefixIcon: const Icon(Icons.check_circle_outline),
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.done,
-              enabled: enabled,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Available beds is required';
-                }
-                final available = int.tryParse(v.trim());
-                if (available == null || available < 0) {
-                  return 'Enter a valid number';
-                }
-                final total = int.tryParse(draft.totalBedsCtrl.text.trim());
-                if (total != null && available > total) {
-                  return 'Cannot exceed total beds ($total)';
                 }
                 return null;
               },

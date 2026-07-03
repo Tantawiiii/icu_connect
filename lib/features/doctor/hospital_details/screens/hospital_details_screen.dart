@@ -345,6 +345,13 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               const SizedBox(height: 8),
+              AppButton(
+                label: AppTexts.dischargedPatients,
+                borderRadius: 28,
+                height: 52,
+                onPressed: _openDischargedPatients,
+              ),
+              const SizedBox(height: 14),
               FutureBuilder<List<PatientAdmissionModel>>(
                 future: _bedOccupancyFuture,
                 builder: (context, snap) {
@@ -491,13 +498,6 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                     ],
                   );
                 },
-              ),
-              const SizedBox(height: 16),
-              AppButton(
-                label: AppTexts.dischargedPatients,
-                borderRadius: 28,
-                height: 52,
-                onPressed: _openDischargedPatients,
               ),
               const SizedBox(height: 24),
             ],

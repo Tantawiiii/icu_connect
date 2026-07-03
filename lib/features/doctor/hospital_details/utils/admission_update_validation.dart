@@ -66,6 +66,19 @@ class AdmissionUpdateValidation {
     return null;
   }
 
+  static String? measurementValue({
+    required String? raw,
+    required String field,
+    required bool isNumeric,
+  }) {
+    final value = raw?.trim() ?? '';
+    if (value.isEmpty) return '$field is required';
+    if (isNumeric && double.tryParse(value) == null) {
+      return '$field must be a number';
+    }
+    return null;
+  }
+
   static String? numericValue(String? raw, {required String field}) {
     final value = raw?.trim() ?? '';
     if (value.isEmpty) return '$field is required';

@@ -9,6 +9,7 @@ import '../../../superAdmin/patients/models/patient_model.dart';
 import '../../patients/models/hospital_patients_page_result.dart';
 import '../enums/admission_activity_subject_type.dart';
 import '../models/admission_activity.dart';
+import '../../../../core/utils/measurement_title_form_helpers.dart';
 
 class HospitalAdmissionsRepository extends BaseApiService {
   const HospitalAdmissionsRepository() : super(UserRole.hospital);
@@ -306,6 +307,124 @@ class HospitalAdmissionsRepository extends BaseApiService {
         ApiConstants.patientById('$id'),
         cancelTag: 'hospital_patient_delete_$id',
       );
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  Future<List<MeasurementTitleModel>> listPatientVitalsTitles(
+    int patientId,
+  ) async {
+    try {
+      final data = await get<Map<String, dynamic>>(
+        ApiConstants.patientVitalsTitles(patientId),
+        cancelTag: 'hospital_patient_vitals_titles_$patientId',
+      );
+
+      final raw = data['data'];
+      final List<dynamic> list;
+      if (raw is List) {
+        list = raw;
+      } else if (raw is Map<String, dynamic>) {
+        list = raw['data'] as List<dynamic>? ?? const [];
+      } else {
+        list = const [];
+      }
+
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(MeasurementTitleModel.fromJson)
+          .toList();
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  Future<MeasurementTitleModel> createPatientVitalTitle({
+    required int patientId,
+    required String title,
+    String? unit,
+    String valueType = 'numeric',
+    double? normalRangeMin,
+    double? normalRangeMax,
+  }) async {
+    try {
+      final body = MeasurementTitleFormValues(
+        title: title,
+        unit: unit,
+        valueType: valueType,
+        normalRangeMin: normalRangeMin,
+        normalRangeMax: normalRangeMax,
+      ).toVitalJson();
+
+      final data = await post<Map<String, dynamic>>(
+        ApiConstants.patientVitalsTitles(patientId),
+        data: body,
+        cancelTag: 'hospital_patient_vitals_title_create_$patientId',
+      );
+
+      final raw = data['data'];
+      if (raw is Map<String, dynamic>) {
+        return MeasurementTitleModel.fromJson(raw);
+      }
+      throw const NetworkException(message: 'Invalid vital title response');
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  Future<List<MeasurementTitleModel>> listPatientLabsTitles(int patientId) async {
+    try {
+      final data = await get<Map<String, dynamic>>(
+        ApiConstants.patientLabsTitles(patientId),
+        cancelTag: 'hospital_patient_labs_titles_$patientId',
+      );
+
+      final raw = data['data'];
+      final List<dynamic> list;
+      if (raw is List) {
+        list = raw;
+      } else if (raw is Map<String, dynamic>) {
+        list = raw['data'] as List<dynamic>? ?? const [];
+      } else {
+        list = const [];
+      }
+
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(MeasurementTitleModel.fromJson)
+          .toList();
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  Future<MeasurementTitleModel> createPatientLabTitle({
+    required int patientId,
+    required String title,
+    String? unit,
+    double? normalRangeMin,
+    double? normalRangeMax,
+  }) async {
+    try {
+      final body = MeasurementTitleFormValues(
+        title: title,
+        unit: unit,
+        normalRangeMin: normalRangeMin,
+        normalRangeMax: normalRangeMax,
+      ).toLabJson();
+
+      final data = await post<Map<String, dynamic>>(
+        ApiConstants.patientLabsTitles(patientId),
+        data: body,
+        cancelTag: 'hospital_patient_labs_title_create_$patientId',
+      );
+
+      final raw = data['data'];
+      if (raw is Map<String, dynamic>) {
+        return MeasurementTitleModel.fromJson(raw);
+      }
+      throw const NetworkException(message: 'Invalid lab title response');
     } on NetworkException {
       rethrow;
     }

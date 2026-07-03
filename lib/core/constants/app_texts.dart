@@ -137,6 +137,39 @@ class AppTexts {
   static const String hospitalUpdated = 'Hospital updated successfully';
   static const String hospitalDeleted = 'Hospital deleted successfully';
   static const String hospitalRestored = 'Hospital restored successfully';
+  static const String requestNewHospital = 'Request new hospital';
+  static const String myHospitalRequests = 'My hospital requests';
+  static const String hospitalRequests = 'Hospital requests';
+  static const String hospitalRequestsTab = 'Requests';
+  static const String hospitalRequestsAll = 'All';
+  static const String hospitalRequestsPending = 'Pending';
+  static const String hospitalRequestsAccepted = 'Accepted';
+  static const String hospitalRequestsRejected = 'Rejected';
+  static const String hospitalRequestSubmitted =
+      'Hospital request submitted successfully';
+  static const String hospitalRequestSubmitFailed =
+      'Could not submit hospital request.';
+  static const String noHospitalRequests = 'No hospital requests found.';
+  static const String acceptHospitalRequest = 'Accept';
+  static const String rejectHospitalRequest = 'Reject';
+  static const String acceptHospitalRequestConfirmation =
+      'Accept this hospital request?';
+  static const String rejectHospitalRequestConfirmation =
+      'Reject this hospital request?';
+  static const String hospitalRequestAccepted =
+      'Hospital request accepted successfully';
+  static const String hospitalRequestRejected =
+      'Hospital request rejected successfully';
+  static const String hospitalRequestStatusAccepted = 'Accepted';
+  static const String hospitalRequestStatusPending = 'Pending';
+  static const String hospitalRequestStatusRejected = 'Rejected';
+  static const String addHospitalGroup = 'Add Group';
+  static const String removeHospitalGroup = 'Remove Group';
+  static const String hospitalGroupName = 'Group Name';
+  static const String hospitalInformation = 'Hospital Information';
+  static const String hospitalGroups = 'Hospital Groups';
+  static const String availableBedsCannotExceedTotal =
+      'Available beds cannot exceed total beds';
 
   // Patients CRUD (admin)
   static const String patientsLabel = 'Patients';
@@ -318,6 +351,10 @@ class AppTexts {
   static const String dischargedStatsDie = 'Die';
   static const String dischargedStatsDama = 'DAMA';
   static const String dischargedEmpty = 'No discharged patients in this period.';
+  static const String dischargedSearchHint =
+      'Search by name, bed, ID, or outcome';
+  static const String dischargedSearchEmpty =
+      'No discharged patients match your search.';
   static const String noBedsInGroup = 'No beds in this group';
 
   // Bed swap
@@ -368,8 +405,11 @@ class AppTexts {
       'All available hospitals are already in your list.';
   static const String statistics = 'Statistics';
   static const String aboutUs = 'About Us';
-  static const String reportProblem = 'Report Proplem';
-  static const String setting = 'Setting';
+  static const String helpAndSupport = 'Help & Support';
+  static const String privacyPolicy = 'Privacy Policy';
+  static const String termsOfUse = 'Terms of Use';
+  static const String reportProblem = 'Report a Problem';
+  static const String setting = 'Settings';
   static const String trash = 'Trash';
   static const String logOut = 'Log Out';
   static const String deleteAccount = 'Delete account';

@@ -7,6 +7,13 @@ import 'admission_details_formatters.dart';
 import 'admission_details_section_container.dart';
 import 'pending_measurement_column_entry.dart';
 
+String _measurementRangeLabel(MeasurementTitleModel title) {
+  final min = title.normalRangeMin.trim();
+  final max = title.normalRangeMax.trim();
+  if (min.isEmpty && max.isEmpty) return '—';
+  return '$min–$max';
+}
+
 class AdmissionDetailsMeasurementSection extends StatelessWidget {
   const AdmissionDetailsMeasurementSection({
     super.key,
@@ -22,6 +29,8 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
     required this.onSaveColumn,
     required this.onPickColumnDate,
     required this.onEditColumn,
+    this.onAddTitle,
+    this.addingTitle = false,
   });
 
   final String title;
@@ -36,6 +45,8 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
   final VoidCallback onSaveColumn;
   final VoidCallback onPickColumnDate;
   final void Function(String columnKey) onEditColumn;
+  final VoidCallback? onAddTitle;
+  final bool addingTitle;
 
   static const _titleWidth = 80.0;
   static const _rangeWidth = 76.0;
@@ -83,6 +94,7 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
   }
 
   Color _valueColor(String valueStr, MeasurementTitleModel measureTitle) {
+    if (!measureTitle.isNumericValueType) return AppColors.textPrimary;
     final val = double.tryParse(valueStr);
     final min = double.tryParse(measureTitle.normalRangeMin);
     final max = double.tryParse(measureTitle.normalRangeMax);
@@ -96,7 +108,8 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
         ? (record as LabRecordModel).value
         : (record as VitalRecordModel).value;
     if (value.isEmpty) return '—';
-    return '$value ${measureTitle.unit}';
+    final unit = measureTitle.unit.trim();
+    return unit.isEmpty ? value : '$value $unit';
   }
 
   Widget _buildReadingColumn(String key) {
@@ -112,6 +125,8 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
         rowHeight: _rowHeight,
         saving: saving,
         onPickDate: onPickColumnDate,
+        showAddTitleRow: onAddTitle != null,
+        isLabs: isLabs,
       );
     }
 
@@ -122,6 +137,7 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
       width: _readingWidth,
       dateHeaderHeight: _dateHeaderHeight,
       rowHeight: _rowHeight,
+      showAddTitleRow: onAddTitle != null,
       valueForTitle: (title) => _recordValue(_recordAt(title.id, key), title),
       valueColorForTitle: (title) {
         final record = _recordAt(title.id, key);
@@ -191,7 +207,7 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
                   ),
               ],
             ),
-      child: titles.isEmpty
+      child: titles.isEmpty && onAddTitle == null
           ? const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
@@ -238,6 +254,7 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (onAddTitle != null) _buildAddTitleRow(),
                     ],
                   ),
                   Expanded(
@@ -278,6 +295,7 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
                                 width: _rangeWidth,
                                 dateHeaderHeight: _dateHeaderHeight,
                                 rowHeight: _rowHeight,
+                                showAddTitleRow: onAddTitle != null,
                               ),
                               ...columnKeys.map(_buildReadingColumn),
                               if (addingColumn &&
@@ -291,6 +309,8 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
                                   rowHeight: _rowHeight,
                                   saving: saving,
                                   onPickDate: onPickColumnDate,
+                                  showAddTitleRow: onAddTitle != null,
+                                  isLabs: isLabs,
                                 ),
                             ],
                           ),
@@ -312,6 +332,32 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
       width += _readingWidth;
     }
     return width > 0 ? width : _readingWidth;
+  }
+
+  Widget _buildAddTitleRow() {
+    return _TitleCell(
+      width: _titleWidth,
+      height: _rowHeight,
+      child: Center(
+        child: addingTitle
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: isLabs ? 'Add lab' : 'Add vital',
+                onPressed: onAddTitle,
+                icon: const Icon(
+                  Icons.add_circle_outline,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ),
+      ),
+    );
   }
 
   static const _headerStyle = TextStyle(
@@ -403,12 +449,14 @@ class _RangeColumn extends StatelessWidget {
     required this.width,
     required this.dateHeaderHeight,
     required this.rowHeight,
+    this.showAddTitleRow = false,
   });
 
   final List<MeasurementTitleModel> titles;
   final double width;
   final double dateHeaderHeight;
   final double rowHeight;
+  final bool showAddTitleRow;
 
   @override
   Widget build(BuildContext context) {
@@ -426,7 +474,7 @@ class _RangeColumn extends StatelessWidget {
               width: width,
               height: rowHeight,
               child: Text(
-                '${t.normalRangeMin}–${t.normalRangeMax}',
+                _measurementRangeLabel(t),
                 style: const TextStyle(
                   fontSize: 10,
                   color: AppColors.textSecondary,
@@ -435,6 +483,12 @@ class _RangeColumn extends StatelessWidget {
               ),
             ),
           ),
+          if (showAddTitleRow)
+            _ScrollCell(
+              width: width,
+              height: rowHeight,
+              child: const SizedBox.shrink(),
+            ),
         ],
       ),
     );
@@ -452,6 +506,7 @@ class _ReadingColumn extends StatelessWidget {
     required this.valueForTitle,
     required this.valueColorForTitle,
     required this.onEdit,
+    this.showAddTitleRow = false,
   });
 
   final String columnKey;
@@ -463,6 +518,7 @@ class _ReadingColumn extends StatelessWidget {
   final String Function(MeasurementTitleModel title) valueForTitle;
   final Color Function(MeasurementTitleModel title) valueColorForTitle;
   final VoidCallback onEdit;
+  final bool showAddTitleRow;
 
   @override
   Widget build(BuildContext context) {
@@ -532,6 +588,12 @@ class _ReadingColumn extends StatelessWidget {
               ),
             );
           }),
+          if (showAddTitleRow)
+            _ScrollCell(
+              width: width,
+              height: rowHeight,
+              child: const SizedBox.shrink(),
+            ),
         ],
       ),
     );
@@ -547,6 +609,8 @@ class _EditingReadingColumn extends StatelessWidget {
     required this.rowHeight,
     required this.saving,
     required this.onPickDate,
+    this.showAddTitleRow = false,
+    this.isLabs = false,
   });
 
   final PendingMeasurementColumnEntry pending;
@@ -556,6 +620,8 @@ class _EditingReadingColumn extends StatelessWidget {
   final double rowHeight;
   final bool saving;
   final VoidCallback onPickDate;
+  final bool showAddTitleRow;
+  final bool isLabs;
 
   @override
   Widget build(BuildContext context) {
@@ -604,8 +670,9 @@ class _EditingReadingColumn extends StatelessWidget {
               child: TextField(
                 controller: ctrl,
                 enabled: !saving,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: (!isLabs && !t.isNumericValueType)
+                    ? TextInputType.text
+                    : const TextInputType.numberWithOptions(decimal: true),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 11,
@@ -626,6 +693,12 @@ class _EditingReadingColumn extends StatelessWidget {
               ),
             );
           }),
+          if (showAddTitleRow)
+            _ScrollCell(
+              width: width,
+              height: rowHeight,
+              child: const SizedBox.shrink(),
+            ),
         ],
       ),
     );
