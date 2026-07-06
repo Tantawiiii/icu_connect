@@ -15,6 +15,7 @@ import '../cubit/admission_form_cubit.dart';
 import '../cubit/admission_form_state.dart';
 import '../enums/admission_status.dart';
 import '../utils/admission_update_validation.dart';
+import '../widgets/admission_details_consultation_card.dart';
 import '../widgets/admission_details_culture_card.dart';
 import '../widgets/admission_details_empty_hint.dart';
 import '../widgets/admission_details_generic_add_form.dart';
@@ -102,6 +103,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
   final List<EchoModel> _echoDrafts = [];
   final List<UltrasoundModel> _ultrasoundDrafts = [];
   final List<CultureModel> _cultureDrafts = [];
+  final List<ConsultationModel> _consultationDrafts = [];
+  final Set<int> _loadedConsultationIds = {};
 
   final List<VitalRecordModel> _vitalDraftRecords = [];
   final List<LabRecordModel> _labDraftRecords = [];
@@ -137,6 +140,28 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
       _dateComes = _parseDate(a.dateComes);
       _dateLeave = _parseDate(a.dateLeave);
       _dateOfDeath = _parseDate(a.dateOfDeath);
+      _clinicalDrafts.addAll(a.clinicalNotes);
+      _treatmentDrafts.addAll(a.treatmentPlans);
+      _medicationDrafts.addAll(a.medications);
+      _echoDrafts.addAll(a.echoes);
+      _ultrasoundDrafts.addAll(a.ultrasounds);
+      _cultureDrafts.addAll(a.cultures);
+      _consultationDrafts.addAll(a.consultations);
+      _loadedConsultationIds.addAll(a.consultations.map((c) => c.id));
+      _vitalDraftRecords.addAll(a.vitals);
+      _labDraftRecords.addAll(a.labs);
+      _radiologyDrafts.addAll(
+        a.radiologyImages.map(
+          (img) => AdmissionFormRadiologyDraft(
+            id: img.id,
+            title: img.title,
+            report: img.report,
+            localMediaPaths:
+                img.imagePath.isNotEmpty ? [img.imagePath] : const [],
+          ),
+        ),
+      );
+      _tempId = _nextTempIdSeed(a);
     } else {
       _dateComes = DateTime.now();
       final preset = widget.initialBedNumber?.trim();
@@ -154,6 +179,46 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
   String _nowIso() => DateTime.now().toIso8601String();
 
   int _nextTempId() => _tempId++;
+
+  int _nextTempIdSeed(PatientAdmissionModel a) {
+    var max = 0;
+    void consider(int id) {
+      if (id > max) max = id;
+    }
+
+    for (final item in a.clinicalNotes) {
+      consider(item.id);
+    }
+    for (final item in a.treatmentPlans) {
+      consider(item.id);
+    }
+    for (final item in a.medications) {
+      consider(item.id);
+    }
+    for (final item in a.echoes) {
+      consider(item.id);
+    }
+    for (final item in a.ultrasounds) {
+      consider(item.id);
+    }
+    for (final item in a.cultures) {
+      consider(item.id);
+    }
+    for (final item in a.consultations) {
+      consider(item.id);
+    }
+    for (final item in a.vitals) {
+      consider(item.id);
+    }
+    for (final item in a.labs) {
+      consider(item.id);
+    }
+    for (final item in a.radiologyImages) {
+      consider(item.id);
+    }
+
+    return max + 1;
+  }
 
   void _applyInitialPatient(List<AdmissionPatientModel> patients) {
     if (_initialPatientApplied || widget.initialPatientId == null) return;
@@ -317,6 +382,11 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           _getCtrl('title').text,
           field: 'Culture title',
         );
+      case 'consultation':
+        return AdmissionUpdateValidation.requiredText(
+          _getCtrl('speciality').text,
+          field: 'Speciality',
+        );
       default:
         return null;
     }
@@ -397,6 +467,17 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
               admissionId: 0,
               title: _getCtrl('title').text.trim(),
               note: _getCtrl('note').text.trim(),
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+        case 'consultation':
+          _consultationDrafts.add(
+            ConsultationModel(
+              id: _nextTempId(),
+              admissionId: 0,
+              speciality: _getCtrl('speciality').text.trim(),
+              reply: _getCtrl('reply').text.trim(),
               createdAt: now,
               updatedAt: now,
             ),
@@ -506,6 +587,18 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
               updatedAt: now,
             );
           }
+        case 'consultation':
+          final i = _consultationDrafts.indexWhere((c) => c.id == id);
+          if (i >= 0) {
+            _consultationDrafts[i] = ConsultationModel(
+              id: id,
+              admissionId: 0,
+              speciality: _getCtrl('speciality').text.trim(),
+              reply: _getCtrl('reply').text.trim(),
+              createdAt: _consultationDrafts[i].createdAt,
+              updatedAt: now,
+            );
+          }
         case 'plan':
           final i = _treatmentDrafts.indexWhere((p) => p.id == id);
           if (i >= 0) {
@@ -540,6 +633,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           _ultrasoundDrafts.removeWhere((u) => u.id == id);
         case 'culture':
           _cultureDrafts.removeWhere((c) => c.id == id);
+        case 'consultation':
+          _consultationDrafts.removeWhere((c) => c.id == id);
       }
     });
   }
@@ -946,6 +1041,18 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
         )
         .toList();
 
+    final consultationDrafts = _consultationDrafts
+        .map(
+          (e) => AdmissionConsultationDraft(
+            id: _isEdit && _loadedConsultationIds.contains(e.id)
+                ? e.id
+                : null,
+            speciality: e.speciality,
+            reply: e.reply,
+          ),
+        )
+        .toList();
+
     if (_isEdit) {
       final req = AdmissionUpdateRequest(
         bedNumber: _bedCtrl.text.trim(),
@@ -963,6 +1070,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
         echoes: echoDrafts,
         ultrasounds: ultrasoundDrafts,
         cultures: cultureDrafts,
+        consultations: consultationDrafts,
       );
       cubit.updateAdmission(widget.admission!.id, req);
     } else {
@@ -986,6 +1094,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
         echoes: echoDrafts,
         ultrasounds: ultrasoundDrafts,
         cultures: cultureDrafts,
+        consultations: consultationDrafts,
       );
       cubit.createAdmission(req);
     }
@@ -1059,7 +1168,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
   List<Widget> _buildRecordSections(AdmissionFormRefsReady refs) {
     return [
       AdmissionDetailsSectionContainer(
-        title: 'Clinical Notes',
+        title: AppTexts.clinicalNotesSection,
         headerAction: _addingSection == 'clinical_note' ||
                 _editingSection == 'clinical_note'
             ? null
@@ -1100,7 +1209,9 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                 ],
               ),
             if (_clinicalDrafts.isEmpty && _addingSection != 'clinical_note')
-              const AdmissionDetailsEmptyHint('No clinical notes recorded.')
+              const AdmissionDetailsEmptyHint(
+                'No history and complaint recorded.',
+              )
             else
               ..._clinicalDrafts.map((n) {
                 if (_isEditingItem('clinical_note', n.id)) {
@@ -1639,6 +1750,83 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                     },
                   ),
                   onDelete: () => _deleteDraftItem('culture', c.id),
+                );
+              }),
+          ],
+        ),
+      ),
+      AdmissionDetailsSectionContainer(
+        title: 'Consultations',
+        headerAction: _addingSection == 'consultation' ||
+                _editingSection == 'consultation'
+            ? null
+            : IconButton(
+                icon: const Icon(
+                  Icons.add_circle_outline,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+                onPressed: () => _startAddGeneric('consultation'),
+              ),
+        child: Column(
+          children: [
+            if (_addingSection == 'consultation')
+              AdmissionDetailsGenericAddForm(
+                title: 'Add Consultation',
+                saving: false,
+                onCancel: () {
+                  _cancelAddGeneric();
+                  _disposeGenericCtrls();
+                  setState(() {});
+                },
+                onSave: _saveGenericAddLocal,
+                fields: [
+                  AdmissionDetailsFormFieldSpec(
+                    hint: 'Speciality (e.g. Cardiology)',
+                    controller: _getCtrl('speciality'),
+                    isRequired: true,
+                  ),
+                  AdmissionDetailsFormFieldSpec(
+                    hint: 'Reply',
+                    controller: _getCtrl('reply'),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+            if (_consultationDrafts.isEmpty &&
+                _addingSection != 'consultation')
+              const AdmissionDetailsEmptyHint('No consultations recorded.')
+            else
+              ..._consultationDrafts.map((c) {
+                if (_isEditingItem('consultation', c.id)) {
+                  return _buildGenericEditForm(
+                    section: 'consultation',
+                    title: 'Edit Consultation',
+                    fields: [
+                      AdmissionDetailsFormFieldSpec(
+                        hint: 'Speciality (e.g. Cardiology)',
+                        controller: _getCtrl('speciality'),
+                        isRequired: true,
+                      ),
+                      AdmissionDetailsFormFieldSpec(
+                        hint: 'Reply',
+                        controller: _getCtrl('reply'),
+                        maxLines: 3,
+                      ),
+                    ],
+                  );
+                }
+                return AdmissionDetailsConsultationCard(
+                  consultation: c,
+                  onEdit: () => _beginEditItem(
+                    'consultation',
+                    c.id,
+                    fields: {
+                      'speciality': c.speciality,
+                      'reply': c.reply,
+                    },
+                  ),
+                  onDelete: () => _deleteDraftItem('consultation', c.id),
                 );
               }),
           ],

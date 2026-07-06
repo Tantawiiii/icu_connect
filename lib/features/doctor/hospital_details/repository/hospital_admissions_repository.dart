@@ -9,6 +9,7 @@ import '../../../superAdmin/patients/models/patient_model.dart';
 import '../../patients/models/hospital_patients_page_result.dart';
 import '../enums/admission_activity_subject_type.dart';
 import '../models/admission_activity.dart';
+import '../utils/measurement_title_order.dart';
 import '../../../../core/utils/measurement_title_form_helpers.dart';
 
 class HospitalAdmissionsRepository extends BaseApiService {
@@ -331,10 +332,12 @@ class HospitalAdmissionsRepository extends BaseApiService {
         list = const [];
       }
 
-      return list
-          .whereType<Map<String, dynamic>>()
-          .map(MeasurementTitleModel.fromJson)
-          .toList();
+      return MeasurementTitleOrder.sortVitals(
+        list
+            .whereType<Map<String, dynamic>>()
+            .map(MeasurementTitleModel.fromJson)
+            .toList(),
+      );
     } on NetworkException {
       rethrow;
     }
@@ -390,10 +393,12 @@ class HospitalAdmissionsRepository extends BaseApiService {
         list = const [];
       }
 
-      return list
-          .whereType<Map<String, dynamic>>()
-          .map(MeasurementTitleModel.fromJson)
-          .toList();
+      return MeasurementTitleOrder.sortLabs(
+        list
+            .whereType<Map<String, dynamic>>()
+            .map(MeasurementTitleModel.fromJson)
+            .toList(),
+      );
     } on NetworkException {
       rethrow;
     }
@@ -403,6 +408,7 @@ class HospitalAdmissionsRepository extends BaseApiService {
     required int patientId,
     required String title,
     String? unit,
+    String valueType = 'numeric',
     double? normalRangeMin,
     double? normalRangeMax,
   }) async {
@@ -410,6 +416,7 @@ class HospitalAdmissionsRepository extends BaseApiService {
       final body = MeasurementTitleFormValues(
         title: title,
         unit: unit,
+        valueType: valueType,
         normalRangeMin: normalRangeMin,
         normalRangeMax: normalRangeMax,
       ).toLabJson();
@@ -438,9 +445,11 @@ class HospitalAdmissionsRepository extends BaseApiService {
       );
 
       final raw = data['data'] as List<dynamic>? ?? const [];
-      return raw
-          .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return MeasurementTitleOrder.sortVitals(
+        raw
+            .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
     } on NetworkException {
       rethrow;
     }
@@ -454,9 +463,11 @@ class HospitalAdmissionsRepository extends BaseApiService {
       );
 
       final raw = data['data'] as List<dynamic>? ?? const [];
-      return raw
-          .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return MeasurementTitleOrder.sortLabs(
+        raw
+            .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
     } on NetworkException {
       rethrow;
     }

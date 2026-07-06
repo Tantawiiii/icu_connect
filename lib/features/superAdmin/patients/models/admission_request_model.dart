@@ -138,6 +138,27 @@ class AdmissionCultureDraft {
       };
 }
 
+class AdmissionConsultationDraft {
+  const AdmissionConsultationDraft({
+    this.id,
+    required this.speciality,
+    required this.reply,
+  });
+
+  final int? id;
+  final String speciality;
+  final String reply;
+
+  Map<String, dynamic> toJson() {
+    final m = <String, dynamic>{
+      'speciality': speciality,
+      'reply': reply,
+    };
+    if (id != null) m['id'] = id;
+    return m;
+  }
+}
+
 class AdmissionCreateRequest {
   const AdmissionCreateRequest({
     required this.patientId,
@@ -159,6 +180,7 @@ class AdmissionCreateRequest {
     this.echoes = const [],
     this.ultrasounds = const [],
     this.cultures = const [],
+    this.consultations = const [],
   });
 
   final int patientId;
@@ -180,6 +202,7 @@ class AdmissionCreateRequest {
   final List<AdmissionEchoDraft> echoes;
   final List<AdmissionUltrasoundDraft> ultrasounds;
   final List<AdmissionCultureDraft> cultures;
+  final List<AdmissionConsultationDraft> consultations;
 
   bool get needsMultipart => radiologyImages.any((r) => r.hasFile);
 
@@ -228,6 +251,9 @@ class AdmissionCreateRequest {
     }
     if (cultures.isNotEmpty) {
       m['cultures'] = cultures.map((e) => e.toJson()).toList();
+    }
+    if (consultations.isNotEmpty) {
+      m['consultations'] = consultations.map((e) => e.toJson()).toList();
     }
     return m;
   }
@@ -326,6 +352,13 @@ class AdmissionCreateRequest {
       addField('cultures[$i][note]', c.note);
     }
 
+    for (var i = 0; i < consultations.length; i++) {
+      final c = consultations[i];
+      if (c.id != null) addField('consultations[$i][id]', '${c.id}');
+      addField('consultations[$i][speciality]', c.speciality);
+      addField('consultations[$i][reply]', c.reply);
+    }
+
     return fd;
   }
 }
@@ -347,6 +380,7 @@ class AdmissionUpdateRequest {
     this.echoes = const [],
     this.ultrasounds = const [],
     this.cultures = const [],
+    this.consultations = const [],
   });
 
   final String? bedNumber;
@@ -364,6 +398,7 @@ class AdmissionUpdateRequest {
   final List<AdmissionEchoDraft> echoes;
   final List<AdmissionUltrasoundDraft> ultrasounds;
   final List<AdmissionCultureDraft> cultures;
+  final List<AdmissionConsultationDraft> consultations;
 
   bool get needsMultipart => radiologyImages.any((r) => r.hasFile);
 
@@ -382,7 +417,8 @@ class AdmissionUpdateRequest {
       medications.isEmpty &&
       echoes.isEmpty &&
       ultrasounds.isEmpty &&
-      cultures.isEmpty;
+      cultures.isEmpty &&
+      consultations.isEmpty;
 
   Map<String, dynamic> toJson() {
     final m = <String, dynamic>{};
@@ -426,6 +462,9 @@ class AdmissionUpdateRequest {
     }
     if (cultures.isNotEmpty) {
       m['cultures'] = cultures.map((e) => e.toJson()).toList();
+    }
+    if (consultations.isNotEmpty) {
+      m['consultations'] = consultations.map((e) => e.toJson()).toList();
     }
     return m;
   }
@@ -520,6 +559,13 @@ class AdmissionUpdateRequest {
       final c = cultures[i];
       addField('cultures[$i][title]', c.title);
       addField('cultures[$i][note]', c.note);
+    }
+
+    for (var i = 0; i < consultations.length; i++) {
+      final c = consultations[i];
+      if (c.id != null) addField('consultations[$i][id]', '${c.id}');
+      addField('consultations[$i][speciality]', c.speciality);
+      addField('consultations[$i][reply]', c.reply);
     }
 
     return fd;

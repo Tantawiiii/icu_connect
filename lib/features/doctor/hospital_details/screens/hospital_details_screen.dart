@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
+import 'package:icu_connect/core/network/network_exceptions.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
 import 'package:icu_connect/core/widgets/app_text_field.dart';
 
@@ -37,7 +38,6 @@ class HospitalDetailsScreen extends StatefulWidget {
 class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
   final AdmissionStatus _statusFilter = AdmissionStatus.admitted;
   late Future<List<PatientAdmissionModel>> _admissionsFuture;
-  late Future<List<PatientAdmissionModel>> _bedOccupancyFuture;
   late final ScrollController _scrollController;
   final TextEditingController _searchController = TextEditingController();
   int? _selectedGroupId;
@@ -55,7 +55,6 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
       _selectedGroupId = groups.first.id;
     }
     _admissionsFuture = _fetchAdmissions();
-    _bedOccupancyFuture = _fetchBedOccupancy();
   }
 
   @override
@@ -116,18 +115,8 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
     );
   }
 
-  Future<List<PatientAdmissionModel>> _fetchBedOccupancy() {
-    return const HospitalAdmissionsRepository().listAdmissions(
-      hospitalId: widget.hospital.id,
-      status: AdmissionStatus.admitted.apiValue,
-    );
-  }
-
   void _refreshAdmissionsAndBeds() {
-    setState(() {
-      _admissionsFuture = _fetchAdmissions();
-      _bedOccupancyFuture = _fetchBedOccupancy();
-    });
+    setState(() => _admissionsFuture = _fetchAdmissions());
   }
 
   void _exitSwapMode() {
@@ -252,12 +241,9 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
   }
 
   Future<void> _onPullToRefresh() async {
-    setState(() {
-      _admissionsFuture = _fetchAdmissions();
-      _bedOccupancyFuture = _fetchBedOccupancy();
-    });
+    setState(() => _admissionsFuture = _fetchAdmissions());
     try {
-      await Future.wait([_admissionsFuture, _bedOccupancyFuture]);
+      await _admissionsFuture;
     } catch (_) {}
   }
 
@@ -353,14 +339,8 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
               ),
               const SizedBox(height: 14),
               FutureBuilder<List<PatientAdmissionModel>>(
-                future: _bedOccupancyFuture,
+                future: _admissionsFuture,
                 builder: (context, snap) {
-                  final admissions = snap.data ?? const [];
-                  final groups = _effectiveGroups(snap.hasData ? admissions : null);
-                  _ensureSelectedGroup(groups);
-                  final selectedGroup = _resolveSelectedGroup(groups);
-                  final groupId = selectedGroup?.id;
-
                   if (snap.connectionState == ConnectionState.waiting &&
                       !snap.hasData) {
                     return const Padding(
@@ -372,6 +352,22 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                       ),
                     );
                   }
+
+                  if (snap.hasError) {
+                    final message = snap.error is NetworkException
+                        ? (snap.error as NetworkException).message
+                        : 'Failed to load admissions.';
+                    return _HospitalAdmissionsErrorState(
+                      message: message,
+                      onRetry: _refreshAdmissionsAndBeds,
+                    );
+                  }
+
+                  final admissions = snap.data ?? const [];
+                  final groups = _effectiveGroups(admissions);
+                  _ensureSelectedGroup(groups);
+                  final selectedGroup = _resolveSelectedGroup(groups);
+                  final groupId = selectedGroup?.id;
 
                   final occupancy = buildBedOccupancyForGroup(admissions, groupId);
                   final hospitalOccupiedCount = countOccupiedBeds(admissions);
@@ -503,6 +499,46 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _HospitalAdmissionsErrorState extends StatelessWidget {
+  const _HospitalAdmissionsErrorState({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.cloud_off_outlined,
+            size: 48,
+            color: AppColors.error,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 16),
+          AppButton(
+            label: AppTexts.retry,
+            width: 180,
+            height: 44,
+            onPressed: onRetry,
+          ),
+        ],
       ),
     );
   }

@@ -218,9 +218,9 @@ class AppTexts {
   static const String optional = 'optional';
   static const String admissionOptionalRecords = 'Additional records (optional)';
   static const String admissionOptionalRecordsHint =
-      'Clinical notes, vitals, labs, medications, and more';
+      'History and complaint, vitals, labs, medications, and more';
   static const String admissionNotesSection = 'Admission notes';
-  static const String clinicalNotesSection = 'Clinical notes';
+  static const String clinicalNotesSection = 'History and complaint';
   static const String treatmentPlansSection = 'Treatment plans';
   static const String defaultVitalMeasurementTitle = 'Vital';
   static const String defaultLabMeasurementTitle = 'Lab';

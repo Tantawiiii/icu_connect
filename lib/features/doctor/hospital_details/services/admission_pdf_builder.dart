@@ -4,8 +4,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
-import '../models/admission_activity.dart';
-import '../utils/admission_activity_formatter.dart';
 import '../widgets/admission_details_formatters.dart';
 
 class AdmissionPdfBuilder {
@@ -13,13 +11,30 @@ class AdmissionPdfBuilder {
 
   static Future<Uint8List> build({
     required PatientAdmissionModel admission,
-    List<AdmissionActivity> activities = const [],
   }) {
-    return _AdmissionPdfRenderer(
-      admission: admission,
-      activities: activities,
-    ).render();
+    return _AdmissionPdfRenderer(admission: admission).render();
   }
+}
+
+/// A single measurement reading, flattened for the transposed matrix table.
+class _MeasureEntry {
+  const _MeasureEntry({
+    required this.titleId,
+    required this.title,
+    required this.unit,
+    required this.rangeMin,
+    required this.rangeMax,
+    required this.value,
+    required this.dayKey,
+  });
+
+  final int titleId;
+  final String title;
+  final String unit;
+  final String rangeMin;
+  final String rangeMax;
+  final String value;
+  final String dayKey; // yyyy-MM-dd
 }
 
 class _PdfFonts {
@@ -65,19 +80,18 @@ bool _containsArabic(String text) => _arabicScript.hasMatch(text);
 class _AdmissionPdfRenderer {
   _AdmissionPdfRenderer({
     required this.admission,
-    required this.activities,
   });
 
   final PatientAdmissionModel admission;
-  final List<AdmissionActivity> activities;
 
   static final _primary = PdfColor.fromHex('#1A1F36');
   static final _muted = PdfColor.fromHex('#8A8D9F');
   static final _border = PdfColor.fromHex('#E8EAEF');
   static final _surface = PdfColor.fromHex('#F5F7FB');
   static final _accent = PdfColor.fromHex('#4CAF50');
-  static final _accentSoft = PdfColor.fromHex('#E8F5E9');
   static final _heroMuted = PdfColor.fromHex('#B8BBCC');
+  static final _abnormal = PdfColor.fromHex('#C62828');
+  static final _abnormalSoft = PdfColor.fromHex('#FDECEA');
 
   late final _PdfFonts _fonts;
 
@@ -100,7 +114,7 @@ class _AdmissionPdfRenderer {
     doc.addPage(
       pw.MultiPage(
         pageTheme: pw.PageTheme(
-          margin: const pw.EdgeInsets.fromLTRB(32, 32, 32, 44),
+          margin: const pw.EdgeInsets.fromLTRB(18, 18, 18, 26),
           theme: _fonts.theme,
         ),
         header: (context) => _pageHeader(
@@ -111,28 +125,28 @@ class _AdmissionPdfRenderer {
         footer: (context) => _pageFooter(),
         build: (context) => [
           _heroSummary(generatedAt),
-          pw.SizedBox(height: 20),
+          pw.SizedBox(height: 12),
           if (admission.patient != null) ...[
             _sectionTitle('Patient'),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 6),
             _infoCard(_patientRows(admission.patient!)),
-            pw.SizedBox(height: 18),
+            pw.SizedBox(height: 10),
           ],
           _sectionTitle('Admission'),
-          pw.SizedBox(height: 8),
+          pw.SizedBox(height: 6),
           _infoCard(_admissionRows(admission)),
-          pw.SizedBox(height: 18),
+          pw.SizedBox(height: 10),
           if (admission.doctor != null) ...[
             _sectionTitle('Attending doctor'),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 6),
             _infoCard(_doctorRows(admission)),
-            pw.SizedBox(height: 18),
+            pw.SizedBox(height: 10),
           ],
           if (admission.notes.trim().isNotEmpty) ...[
             _sectionTitle(AppTexts.admissionNotesSection),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 6),
             _textCard(admission.notes),
-            pw.SizedBox(height: 18),
+            pw.SizedBox(height: 10),
           ],
           ..._clinicalNotesSection(),
           ..._treatmentPlansSection(),
@@ -149,7 +163,6 @@ class _AdmissionPdfRenderer {
             admission.ultrasounds.map((u) => (u.text, u.createdAt)).toList(),
           ),
           ..._culturesSection(),
-          ..._activitySection(),
         ],
       ),
     );
@@ -178,9 +191,23 @@ class _AdmissionPdfRenderer {
     pw.TextAlign? textAlign,
   }) {
     final rtl = _containsArabic(text);
+    // Arabic only joins/shapes correctly when the Arabic font is the PRIMARY
+    // font. Via fontFallback each glyph is drawn in isolation (disconnected,
+    // out-of-order letters), so promote the Arabic font for RTL strings.
+    var effectiveStyle = style;
+    if (rtl) {
+      final isBold = style?.fontWeight == pw.FontWeight.bold;
+      final arabicFont = isBold ? _fonts.arabicBold : _fonts.arabic;
+      effectiveStyle = (style ?? _style()).copyWith(
+        font: arabicFont,
+        fontNormal: arabicFont,
+        fontBold: _fonts.arabicBold,
+        fontFallback: [arabicFont],
+      );
+    }
     return pw.Text(
       text,
-      style: style,
+      style: effectiveStyle,
       textDirection: rtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
       textAlign: textAlign ?? (rtl ? pw.TextAlign.right : pw.TextAlign.left),
     );
@@ -285,7 +312,7 @@ class _AdmissionPdfRenderer {
 
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.fromLTRB(20, 20, 20, 18),
+      padding: const pw.EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: pw.BoxDecoration(
         color: _primary,
         borderRadius: pw.BorderRadius.circular(16),
@@ -384,7 +411,7 @@ class _AdmissionPdfRenderer {
   pw.Widget _infoCard(List<(String, String)> rows) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: pw.BoxDecoration(
         color: _surface,
         borderRadius: pw.BorderRadius.circular(12),
@@ -404,7 +431,7 @@ class _AdmissionPdfRenderer {
   pw.Widget _infoRow(String label, String value) {
     final display = value.isEmpty ? AppTexts.notAvailable : value;
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 8),
+      padding: const pw.EdgeInsets.symmetric(vertical: 5),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
@@ -429,7 +456,7 @@ class _AdmissionPdfRenderer {
   pw.Widget _textCard(String text) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.all(14),
+      padding: const pw.EdgeInsets.all(10),
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: pw.BorderRadius.circular(12),
@@ -497,7 +524,7 @@ class _AdmissionPdfRenderer {
   List<pw.Widget> _clinicalNotesSection() {
     if (admission.clinicalNotes.isEmpty) return [];
     return [
-      _sectionTitle('Clinical notes'),
+      _sectionTitle(AppTexts.clinicalNotesSection),
       pw.SizedBox(height: 8),
       ...admission.clinicalNotes.map(
         (n) => pw.Padding(
@@ -533,39 +560,173 @@ class _AdmissionPdfRenderer {
   }
 
   List<pw.Widget> _vitalsSection() {
-    if (admission.vitals.isEmpty) return [];
-    return [
-      _sectionTitle(AppTexts.vitalSigns),
-      pw.SizedBox(height: 8),
-      _measurementTable(
-        headers: const ['Vital', 'Value', 'Date'],
-        rows: admission.vitals.map((v) {
-          final title = v.vitalsTitle?.title ?? 'Vital #${v.vitalsTitleId}';
-          final unit = v.vitalsTitle?.unit ?? '';
-          final value = unit.isEmpty ? v.value : '${v.value} $unit';
-          return [title, value, admissionDetailsFormatDateTime(v.date)];
-        }).toList(),
-      ),
-      pw.SizedBox(height: 18),
-    ];
+    final entries = admission.vitals
+        .map(
+          (v) => _MeasureEntry(
+            titleId: v.vitalsTitleId,
+            title: v.vitalsTitle?.title ?? 'Vital #${v.vitalsTitleId}',
+            unit: v.vitalsTitle?.unit ?? '',
+            rangeMin: v.vitalsTitle?.normalRangeMin ?? '',
+            rangeMax: v.vitalsTitle?.normalRangeMax ?? '',
+            value: v.value,
+            dayKey: v.date.isNotEmpty ? v.date : v.createdAt,
+          ),
+        )
+        .toList();
+    return _readingsSection(AppTexts.vitalSigns, entries);
   }
 
   List<pw.Widget> _labsSection() {
-    if (admission.labs.isEmpty) return [];
+    final entries = admission.labs
+        .map(
+          (l) => _MeasureEntry(
+            titleId: l.labsTitleId,
+            title: l.labsTitle?.title ?? 'Lab #${l.labsTitleId}',
+            unit: l.labsTitle?.unit ?? '',
+            rangeMin: l.labsTitle?.normalRangeMin ?? '',
+            rangeMax: l.labsTitle?.normalRangeMax ?? '',
+            value: l.value,
+            dayKey: l.date.isNotEmpty ? l.date : l.createdAt,
+          ),
+        )
+        .toList();
+    return _readingsSection(AppTexts.labs, entries);
+  }
+
+  bool _isAbnormal(_MeasureEntry rep, String value) {
+    final v = double.tryParse(value);
+    if (v == null) return false;
+    final min = double.tryParse(rep.rangeMin);
+    final max = double.tryParse(rep.rangeMax);
+    if (min != null && v < min) return true;
+    if (max != null && v > max) return true;
+    return false;
+  }
+
+  /// One table per title: the title as a heading, then a Date | Reading table
+  /// with a row for every reading of that title (newest first). Out-of-range
+  /// values are flagged in red.
+  List<pw.Widget> _readingsSection(String title, List<_MeasureEntry> entries) {
+    if (entries.isEmpty) return [];
+
+    // Group readings by their title, keeping first-seen order.
+    final order = <int>[];
+    final grouped = <int, List<_MeasureEntry>>{};
+    for (final e in entries) {
+      if (!grouped.containsKey(e.titleId)) order.add(e.titleId);
+      (grouped[e.titleId] ??= []).add(e);
+    }
+
+    final hasAbnormal = entries.any((e) => _isAbnormal(e, e.value));
+
     return [
-      _sectionTitle(AppTexts.labs),
+      _sectionTitle(title),
       pw.SizedBox(height: 8),
-      _measurementTable(
-        headers: const ['Lab', 'Result', 'Date'],
-        rows: admission.labs.map((l) {
-          final title = l.labsTitle?.title ?? 'Lab #${l.labsTitleId}';
-          final unit = l.labsTitle?.unit ?? '';
-          final value = unit.isEmpty ? l.value : '${l.value} $unit';
-          return [title, value, admissionDetailsFormatDateTime(l.date)];
-        }).toList(),
-      ),
-      pw.SizedBox(height: 18),
+      ...order.map((id) {
+        final group = [...grouped[id]!]
+          ..sort((a, b) => b.dayKey.compareTo(a.dayKey));
+        return pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 8),
+          child: _titleReadingsTable(group),
+        );
+      }),
+      if (hasAbnormal)
+        _txt(
+          '* value outside the normal range',
+          style: _style(fontSize: 8, color: _abnormal),
+        ),
+      pw.SizedBox(height: 10),
     ];
+  }
+
+  pw.Widget _titleReadingsTable(List<_MeasureEntry> readings) {
+    final rep = readings.first;
+    final heading = rep.unit.isEmpty ? rep.title : '${rep.title} (${rep.unit})';
+
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        borderRadius: pw.BorderRadius.circular(12),
+        border: pw.Border.all(color: _border),
+      ),
+      child: pw.ClipRRect(
+        horizontalRadius: 12,
+        verticalRadius: 12,
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // Title heading spanning the whole card.
+            pw.Container(
+              width: double.infinity,
+              color: _surface,
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 5,
+              ),
+              child: _txt(
+                heading,
+                style: _style(fontSize: 10, bold: true, color: _primary),
+              ),
+            ),
+            pw.Table(
+              border: pw.TableBorder(
+                horizontalInside: pw.BorderSide(color: _border, width: 0.5),
+                verticalInside: pw.BorderSide(color: _border, width: 0.5),
+                top: pw.BorderSide(color: _border, width: 0.5),
+              ),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(2),
+                1: pw.FlexColumnWidth(2),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(color: _primary),
+                  children: [
+                    _readingCell('Date', bold: true, color: PdfColors.white),
+                    _readingCell('Reading', bold: true, color: PdfColors.white),
+                  ],
+                ),
+                ...readings.asMap().entries.map((row) {
+                  final e = row.value;
+                  final abnormal = _isAbnormal(e, e.value);
+                  return pw.TableRow(
+                    decoration: pw.BoxDecoration(
+                      color: abnormal
+                          ? _abnormalSoft
+                          : (row.key.isEven ? PdfColors.white : _surface),
+                    ),
+                    children: [
+                      _readingCell(
+                        admissionDetailsFormatDateTime(e.dayKey),
+                        color: _muted,
+                      ),
+                      _readingCell(
+                        abnormal ? '${e.value} *' : e.value,
+                        bold: abnormal,
+                        color: abnormal ? _abnormal : _primary,
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  pw.Widget _readingCell(
+    String text, {
+    bool bold = false,
+    PdfColor? color,
+  }) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: _txt(
+        text.isEmpty ? AppTexts.notAvailable : text,
+        style: _style(fontSize: 9, bold: bold, color: color ?? _primary),
+      ),
+    );
   }
 
   List<pw.Widget> _medicationsSection() {
@@ -588,7 +749,7 @@ class _AdmissionPdfRenderer {
           ];
         }).toList(),
       ),
-      pw.SizedBox(height: 18),
+      pw.SizedBox(height: 10),
     ];
   }
 
@@ -652,81 +813,6 @@ class _AdmissionPdfRenderer {
     ];
   }
 
-  List<pw.Widget> _activitySection() {
-    if (activities.isEmpty) return [];
-    return [
-      _sectionTitle(AppTexts.activityHistorySection),
-      pw.SizedBox(height: 8),
-      ...activities.take(50).map(
-        (a) {
-          final changeLines = admissionActivityChangeLines(a);
-          return pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 6),
-          child: pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.all(12),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.white,
-              border: pw.Border.all(color: _border),
-              borderRadius: pw.BorderRadius.circular(10),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: pw.BoxDecoration(
-                        color: _accentSoft,
-                        borderRadius: pw.BorderRadius.circular(6),
-                      ),
-                      child: _txt(
-                        admissionActivityTitle(a),
-                        style: _style(
-                          fontSize: 8,
-                          bold: true,
-                          color: PdfColor.fromHex('#2E7D32'),
-                        ),
-                      ),
-                    ),
-                    _txt(
-                      admissionDetailsFormatDateTime(a.createdAt),
-                      style: _style(fontSize: 8, color: _muted),
-                    ),
-                  ],
-                ),
-                if (changeLines.isNotEmpty) ...[
-                  pw.SizedBox(height: 6),
-                  ...changeLines.map(
-                    (line) => pw.Padding(
-                      padding: const pw.EdgeInsets.only(bottom: 3),
-                      child: _txt(
-                        line,
-                        style: _style(fontSize: 9, color: _primary),
-                      ),
-                    ),
-                  ),
-                ] else if (a.description.isNotEmpty) ...[
-                  pw.SizedBox(height: 6),
-                  _txt(
-                    a.description,
-                    style: _style(fontSize: 9, color: _primary),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-        },
-      ),
-    ];
-  }
-
   pw.Widget _recordCard({
     required String title,
     required String subtitle,
@@ -734,7 +820,7 @@ class _AdmissionPdfRenderer {
   }) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.all(14),
+      padding: const pw.EdgeInsets.all(10),
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: pw.BorderRadius.circular(12),
@@ -818,8 +904,8 @@ class _AdmissionPdfRenderer {
                   .map(
                     (h) => pw.Padding(
                       padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
+                        horizontal: 8,
+                        vertical: 5,
                       ),
                       child: _txt(
                         h,
@@ -844,8 +930,8 @@ class _AdmissionPdfRenderer {
                       .map(
                         (cell) => pw.Padding(
                           padding: const pw.EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 7,
+                            horizontal: 8,
+                            vertical: 5,
                           ),
                           child: _txt(
                             cell.isEmpty ? AppTexts.notAvailable : cell,

@@ -465,6 +465,41 @@ class CultureModel extends Equatable {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Consultation
+// ═══════════════════════════════════════════════════════════════════════════════
+class ConsultationModel extends Equatable {
+  const ConsultationModel({
+    required this.id,
+    required this.admissionId,
+    required this.speciality,
+    required this.reply,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final int id;
+  final int admissionId;
+  final String speciality;
+  final String reply;
+  final String createdAt;
+  final String updatedAt;
+
+  factory ConsultationModel.fromJson(Map<String, dynamic> json) =>
+      ConsultationModel(
+        id: json['id'] as int,
+        admissionId: json['admission_id'] as int,
+        speciality: json['speciality'] as String? ?? '',
+        reply: json['reply'] as String? ?? '',
+        createdAt: json['created_at'] as String? ?? '',
+        updatedAt: json['updated_at'] as String? ?? '',
+      );
+
+  @override
+  List<Object?> get props =>
+      [id, admissionId, speciality, reply, createdAt, updatedAt];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // HospitalGroup
 // ═══════════════════════════════════════════════════════════════════════════════
 class HospitalGroupModel extends Equatable {
@@ -544,6 +579,7 @@ class PatientAdmissionModel extends Equatable {
     this.echoes = const [],
     this.ultrasounds = const [],
     this.cultures = const [],
+    this.consultations = const [],
   });
 
   final int id;
@@ -573,6 +609,7 @@ class PatientAdmissionModel extends Equatable {
   final List<EchoModel> echoes;
   final List<UltrasoundModel> ultrasounds;
   final List<CultureModel> cultures;
+  final List<ConsultationModel> consultations;
 
   factory PatientAdmissionModel.fromJson(Map<String, dynamic> json) =>
       PatientAdmissionModel(
@@ -631,6 +668,9 @@ class PatientAdmissionModel extends Equatable {
         cultures: (json['cultures'] as List<dynamic>? ?? [])
             .map((e) => CultureModel.fromJson(e as Map<String, dynamic>))
             .toList(),
+        consultations: (json['consultations'] as List<dynamic>? ?? [])
+            .map((e) => ConsultationModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
       );
 
   @override
@@ -661,6 +701,7 @@ class PatientAdmissionModel extends Equatable {
         echoes,
         ultrasounds,
         cultures,
+        consultations,
         hospitalGroup,
       ];
 }
