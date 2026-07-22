@@ -33,7 +33,7 @@ import '../widgets/admission_details_patient_header_section.dart';
 import '../widgets/admission_details_radiology_card.dart';
 import '../widgets/admission_details_section_container.dart';
 import '../widgets/admission_details_simple_text_card.dart';
-import '../widgets/admission_details_treatment_plan_card.dart';
+import '../widgets/admission_plans_section.dart';
 import '../widgets/pending_measurement_column_entry.dart';
 
 class AdmissionDetailsScreen extends StatefulWidget {
@@ -1551,73 +1551,39 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                       ),
                     ),
 
-                    // ── Treatment Plans ──────────────────────────────────────
-                    AdmissionDetailsSectionContainer(
-                      title: 'Treatment Plans',
-                      headerAction: _addingSection == 'plan' ||
-                              _editingSection == 'plan'
-                          ? null
-                          : IconButton(
-                              icon: const Icon(
-                                Icons.add_circle_outline,
-                                color: AppColors.primary,
-                                size: 20,
-                              ),
-                              onPressed: () => _startAddGeneric('plan'),
-                            ),
-                      child: Column(
-                        children: [
-                          if (_addingSection == 'plan')
-                            AdmissionDetailsGenericAddForm(
-                              title: 'Add Treatment Plan',
-                              saving: _savingGeneric,
-                              onCancel: _cancelAddGeneric,
-                              onSave: _saveGenericAdd,
-                              fields: [
-                                AdmissionDetailsFormFieldSpec(
-                                  hint: 'Plan content',
-                                  controller: _getCtrl('plan'),
-                                  maxLines: 4,
-                                  isRequired: true,
-                                ),
-                              ],
-                            ),
-                          if (admission.treatmentPlans.isEmpty &&
-                              _addingSection != 'plan')
-                            const AdmissionDetailsEmptyHint(
-                              'No treatment plans recorded.',
-                            )
-                          else
-                            ...admission.treatmentPlans.map(
-                              (p) {
-                                if (_isEditingItem('plan', p.id)) {
-                                  return _buildGenericEditForm(
-                                    section: 'plan',
-                                    title: 'Edit Treatment Plan',
-                                    fields: [
-                                      AdmissionDetailsFormFieldSpec(
-                                        hint: 'Plan content',
-                                        controller: _getCtrl('plan'),
-                                        maxLines: 4,
-                                        isRequired: true,
-                                      ),
-                                    ],
-                                  );
-                                }
-                                return AdmissionDetailsTreatmentPlanCard(
-                                  plan: p,
-                                  onEdit: () => _beginEditItem(
-                                    'plan',
-                                    p.id,
-                                    fields: {'plan': p.planContent},
-                                  ),
-                                  onDelete: () =>
-                                      _deleteItem('treatment_plans', p.id),
-                                );
-                              },
-                            ),
-                        ],
+                    // ── Plans ────────────────────────────────────────────────
+                    AdmissionPlansSection(
+                      plans: admission.treatmentPlans,
+                      adding: _addingSection == 'plan',
+                      editingItemId:
+                          _editingSection == 'plan' ? _editingItemId : null,
+                      saving: _savingGeneric,
+                      contentController: _getCtrl('plan'),
+                      onStartAdd: () => _startAddGeneric('plan'),
+                      onCancelAdd: () {
+                        _cancelAddGeneric();
+                        for (final c in _genericCtrls.values) {
+                          c.dispose();
+                        }
+                        _genericCtrls.clear();
+                        setState(() {});
+                      },
+                      onSaveAdd: _saveGenericAdd,
+                      onBeginEdit: (plan) => _beginEditItem(
+                        'plan',
+                        plan.id,
+                        fields: {'plan': plan.planContent},
                       ),
+                      onCancelEdit: () {
+                        _cancelEditGeneric();
+                        for (final c in _genericCtrls.values) {
+                          c.dispose();
+                        }
+                        _genericCtrls.clear();
+                        setState(() {});
+                      },
+                      onSaveEdit: _saveGenericEdit,
+                      onDelete: (id) => _deleteItem('treatment_plans', id),
                     ),
 
                     // ── Vital Signs ──────────────────────────────────────────

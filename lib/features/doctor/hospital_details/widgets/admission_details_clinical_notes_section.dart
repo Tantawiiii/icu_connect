@@ -64,33 +64,30 @@ class AdmissionDetailsClinicalNotesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AdmissionDetailsSectionContainer(
-      title: AppTexts.clinicalNotesSection,
-      child: Column(
-        children: [
-          for (var i = 0; i < AdmissionClinicalNoteType.values.length; i++) ...[
-            if (i > 0) const SizedBox(height: 12),
-            _ClinicalNoteTypeCard(
-              type: AdmissionClinicalNoteType.values[i],
-              notes: _notesForType(AdmissionClinicalNoteType.values[i]),
-              showAddForm: _isAddingType(AdmissionClinicalNoteType.values[i]),
-              editingItemId: _isEditingInType(AdmissionClinicalNoteType.values[i])
-                  ? editingItemId
-                  : null,
-              saving: saving,
-              contentController: contentController,
-              canAdd: !adding && editingItemId == null,
-              onAdd: () => onStartAdd(AdmissionClinicalNoteType.values[i]),
-              onCancelAdd: onCancelAdd,
-              onSaveAdd: onSaveAdd,
-              onBeginEdit: onBeginEdit,
-              onCancelEdit: onCancelEdit,
-              onSaveEdit: onSaveEdit,
-              onDelete: onDelete,
-            ),
-          ],
+    return Column(
+      children: [
+        for (var i = 0; i < AdmissionClinicalNoteType.values.length; i++) ...[
+          if (i > 0) const SizedBox(height: 12),
+          _ClinicalNoteTypeCard(
+            type: AdmissionClinicalNoteType.values[i],
+            notes: _notesForType(AdmissionClinicalNoteType.values[i]),
+            showAddForm: _isAddingType(AdmissionClinicalNoteType.values[i]),
+            editingItemId: _isEditingInType(AdmissionClinicalNoteType.values[i])
+                ? editingItemId
+                : null,
+            saving: saving,
+            contentController: contentController,
+            canAdd: !adding && editingItemId == null,
+            onAdd: () => onStartAdd(AdmissionClinicalNoteType.values[i]),
+            onCancelAdd: onCancelAdd,
+            onSaveAdd: onSaveAdd,
+            onBeginEdit: onBeginEdit,
+            onCancelEdit: onCancelEdit,
+            onSaveEdit: onSaveEdit,
+            onDelete: onDelete,
+          ),
         ],
-      ),
+      ],
     );
   }
 }

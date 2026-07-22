@@ -222,6 +222,7 @@ class AppTexts {
   static const String admissionNotesSection = 'Admission notes';
   static const String clinicalNotesSection = 'History and complaint';
   static const String treatmentPlansSection = 'Treatment plans';
+  static const String plansSection = 'Plans';
   static const String defaultVitalMeasurementTitle = 'Vital';
   static const String defaultLabMeasurementTitle = 'Lab';
   static const String normalRangePrefix = 'Normal:';
@@ -276,6 +277,39 @@ class AppTexts {
   static const String vitalTitleCreated = 'Vital title created successfully';
   static const String vitalTitleUpdated = 'Vital title updated successfully';
   static const String vitalTitleDeleted = 'Vital title deleted successfully';
+
+  // Drugs CRUD
+  static const String drugsLabel = 'Drugs';
+  static const String searchDrugsHint = 'Search by generic name';
+  static const String drugsSearchEmpty = 'No drugs match your search.';
+  static const String addDrug = 'Add Drug';
+  static const String editDrug = 'Edit Drug';
+  static const String drugDetails = 'Drug Details';
+  static const String archiveDrug = 'Archive Drug';
+  static const String restoreDrug = 'Restore Drug';
+  static const String archiveDrugConfirmation =
+      'Archive this drug? It will be hidden from normal listings.';
+  static const String restoreDrugConfirmation =
+      'Restore this drug to the active catalog?';
+  static const String drugCreated = 'Drug created successfully';
+  static const String drugUpdated = 'Drug updated successfully';
+  static const String drugArchived = 'Drug archived successfully';
+  static const String drugRestored = 'Drug restored successfully';
+  static const String genericName = 'Generic name';
+  static const String tradeNames = 'Trade names';
+  static const String dosingGuidelines = 'Dosing guidelines';
+  static const String indications = 'Indications';
+  static const String contraindications = 'Contraindications';
+  static const String sideEffects = 'Side effects';
+  static const String pregnancy = 'Pregnancy';
+  static const String renalDoseAdjustment = 'Renal dose adjustment';
+  static const String hepaticDoseAdjustment = 'Hepatic dose adjustment';
+  static const String drugActive = 'Active';
+  static const String drugInactive = 'Inactive';
+  static const String drugArchivedFilter = 'Archived';
+  static const String drugAllFilter = 'All';
+  static const String addListItem = 'Add';
+  static const String genericNameRequired = 'Generic name is required';
 
   // Super admins CRUD
   static const String superAdmins = 'Super Admins';

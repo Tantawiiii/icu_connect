@@ -109,7 +109,6 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
   static const _clinicalTypes = [
     'history_complaint',
     'progress_note',
-    'discharge_summary',
   ];
 
   final _formKey = GlobalKey<FormState>();

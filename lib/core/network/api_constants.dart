@@ -73,6 +73,11 @@ class ApiConstants {
   static String labTitleById(int id) => '/labs-titles/$id';
   static const String vitalsTitles = '/vitals-titles';
   static String vitalTitleById(int id) => '/vitals-titles/$id';
+  static const String drugs = '/drugs';
+  static const String drugsFormulary = '/drugs/formulary';
+  static String drugById(int id) => '/drugs/$id';
+  static String drugArchive(int id) => '/drugs/$id/archive';
+  static String drugRestore(int id) => '/drugs/$id/restore';
   static const String statistics = '/statistics';
   static const String dashboard = '/dashboard';
   static const String admins = '/admins';

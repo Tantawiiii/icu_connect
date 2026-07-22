@@ -7,6 +7,7 @@ import '../../admins/screens/admins_list_screen.dart';
 import '../../hospitals/screens/hospitals_list_screen.dart';
 import '../../users/screens/users_list_screen.dart';
 import '../../patients/screens/patients_list_screen.dart';
+import '../../drugs/screens/drugs_list_screen.dart';
 import '../../labs/screens/labs_titles_list_screen.dart';
 import '../../vitals/screens/vitals_titles_list_screen.dart';
 
@@ -69,6 +70,14 @@ class QuickActions extends StatelessWidget {
           color: Colors.redAccent,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const VitalsTitlesListScreen()),
+          ),
+        ),
+        _ActionTile(
+          icon: Icons.medication_outlined,
+          label: AppTexts.drugsLabel,
+          color: Colors.teal,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const DrugsListScreen()),
           ),
         ),
 

@@ -5,28 +5,26 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
-import 'package:icu_connect/core/network/network_exceptions.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
 import 'package:icu_connect/core/widgets/app_text_field.dart';
-import 'package:icu_connect/features/doctor/patients/screens/patient_form_screen.dart';
 import '../../../superAdmin/patients/models/admission_request_model.dart';
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
 import '../cubit/admission_form_cubit.dart';
 import '../cubit/admission_form_state.dart';
 import '../enums/admission_status.dart';
 import '../utils/admission_update_validation.dart';
+import '../widgets/admission_details_clinical_notes_section.dart';
 import '../widgets/admission_details_consultation_card.dart';
 import '../widgets/admission_details_culture_card.dart';
 import '../widgets/admission_details_empty_hint.dart';
 import '../widgets/admission_details_generic_add_form.dart';
 import '../widgets/admission_details_measurement_section.dart';
 import '../widgets/admission_details_medication_card.dart';
-import '../widgets/admission_details_note_card.dart';
 import '../widgets/admission_details_section_container.dart';
 import '../widgets/admission_details_simple_text_card.dart';
-import '../widgets/admission_details_treatment_plan_card.dart';
 import '../widgets/admission_form_essentials_section.dart';
 import '../widgets/admission_form_radiology_draft_card.dart';
+import '../widgets/admission_plans_section.dart';
 import '../widgets/pending_measurement_column_entry.dart';
 
 class AdmissionFormScreen extends StatelessWidget {
@@ -880,39 +878,6 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
     });
   }
 
-  Future<void> _openAddPatient() async {
-    final newId = await Navigator.of(context).push<int?>(
-      MaterialPageRoute(builder: (_) => const PatientFormScreen()),
-    );
-    if (newId == null || !mounted) return;
-
-    final cubit = context.read<AdmissionFormCubit>();
-    try {
-      await cubit.refreshPatients(ensurePatientId: newId);
-    } on NetworkException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: AppColors.error),
-        );
-      }
-      return;
-    }
-
-    final list = cubit.refs?.patients;
-    if (list == null || !mounted) return;
-
-    AdmissionPatientModel? match;
-    for (final p in list) {
-      if (p.id == newId) {
-        match = p;
-        break;
-      }
-    }
-    if (match != null) {
-      setState(() => _selectedPatient = match);
-    }
-  }
-
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedPatient == null) {
@@ -1167,82 +1132,37 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
 
   List<Widget> _buildRecordSections(AdmissionFormRefsReady refs) {
     return [
-      AdmissionDetailsSectionContainer(
-        title: AppTexts.clinicalNotesSection,
-        headerAction: _addingSection == 'clinical_note' ||
-                _editingSection == 'clinical_note'
-            ? null
-            : IconButton(
-                icon: const Icon(
-                  Icons.add_circle_outline,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-                onPressed: () => _startAddGeneric(
-                  'clinical_note',
-                  defaultType: 'progress_note',
-                ),
-              ),
-        child: Column(
-          children: [
-            if (_addingSection == 'clinical_note')
-              AdmissionDetailsGenericAddForm(
-                title: 'Add Clinical Note',
-                saving: false,
-                onCancel: () {
-                  _cancelAddGeneric();
-                  _disposeGenericCtrls();
-                  setState(() {});
-                },
-                onSave: _saveGenericAddLocal,
-                typeLabel: 'Note Type',
-                typeValue: _pendingType,
-                types: AdmissionClinicalNoteType.values,
-                onTypeChanged: (v) => setState(() => _pendingType = v),
-                fields: [
-                  AdmissionDetailsFormFieldSpec(
-                    hint: 'Content',
-                    controller: _getCtrl('content'),
-                    maxLines: 5,
-                    isRequired: true,
-                  ),
-                ],
-              ),
-            if (_clinicalDrafts.isEmpty && _addingSection != 'clinical_note')
-              const AdmissionDetailsEmptyHint(
-                'No history and complaint recorded.',
-              )
-            else
-              ..._clinicalDrafts.map((n) {
-                if (_isEditingItem('clinical_note', n.id)) {
-                  return _buildGenericEditForm(
-                    section: 'clinical_note',
-                    title: 'Edit Clinical Note',
-                    typeLabel: 'Note Type',
-                    types: AdmissionClinicalNoteType.values,
-                    fields: [
-                      AdmissionDetailsFormFieldSpec(
-                        hint: 'Content',
-                        controller: _getCtrl('content'),
-                        maxLines: 5,
-                        isRequired: true,
-                      ),
-                    ],
-                  );
-                }
-                return AdmissionDetailsNoteCard(
-                  note: n,
-                  onEdit: () => _beginEditItem(
-                    'clinical_note',
-                    n.id,
-                    type: n.type,
-                    fields: {'content': n.content},
-                  ),
-                  onDelete: () => _deleteDraftItem('clinical_note', n.id),
-                );
-              }),
-          ],
+      AdmissionDetailsClinicalNotesSection(
+        notes: _clinicalDrafts,
+        adding: _addingSection == 'clinical_note',
+        editingItemId:
+            _editingSection == 'clinical_note' ? _editingItemId : null,
+        pendingType: _pendingType,
+        saving: false,
+        contentController: _getCtrl('content'),
+        onStartAdd: (type) => _startAddGeneric(
+          'clinical_note',
+          defaultType: type,
         ),
+        onCancelAdd: () {
+          _cancelAddGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveAdd: _saveGenericAddLocal,
+        onBeginEdit: (note) => _beginEditItem(
+          'clinical_note',
+          note.id,
+          type: note.type,
+          fields: {'content': note.content},
+        ),
+        onCancelEdit: () {
+          _cancelEditGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveEdit: _saveGenericEditLocal,
+        onDelete: (id) => _deleteDraftItem('clinical_note', id),
       ),
       AdmissionDetailsSectionContainer(
         title: 'Radiology',
@@ -1347,70 +1267,31 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           ],
         ),
       ),
-      AdmissionDetailsSectionContainer(
-        title: 'Treatment Plans',
-        headerAction:
-            _addingSection == 'plan' || _editingSection == 'plan'
-                ? null
-                : IconButton(
-                    icon: const Icon(
-                      Icons.add_circle_outline,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                    onPressed: () => _startAddGeneric('plan'),
-                  ),
-        child: Column(
-          children: [
-            if (_addingSection == 'plan')
-              AdmissionDetailsGenericAddForm(
-                title: 'Add Treatment Plan',
-                saving: false,
-                onCancel: () {
-                  _cancelAddGeneric();
-                  _disposeGenericCtrls();
-                  setState(() {});
-                },
-                onSave: _saveGenericAddLocal,
-                fields: [
-                  AdmissionDetailsFormFieldSpec(
-                    hint: 'Plan content',
-                    controller: _getCtrl('plan'),
-                    maxLines: 4,
-                    isRequired: true,
-                  ),
-                ],
-              ),
-            if (_treatmentDrafts.isEmpty && _addingSection != 'plan')
-              const AdmissionDetailsEmptyHint('No treatment plans recorded.')
-            else
-              ..._treatmentDrafts.map((p) {
-                if (_isEditingItem('plan', p.id)) {
-                  return _buildGenericEditForm(
-                    section: 'plan',
-                    title: 'Edit Treatment Plan',
-                    fields: [
-                      AdmissionDetailsFormFieldSpec(
-                        hint: 'Plan content',
-                        controller: _getCtrl('plan'),
-                        maxLines: 4,
-                        isRequired: true,
-                      ),
-                    ],
-                  );
-                }
-                return AdmissionDetailsTreatmentPlanCard(
-                  plan: p,
-                  onEdit: () => _beginEditItem(
-                    'plan',
-                    p.id,
-                    fields: {'plan': p.planContent},
-                  ),
-                  onDelete: () => _deleteDraftItem('plan', p.id),
-                );
-              }),
-          ],
+      AdmissionPlansSection(
+        plans: _treatmentDrafts,
+        adding: _addingSection == 'plan',
+        editingItemId: _editingSection == 'plan' ? _editingItemId : null,
+        saving: false,
+        contentController: _getCtrl('plan'),
+        onStartAdd: () => _startAddGeneric('plan'),
+        onCancelAdd: () {
+          _cancelAddGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveAdd: _saveGenericAddLocal,
+        onBeginEdit: (plan) => _beginEditItem(
+          'plan',
+          plan.id,
+          fields: {'plan': plan.planContent},
         ),
+        onCancelEdit: () {
+          _cancelEditGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveEdit: _saveGenericEditLocal,
+        onDelete: (id) => _deleteDraftItem('plan', id),
       ),
       AdmissionDetailsMeasurementSection(
         title: AppTexts.vitalSigns,
@@ -1996,12 +1877,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                       dateComes: _dateComes,
                       dateLeave: _dateLeave,
                       dateOfDeath: _dateOfDeath,
-                      patients: refs.patients,
                       selectedPatient: _selectedPatient,
-                      hospitalGroupId: widget.hospitalGroupId,
-                      onPatientChanged: (patient) =>
-                          setState(() => _selectedPatient = patient),
-                      onAddPatient: _openAddPatient,
                       onStatusChanged: (status) => setState(
                         () => _status = status ?? AdmissionStatus.admitted,
                       ),
@@ -2055,7 +1931,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                       bedValidator: (value) =>
                           (value?.trim() ?? '').isEmpty ? 'Required' : null,
                       patientValidator: (patient) =>
-                          patient == null ? 'Select a patient' : null,
+                          patient == null ? 'Patient is required' : null,
                     ),
                     ..._buildRecordSections(refs),
                   ],
