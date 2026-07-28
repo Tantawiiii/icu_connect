@@ -8,6 +8,8 @@ class ApiConstants {
 
   static const String adminBaseUrl = '$_scheme://$_host$_version/admin';
   static const String hospitalBaseUrl = '$_scheme://$_host$_version/hospital';
+  /// Shared (role-agnostic) API root — used by endpoints that accept any Sanctum user.
+  static const String sharedBaseUrl = '$_scheme://$_host$_version';
 
   static const String passwordBaseUrl = '$_scheme://$_host$_version/password/';
   static const String imageBaseUrl = '$_scheme://$_host/storage/';
@@ -38,7 +40,31 @@ class ApiConstants {
   static const String admissions = '/admissions';
   static String admissionById(int id) => '/admissions/$id';
   static String admissionActivity(int id) => '/admissions/$id/activity';
+  static String admissionNotes(int id) => '/admissions/$id/notes';
   static const String admissionsSwapBeds = '/admissions/swap-beds';
+
+  // ── AI recommendations (admission-scoped, shared Sanctum routes) ────────────
+  static String aiRecommend(String feature) =>
+      '$sharedBaseUrl/ai/recommend/$feature';
+  static const String aiRecommendMedication =
+      '$sharedBaseUrl/ai/recommend/medication';
+  static const String aiRecommendLabs = '$sharedBaseUrl/ai/recommend/labs';
+  static const String aiRecommendVitals = '$sharedBaseUrl/ai/recommend/vitals';
+  static const String aiRecommendProgressNotes =
+      '$sharedBaseUrl/ai/recommend/progress_notes';
+  static const String aiRecommendConsultations =
+      '$sharedBaseUrl/ai/recommend/consultations';
+  static const String aiRecommendTreatmentPlan =
+      '$sharedBaseUrl/ai/recommend/treatment_plan';
+  static const String aiRecommendMicrobiology =
+      '$sharedBaseUrl/ai/recommend/microbiology';
+  static const String aiRecommendImaging =
+      '$sharedBaseUrl/ai/recommend/imaging';
+  static const String aiRecommendDiagnosis =
+      '$sharedBaseUrl/ai/recommend/diagnosis';
+  static const String aiRecommendDischarge =
+      '$sharedBaseUrl/ai/recommend/discharge';
+
   static const String patientVitalSigns = '/vital-signs';
   static String patientVitalSignsById(String patientId) =>
       '/patients/$patientId/vital-signs';
@@ -74,7 +100,7 @@ class ApiConstants {
   static const String vitalsTitles = '/vitals-titles';
   static String vitalTitleById(int id) => '/vitals-titles/$id';
   static const String drugs = '/drugs';
-  static const String drugsFormulary = '/drugs/formulary';
+  static const String drugsFormulary = '/drugs';
   static String drugById(int id) => '/drugs/$id';
   static String drugArchive(int id) => '/drugs/$id/archive';
   static String drugRestore(int id) => '/drugs/$id/restore';

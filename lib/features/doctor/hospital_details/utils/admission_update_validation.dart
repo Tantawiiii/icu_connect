@@ -89,14 +89,15 @@ class AdmissionUpdateValidation {
   }
 
   static String? medicationFields({
-    required String title,
-    String? type,
+    required int? drugId,
+    required String dose,
+    required String frequency,
   }) {
-    final titleError = requiredText(title, field: 'Medication title');
-    if (titleError != null) return titleError;
-    if (type != null && type.trim().isEmpty) {
-      return 'Medication type is required';
+    if (drugId == null) {
+      return 'Select a drug from the formulary';
     }
-    return null;
+    final doseError = requiredText(dose, field: 'Dose');
+    if (doseError != null) return doseError;
+    return requiredText(frequency, field: 'Frequency');
   }
 }

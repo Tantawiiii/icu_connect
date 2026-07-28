@@ -220,6 +220,51 @@ class AppTexts {
   static const String admissionOptionalRecordsHint =
       'History and complaint, vitals, labs, medications, and more';
   static const String admissionNotesSection = 'Admission notes';
+  static const String clinicalTimelineSection = 'Clinical Timeline';
+  static const String aiClinicalAssistant = 'AI Clinical Assistant';
+  static const String aiRecommendationsTitle = 'AI Recommendations';
+  static const String aiRecommendationsSubtitle =
+      'ICU-focused insights across medications, labs, vitals, and more.';
+  static const String aiOpenAssistant = 'Open AI Assistant';
+  static const String aiAnalyzing = 'Analyzing clinical data…';
+  static const String aiRefreshing = 'Generating a fresh review…';
+  static const String aiRefresh = 'Refresh';
+  static const String aiCachedHint =
+      'Cached until admission data changes (or 6h). Refresh to regenerate.';
+  static const String aiSummary = 'Clinical summary';
+  static const String aiPriorityConcerns = 'Priority concerns';
+  static const String aiRecommendations = 'Recommendations';
+  static const String aiMissingData = 'Missing data';
+  static const String aiSafetyFlags = 'Safety flags';
+  static const String aiConfidence = 'Confidence';
+  static const String aiLanguage = 'Language';
+  static const String aiEmptyFeature =
+      'Select a focus area to generate AI recommendations.';
+  static const String aiLoadFailed = 'Could not load AI recommendation.';
+  static const String aiNotConfigured =
+      'AI is not configured on the server yet.';
+  static const String aiDisclaimer =
+      'Decision support only — not a substitute for clinical judgment.';
+  static const String aiSelectToApplyHint =
+      'Tap items you want to apply into the admission chart.';
+  static const String aiApplyToAdmission = 'Apply to admission';
+  static const String aiApplyPickDestination =
+      'Choose where selected AI suggestions should be saved.';
+  static const String aiSuggested = 'Suggested';
+  static const String aiApplySelected = 'Apply';
+  static const String aiApplying = 'Applying…';
+  static const String aiClearSelection = 'Clear';
+  static const String aiApplyFailed = 'Could not apply AI suggestions.';
+
+  static String aiSelectedCount(int count) =>
+      count == 1 ? '1 selected' : '$count selected';
+
+  static String aiAppliedSuccess(String destination) =>
+      'Applied to $destination';
+  static const String timelineNoteHint = 'Write a note for the team…';
+  static const String timelineNoteEmpty = 'No timeline notes yet. Start the conversation.';
+  static const String timelineNoteAdded = 'Note added';
+  static const String timelineNoteRequired = 'Note content is required';
   static const String clinicalNotesSection = 'History and complaint';
   static const String treatmentPlansSection = 'Treatment plans';
   static const String plansSection = 'Plans';
