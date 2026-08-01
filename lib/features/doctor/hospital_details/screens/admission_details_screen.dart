@@ -11,28 +11,32 @@ import 'package:icu_connect/core/widgets/app_button.dart';
 
 import '../../../superAdmin/patients/models/admission_request_model.dart';
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
-import '../models/admission_activity.dart';
+import '../../ai_recommendations/ai_recommendations.dart';
+import '../data/default_patient_lab_titles.dart';
 import '../enums/admission_status.dart';
 import '../utils/admission_update_validation.dart';
+import '../models/admission_timeline_note.dart';
 import '../repository/hospital_admissions_repository.dart';
 import '../services/admission_pdf_builder.dart';
 import 'admission_activity_history_screen.dart';
 import '../widgets/admission_exit_outcome_sheet.dart';
 import '../widgets/add_patient_measurement_title_sheet.dart';
-import '../widgets/admission_details_culture_card.dart';
+import '../widgets/admission_cultures_section.dart';
+import '../widgets/admission_details_clinical_notes_section.dart';
+import '../widgets/admission_details_consultation_card.dart';
 import '../widgets/admission_details_empty_hint.dart';
 import '../widgets/admission_details_formatters.dart';
 import '../widgets/admission_details_generic_add_form.dart';
 import '../widgets/admission_details_info_section.dart';
-import '../widgets/admission_details_medication_card.dart';
 import '../widgets/admission_details_measurement_section.dart';
 import '../widgets/admission_details_meta_chip.dart';
-import '../widgets/admission_details_note_card.dart';
 import '../widgets/admission_details_patient_header_section.dart';
 import '../widgets/admission_details_radiology_card.dart';
 import '../widgets/admission_details_section_container.dart';
 import '../widgets/admission_details_simple_text_card.dart';
-import '../widgets/admission_details_treatment_plan_card.dart';
+import '../widgets/admission_medications_section.dart';
+import '../widgets/admission_plans_section.dart';
+import '../widgets/admission_timeline_notes_section.dart';
 import '../widgets/pending_measurement_column_entry.dart';
 
 class AdmissionDetailsScreen extends StatefulWidget {
@@ -73,6 +77,9 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
   bool _editingAdmission = false;
   bool _savingAdmission = false;
 
+  List<AdmissionTimelineNote> _timelineNotes = const [];
+  bool _loadingTimelineNotes = false;
+  bool _sendingTimelineNote = false;
 
   bool _addingVital = false;
   bool _savingVital = false;
@@ -160,6 +167,7 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
         _admissionError = null;
       });
       _loadTitles(data.patientId);
+      _loadTimelineNotes();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -175,6 +183,113 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
 
   Future<void> _silentRefreshAdmission() async {
     await _fetchAdmission(silent: true);
+  }
+
+  Future<void> _loadTimelineNotes() async {
+    setState(() => _loadingTimelineNotes = true);
+    try {
+      final notes = await _repo.fetchAdmissionNotes(widget.admissionId);
+      if (!mounted) return;
+      setState(() {
+        _timelineNotes = notes;
+        _loadingTimelineNotes = false;
+      });
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      setState(() => _loadingTimelineNotes = false);
+      _showSnack(e.message, isError: true);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingTimelineNotes = false);
+      _showSnack('Could not load timeline notes', isError: true);
+    }
+  }
+
+  Future<void> _sendTimelineNote(String content) async {
+    final text = content.trim();
+    if (text.isEmpty) {
+      _showSnack(AppTexts.timelineNoteRequired, isError: true);
+      return;
+    }
+    setState(() => _sendingTimelineNote = true);
+    try {
+      final created = await _repo.createAdmissionNote(
+        widget.admissionId,
+        content: text,
+      );
+      if (!mounted) return;
+      setState(() {
+        _timelineNotes = [created, ..._timelineNotes];
+        _sendingTimelineNote = false;
+      });
+      _showSnack(AppTexts.timelineNoteAdded);
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      setState(() => _sendingTimelineNote = false);
+      _showSnack(e.message, isError: true);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _sendingTimelineNote = false);
+      _showSnack('Could not add note', isError: true);
+    }
+  }
+
+  void _openClinicalTimeline() {
+    if (_timelineNotes.isEmpty && !_loadingTimelineNotes) {
+      _loadTimelineNotes();
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            Future<void> refresh() async {
+              await _loadTimelineNotes();
+              setSheetState(() {});
+            }
+
+            Future<void> send(String content) async {
+              await _sendTimelineNote(content);
+              setSheetState(() {});
+            }
+
+            return SizedBox(
+              height: MediaQuery.of(sheetContext).size.height * 0.92,
+              child: AdmissionTimelineNotesSection(
+                asSheet: true,
+                notes: _timelineNotes,
+                loading: _loadingTimelineNotes,
+                sending: _sendingTimelineNote,
+                onRefresh: refresh,
+                onSend: send,
+                onOpenAiAssistant: _openAiRecommendations,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openAiRecommendations() {
+    final admission = _admission;
+    if (admission == null) return;
+    showAdmissionAiRecommendationsSheet(
+      context: context,
+      admissionId: admission.id,
+      patientName: admission.patient?.name,
+      onApplied: () {
+        _silentRefreshAdmission();
+        _loadTimelineNotes();
+      },
+    );
   }
 
   void _openActivityHistory() {
@@ -203,20 +318,18 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     setState(() => _exportingPdf = true);
 
     try {
-      List<AdmissionActivity> activities = const [];
-      try {
-        activities = await _repo.fetchAdmissionActivity(widget.admissionId);
-      } catch (_) {}
+      final bytes = await AdmissionPdfBuilder.build(admission: admission);
 
-      final bytes = await AdmissionPdfBuilder.build(
-        admission: admission,
-        activities: activities,
-      );
-
+      // Keep letters from any script (Arabic included) + digits, collapse
+      // whitespace to underscores so the shared file keeps the patient name.
       final patientName = admission.patient?.name.trim();
-      final slug = (patientName != null && patientName.isNotEmpty)
-          ? patientName.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_')
+      final rawSlug = (patientName != null && patientName.isNotEmpty)
+          ? patientName
+              .replaceAll(RegExp(r'[^\p{L}\p{N}\s-]', unicode: true), '')
+              .trim()
+              .replaceAll(RegExp(r'\s+'), '_')
           : 'admission';
+      final slug = rawSlug.isEmpty ? 'admission' : rawSlug;
       final fileName = '${slug}_${admission.id}.pdf';
 
       if (!mounted) return;
@@ -312,6 +425,32 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     }
   }
 
+  Future<void> _ensureDefaultLabTitles(int patientId) async {
+    for (final preset in DefaultPatientLabTitles.presets) {
+      final exists = _labsTitles.any(
+        (title) =>
+            title.title.trim().toLowerCase() == preset.title.trim().toLowerCase(),
+      );
+      if (exists) continue;
+
+      try {
+        final created = await _repo.createPatientLabTitle(
+          patientId: patientId,
+          title: preset.title,
+          unit: preset.unit,
+          valueType: preset.valueType,
+          normalRangeMin: preset.normalRangeMin,
+          normalRangeMax: preset.normalRangeMax,
+        );
+        if (!mounted) return;
+        setState(() => _labsTitles = [..._labsTitles, created]);
+      } on NetworkException catch (e) {
+        if (!mounted) return;
+        _showSnack(e.message, isError: true);
+      }
+    }
+  }
+
   
   void _startAddGeneric(String section, {String? defaultType}) {
     _cancelEditGeneric();
@@ -369,8 +508,9 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     switch (section) {
       case 'med':
         return AdmissionUpdateValidation.medicationFields(
-          title: _getCtrl('title').text,
-          type: _pendingType,
+          drugId: null,
+          dose: _getCtrl('value').text,
+          frequency: _getCtrl('duration').text,
         );
       case 'clinical_note':
         final contentError = AdmissionUpdateValidation.clinicalNoteContent(
@@ -397,6 +537,11 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
         return AdmissionUpdateValidation.requiredText(
           _getCtrl('title').text,
           field: 'Culture title',
+        );
+      case 'consultation':
+        return AdmissionUpdateValidation.requiredText(
+          _getCtrl('speciality').text,
+          field: 'Speciality',
         );
       default:
         return null;
@@ -444,6 +589,10 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
         item['title'] = _getCtrl('title').text.trim();
         item['note'] = _getCtrl('note').text.trim();
         body['cultures'] = [item];
+      } else if (section == 'consultation') {
+        item['speciality'] = _getCtrl('speciality').text.trim();
+        item['reply'] = _getCtrl('reply').text.trim();
+        body['consultations'] = [item];
       } else if (section == 'plan') {
         item['plan_content'] = _getCtrl('plan').text.trim();
         body['treatment_plans'] = [item];
@@ -517,9 +666,96 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     return _genericCtrls.putIfAbsent(key, () => TextEditingController());
   }
 
+  Future<void> _saveMedicationEntry({
+    required int drugId,
+    required String title,
+    required String dose,
+    required String frequency,
+    String type = 'PO',
+    int? editingId,
+  }) async {
+    setState(() => _savingGeneric = true);
+    try {
+      final item = <String, dynamic>{
+        'drug_id': drugId,
+        'dose': dose,
+        'frequency': frequency,
+      };
+      if (editingId != null) item['id'] = editingId;
+      await _repo.updateAdmissionRaw(widget.admissionId, {
+        'medications': [item],
+      });
+      if (!mounted) return;
+      _showSnack(editingId == null ? 'Entry added' : AppTexts.entryUpdated);
+      if (editingId == null) {
+        _cancelAddGeneric();
+      } else {
+        _cancelEditGeneric();
+      }
+      for (final c in _genericCtrls.values) {
+        c.dispose();
+      }
+      _genericCtrls.clear();
+      _silentRefreshAdmission();
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _savingGeneric = false);
+    }
+  }
+
+  Future<void> _saveCultureEntry({
+    required String title,
+    required String note,
+    required List<CultureAntibioticDraftEntry> antibiotics,
+    required List<int> deletedAntibioticIds,
+    int? editingId,
+  }) async {
+    setState(() => _savingGeneric = true);
+    try {
+      final antibioticPayload = <Map<String, dynamic>>[
+        ...antibiotics.map(
+          (a) => a.toApiJson(includeId: editingId != null),
+        ),
+        ...deletedAntibioticIds.map(
+          (id) => <String, dynamic>{'id': id, '_delete': true},
+        ),
+      ];
+      final item = <String, dynamic>{
+        'title': title,
+        'note': note,
+        if (antibioticPayload.isNotEmpty) 'antibiotics': antibioticPayload,
+      };
+      if (editingId != null) item['id'] = editingId;
+      await _repo.updateAdmissionRaw(widget.admissionId, {
+        'cultures': [item],
+      });
+      if (!mounted) return;
+      _showSnack(editingId == null ? 'Entry added' : AppTexts.entryUpdated);
+      if (editingId == null) {
+        _cancelAddGeneric();
+      } else {
+        _cancelEditGeneric();
+      }
+      for (final c in _genericCtrls.values) {
+        c.dispose();
+      }
+      _genericCtrls.clear();
+      _silentRefreshAdmission();
+    } on NetworkException catch (e) {
+      if (!mounted) return;
+      _showSnack(e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _savingGeneric = false);
+    }
+  }
+
   Future<void> _saveGenericAdd() async {
     if (_addingSection == null) return;
     final section = _addingSection!;
+    // Medications go through AdmissionMedicationsSection → _saveMedicationEntry.
+    if (section == 'med') return;
     final validationError = _validateGenericSection(section);
     if (validationError != null) {
       _showSnack(validationError, isError: true);
@@ -530,16 +766,7 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     try {
       final body = <String, dynamic>{};
 
-      if (section == 'med') {
-        body['medications'] = [
-          {
-            'type': _pendingType ?? 'other',
-            'title': _getCtrl('title').text.trim(),
-            'value': _getCtrl('value').text.trim(),
-            'duration': _getCtrl('duration').text.trim(),
-          },
-        ];
-      } else if (section == 'clinical_note') {
+      if (section == 'clinical_note') {
         body['clinical_notes'] = [
           {
             'type': AdmissionClinicalNoteType.normalize(_pendingType),
@@ -588,6 +815,13 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
           {
             'title': _getCtrl('title').text.trim(),
             'note': _getCtrl('note').text.trim(),
+          },
+        ];
+      } else if (section == 'consultation') {
+        body['consultations'] = [
+          {
+            'speciality': _getCtrl('speciality').text.trim(),
+            'reply': _getCtrl('reply').text.trim(),
           },
         ];
       } else if (section == 'plan') {
@@ -870,10 +1104,14 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     }
   }
 
-  void _startAddLabColumn() {
+  Future<void> _startAddLabColumn(int patientId) async {
     _cancelEditGeneric();
     _cancelAddVitalColumn();
     _disposePendingLabColumn();
+
+    await _ensureDefaultLabTitles(patientId);
+    if (!mounted) return;
+
     _pendingLab = PendingMeasurementColumnEntry(titles: _labsTitles);
     setState(() => _addingLab = true);
   }
@@ -1102,6 +1340,14 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
+                  tooltip: AppTexts.aiClinicalAssistant,
+                  onPressed: _openAiRecommendations,
+                  icon: const Icon(
+                    Icons.auto_awesome,
+                    color: AppColors.primary,
+                  ),
+                ),
+                IconButton(
                   tooltip: AppTexts.exportAdmissionPdf,
                   onPressed: _exportingPdf
                       ? null
@@ -1133,9 +1379,7 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                     } else if (val == 'edit_patient') {
                       final p = admission.patient;
                       if (p != null) _beginPatientEdit(p);
-                    } else if (val == 'edit_admission') {
-                      _beginAdmissionEdit(admission);
-                    } else if (val == 'exit') {
+                    }  else if (val == 'exit') {
                       _exitAdmission(admission);
                     }
                   },
@@ -1154,16 +1398,16 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                         value: 'edit_patient',
                         child: Text(AppTexts.editPatientAdmin),
                       ),
-                    PopupMenuItem(
-                      value: 'edit_admission',
-                      child: Text(AppTexts.editAdmission),
-                    ),
+
                     if (!AdmissionStatus.isDischargedOutcome(admission.status))
                       PopupMenuItem(
                         value: 'exit',
                         enabled: !_exitingAdmission,
                         child: Text(
-                          _exitingAdmission ? 'Exiting…' : 'Exit',
+                          _exitingAdmission ? 'Deleting…' : 'Delete',
+                          style: TextStyle(
+                            color: Colors.red,
+                          ),
                         ),
                       ),
                   ],
@@ -1175,6 +1419,20 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
       body: SafeArea(
         child: _buildBody(admission),
       ),
+      floatingActionButton: admission == null
+          ? null
+          : FloatingActionButton.extended(
+              heroTag: 'timeline_fab',
+              onPressed: _openClinicalTimeline,
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.forum_outlined),
+              label: Text(
+                _timelineNotes.isEmpty
+                    ? AppTexts.clinicalTimelineSection
+                    : '${AppTexts.clinicalTimelineSection} (${_timelineNotes.length})',
+              ),
+            ),
     );
   }
 
@@ -1262,6 +1520,7 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                           ? () => _savePatientEdit(admission.patient!.id)
                           : null,
                     ),
+                    AdmissionAiAssistantCard(onOpen: _openAiRecommendations),
                     const Divider(height: 24),
                     //
                     // AdmissionDetailsInfoSection(
@@ -1296,84 +1555,45 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                     // ),
                     // const SizedBox(height: 8),
 
-                    // ── Clinical Notes ───────────────────────────────────────
-                    AdmissionDetailsSectionContainer(
-                      title: 'Clinical Notes',
-                      headerAction: _addingSection == 'clinical_note' ||
-                              _editingSection == 'clinical_note'
-                          ? null
-                          : IconButton(
-                              icon: const Icon(
-                                Icons.add_circle_outline,
-                                color: AppColors.primary,
-                                size: 20,
-                              ),
-                              onPressed: () => _startAddGeneric(
-                                'clinical_note',
-                                defaultType: 'progress_note',
-                              ),
-                            ),
-                      child: Column(
-                        children: [
-                          if (_addingSection == 'clinical_note')
-                            AdmissionDetailsGenericAddForm(
-                              title: 'Add Clinical Note',
-                              saving: _savingGeneric,
-                              onCancel: _cancelAddGeneric,
-                              onSave: _saveGenericAdd,
-                              typeLabel: 'Note Type',
-                              typeValue: _pendingType,
-                              types: AdmissionClinicalNoteType.values,
-                              onTypeChanged: (v) =>
-                                  setState(() => _pendingType = v),
-                              fields: [
-                                AdmissionDetailsFormFieldSpec(
-                                  hint: 'Content',
-                                  controller: _getCtrl('content'),
-                                  maxLines: 5,
-                                  isRequired: true,
-                                ),
-                              ],
-                            ),
-                          if (admission.clinicalNotes.isEmpty &&
-                              _addingSection != 'clinical_note')
-                            const AdmissionDetailsEmptyHint(
-                              'No clinical notes recorded.',
-                            )
-                          else
-                            ...admission.clinicalNotes.map(
-                              (n) {
-                                if (_isEditingItem('clinical_note', n.id)) {
-                                  return _buildGenericEditForm(
-                                    section: 'clinical_note',
-                                    title: 'Edit Clinical Note',
-                                    typeLabel: 'Note Type',
-                                    types: AdmissionClinicalNoteType.values,
-                                    fields: [
-                                      AdmissionDetailsFormFieldSpec(
-                                        hint: 'Content',
-                                        controller: _getCtrl('content'),
-                                        maxLines: 5,
-                                        isRequired: true,
-                                      ),
-                                    ],
-                                  );
-                                }
-                                return AdmissionDetailsNoteCard(
-                                  note: n,
-                                  onEdit: () => _beginEditItem(
-                                    'clinical_note',
-                                    n.id,
-                                    type: n.type,
-                                    fields: {'content': n.content},
-                                  ),
-                                  onDelete: () =>
-                                      _deleteItem('clinical_notes', n.id),
-                                );
-                              },
-                            ),
-                        ],
+                    // ── History and complaint ────────────────────────────────
+                    AdmissionDetailsClinicalNotesSection(
+                      notes: admission.clinicalNotes,
+                      adding: _addingSection == 'clinical_note',
+                      editingItemId: _editingSection == 'clinical_note'
+                          ? _editingItemId
+                          : null,
+                      pendingType: _pendingType,
+                      saving: _savingGeneric,
+                      contentController: _getCtrl('content'),
+                      onStartAdd: (type) => _startAddGeneric(
+                        'clinical_note',
+                        defaultType: type,
                       ),
+                      onCancelAdd: () {
+                        _cancelAddGeneric();
+                        for (final c in _genericCtrls.values) {
+                          c.dispose();
+                        }
+                        _genericCtrls.clear();
+                        setState(() {});
+                      },
+                      onSaveAdd: _saveGenericAdd,
+                      onBeginEdit: (note) => _beginEditItem(
+                        'clinical_note',
+                        note.id,
+                        type: note.type,
+                        fields: {'content': note.content},
+                      ),
+                      onCancelEdit: () {
+                        _cancelEditGeneric();
+                        for (final c in _genericCtrls.values) {
+                          c.dispose();
+                        }
+                        _genericCtrls.clear();
+                        setState(() {});
+                      },
+                      onSaveEdit: _saveGenericEdit,
+                      onDelete: (id) => _deleteItem('clinical_notes', id),
                     ),
 
                     // ── Radiology ────────────────────────────────────────────
@@ -1545,73 +1765,39 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                       ),
                     ),
 
-                    // ── Treatment Plans ──────────────────────────────────────
-                    AdmissionDetailsSectionContainer(
-                      title: 'Treatment Plans',
-                      headerAction: _addingSection == 'plan' ||
-                              _editingSection == 'plan'
-                          ? null
-                          : IconButton(
-                              icon: const Icon(
-                                Icons.add_circle_outline,
-                                color: AppColors.primary,
-                                size: 20,
-                              ),
-                              onPressed: () => _startAddGeneric('plan'),
-                            ),
-                      child: Column(
-                        children: [
-                          if (_addingSection == 'plan')
-                            AdmissionDetailsGenericAddForm(
-                              title: 'Add Treatment Plan',
-                              saving: _savingGeneric,
-                              onCancel: _cancelAddGeneric,
-                              onSave: _saveGenericAdd,
-                              fields: [
-                                AdmissionDetailsFormFieldSpec(
-                                  hint: 'Plan content',
-                                  controller: _getCtrl('plan'),
-                                  maxLines: 4,
-                                  isRequired: true,
-                                ),
-                              ],
-                            ),
-                          if (admission.treatmentPlans.isEmpty &&
-                              _addingSection != 'plan')
-                            const AdmissionDetailsEmptyHint(
-                              'No treatment plans recorded.',
-                            )
-                          else
-                            ...admission.treatmentPlans.map(
-                              (p) {
-                                if (_isEditingItem('plan', p.id)) {
-                                  return _buildGenericEditForm(
-                                    section: 'plan',
-                                    title: 'Edit Treatment Plan',
-                                    fields: [
-                                      AdmissionDetailsFormFieldSpec(
-                                        hint: 'Plan content',
-                                        controller: _getCtrl('plan'),
-                                        maxLines: 4,
-                                        isRequired: true,
-                                      ),
-                                    ],
-                                  );
-                                }
-                                return AdmissionDetailsTreatmentPlanCard(
-                                  plan: p,
-                                  onEdit: () => _beginEditItem(
-                                    'plan',
-                                    p.id,
-                                    fields: {'plan': p.planContent},
-                                  ),
-                                  onDelete: () =>
-                                      _deleteItem('treatment_plans', p.id),
-                                );
-                              },
-                            ),
-                        ],
+                    // ── Plans ────────────────────────────────────────────────
+                    AdmissionPlansSection(
+                      plans: admission.treatmentPlans,
+                      adding: _addingSection == 'plan',
+                      editingItemId:
+                          _editingSection == 'plan' ? _editingItemId : null,
+                      saving: _savingGeneric,
+                      contentController: _getCtrl('plan'),
+                      onStartAdd: () => _startAddGeneric('plan'),
+                      onCancelAdd: () {
+                        _cancelAddGeneric();
+                        for (final c in _genericCtrls.values) {
+                          c.dispose();
+                        }
+                        _genericCtrls.clear();
+                        setState(() {});
+                      },
+                      onSaveAdd: _saveGenericAdd,
+                      onBeginEdit: (plan) => _beginEditItem(
+                        'plan',
+                        plan.id,
+                        fields: {'plan': plan.planContent},
                       ),
+                      onCancelEdit: () {
+                        _cancelEditGeneric();
+                        for (final c in _genericCtrls.values) {
+                          c.dispose();
+                        }
+                        _genericCtrls.clear();
+                        setState(() {});
+                      },
+                      onSaveEdit: _saveGenericEdit,
+                      onDelete: (id) => _deleteItem('treatment_plans', id),
                     ),
 
                     // ── Vital Signs ──────────────────────────────────────────
@@ -1645,7 +1831,7 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                       saving: _savingLab,
                       pendingColumn: _pendingLab,
                       addingTitle: _addingLabTitle,
-                      onStartAddColumn: _startAddLabColumn,
+                      onStartAddColumn: () => _startAddLabColumn(admission.patientId),
                       onCancelAddColumn: _cancelAddLabColumn,
                       onSaveColumn: _saveLabColumn,
                       onEditColumn: _editLabColumn,
@@ -1656,109 +1842,65 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                       ),
                     ),
 
-                    AdmissionDetailsSectionContainer(
-                      title: 'Medications',
-                      headerAction: _addingSection == 'med' ||
-                              _editingSection == 'med'
-                          ? null
-                          : IconButton(
-                              icon: const Icon(
-                                Icons.add_circle_outline,
-                                color: AppColors.primary,
-                                size: 20,
-                              ),
-                              onPressed: () =>
-                                  _startAddGeneric('med', defaultType: 'other'),
-                            ),
-                      child: Column(
-                        children: [
-                          if (_addingSection == 'med')
-                            AdmissionDetailsGenericAddForm(
-                              title: 'Add Medication',
-                              saving: _savingGeneric,
-                              onCancel: _cancelAddGeneric,
-                              onSave: _saveGenericAdd,
-                              fields: [
-                                AdmissionDetailsFormFieldSpec(
-                                  hint: 'Title',
-                                  controller: _getCtrl('title'),
-                                  isRequired: true,
-                                ),
-                                AdmissionDetailsFormFieldSpec(
-                                  hint: 'Value (e.g. 1g IV)',
-                                  controller: _getCtrl('value'),
-                                ),
-                                AdmissionDetailsFormFieldSpec(
-                                  hint: 'Duration (e.g. 5 days)',
-                                  controller: _getCtrl('duration'),
-                                ),
-                              ],
-                              typeLabel: 'Type',
-                              typeValue: _pendingType,
-                              types: const [
-                                'infusion',
-                                'syring_pump',
-                                'bolus',
-                                'other',
-                              ],
-                              onTypeChanged: (v) =>
-                                  setState(() => _pendingType = v),
-                            ),
-                          if (admission.medications.isEmpty &&
-                              _addingSection != 'med')
-                            const AdmissionDetailsEmptyHint(
-                              'No medications recorded.',
-                            )
-                          else
-                            ...admission.medications.map(
-                              (m) {
-                                if (_isEditingItem('med', m.id)) {
-                                  return _buildGenericEditForm(
-                                    section: 'med',
-                                    title: 'Edit Medication',
-                                    typeLabel: 'Type',
-                                    types: const [
-                                      'infusion',
-                                      'syring_pump',
-                                      'bolus',
-                                      'other',
-                                    ],
-                                    fields: [
-                                      AdmissionDetailsFormFieldSpec(
-                                        hint: 'Title',
-                                        controller: _getCtrl('title'),
-                                        isRequired: true,
-                                      ),
-                                      AdmissionDetailsFormFieldSpec(
-                                        hint: 'Value (e.g. 1g IV)',
-                                        controller: _getCtrl('value'),
-                                      ),
-                                      AdmissionDetailsFormFieldSpec(
-                                        hint: 'Duration (e.g. 5 days)',
-                                        controller: _getCtrl('duration'),
-                                      ),
-                                    ],
-                                  );
-                                }
-                                return AdmissionDetailsMedicationCard(
-                                  med: m,
-                                  onEdit: () => _beginEditItem(
-                                    'med',
-                                    m.id,
-                                    type: m.type,
-                                    fields: {
-                                      'title': m.title,
-                                      'value': m.value,
-                                      'duration': m.duration,
-                                    },
-                                  ),
-                                  onDelete: () =>
-                                      _deleteItem('medications', m.id),
-                                );
-                              },
-                            ),
-                        ],
+                    AdmissionMedicationsSection(
+                      medications: admission.medications,
+                      adding: _addingSection == 'med',
+                      editingItemId:
+                          _editingSection == 'med' ? _editingItemId : null,
+                      saving: _savingGeneric,
+                      onStartAdd: () =>
+                          _startAddGeneric('med', defaultType: 'PO'),
+                      onCancelAdd: _cancelAddGeneric,
+                      onSaveAdd: ({
+                        required drugId,
+                        required title,
+                        required dose,
+                        required frequency,
+                        type = 'PO',
+                      }) =>
+                          _saveMedicationEntry(
+                            drugId: drugId,
+                            title: title,
+                            dose: dose,
+                            frequency: frequency,
+                            type: type,
+                          ),
+                      onBeginEdit: (med) => _beginEditItem(
+                        'med',
+                        med.id,
+                        type: med.type,
+                        fields: {
+                          'title': med.title,
+                          'value': med.value,
+                          'duration': med.duration,
+                        },
                       ),
+                      onCancelEdit: () {
+                        _cancelEditGeneric();
+                        for (final c in _genericCtrls.values) {
+                          c.dispose();
+                        }
+                        _genericCtrls.clear();
+                        setState(() {});
+                      },
+                      onSaveEdit: ({
+                        required drugId,
+                        required title,
+                        required dose,
+                        required frequency,
+                        type = 'PO',
+                      }) =>
+                          _saveMedicationEntry(
+                            drugId: drugId,
+                            title: title,
+                            dose: dose,
+                            frequency: frequency,
+                            type: type,
+                            editingId: _editingItemId,
+                          ),
+                      onDiscontinue: (med) =>
+                          _deleteItem('medications', med.id),
+                      onDelete: (med) => _deleteItem('medications', med.id),
                     ),
 
                     AdmissionDetailsSectionContainer(
@@ -1896,10 +2038,62 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                         ],
                       ),
                     ),
+                    AdmissionCulturesSection(
+                      cultures: admission.cultures,
+                      adding: _addingSection == 'culture',
+                      editingItemId: _editingSection == 'culture'
+                          ? _editingItemId
+                          : null,
+                      saving: _savingGeneric,
+                      onStartAdd: () => _startAddGeneric('culture'),
+                      onCancelAdd: _cancelAddGeneric,
+                      onSaveAdd: ({
+                        required title,
+                        required note,
+                        required antibiotics,
+                        required deletedAntibioticIds,
+                      }) =>
+                          _saveCultureEntry(
+                            title: title,
+                            note: note,
+                            antibiotics: antibiotics,
+                            deletedAntibioticIds: deletedAntibioticIds,
+                          ),
+                      onBeginEdit: (culture) => _beginEditItem(
+                        'culture',
+                        culture.id,
+                        fields: {
+                          'title': culture.title,
+                          'note': culture.note,
+                        },
+                      ),
+                      onCancelEdit: () {
+                        _cancelEditGeneric();
+                        for (final c in _genericCtrls.values) {
+                          c.dispose();
+                        }
+                        _genericCtrls.clear();
+                        setState(() {});
+                      },
+                      onSaveEdit: ({
+                        required title,
+                        required note,
+                        required antibiotics,
+                        required deletedAntibioticIds,
+                      }) =>
+                          _saveCultureEntry(
+                            title: title,
+                            note: note,
+                            antibiotics: antibiotics,
+                            deletedAntibioticIds: deletedAntibioticIds,
+                            editingId: _editingItemId,
+                          ),
+                      onDelete: (id) => _deleteItem('cultures', id),
+                    ),
                     AdmissionDetailsSectionContainer(
-                      title: 'Cultures',
-                      headerAction: _addingSection == 'culture' ||
-                              _editingSection == 'culture'
+                      title: 'Consultations',
+                      headerAction: _addingSection == 'consultation' ||
+                              _editingSection == 'consultation'
                           ? null
                           : IconButton(
                               icon: const Icon(
@@ -1907,66 +2101,67 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
                                 color: AppColors.primary,
                                 size: 20,
                               ),
-                              onPressed: () => _startAddGeneric('culture'),
+                              onPressed: () => _startAddGeneric('consultation'),
                             ),
                       child: Column(
                         children: [
-                          if (_addingSection == 'culture')
+                          if (_addingSection == 'consultation')
                             AdmissionDetailsGenericAddForm(
-                              title: 'Add Culture',
+                              title: 'Add Consultation',
                               saving: _savingGeneric,
                               onCancel: _cancelAddGeneric,
                               onSave: _saveGenericAdd,
                               fields: [
                                 AdmissionDetailsFormFieldSpec(
-                                  hint: 'Title',
-                                  controller: _getCtrl('title'),
+                                  hint: 'Speciality (e.g. Cardiology)',
+                                  controller: _getCtrl('speciality'),
                                   isRequired: true,
                                 ),
                                 AdmissionDetailsFormFieldSpec(
-                                  hint: 'Note',
-                                  controller: _getCtrl('note'),
-                                  maxLines: 2,
+                                  hint: 'Reply',
+                                  controller: _getCtrl('reply'),
+                                  maxLines: 3,
                                 ),
                               ],
                             ),
-                          if (admission.cultures.isEmpty &&
-                              _addingSection != 'culture')
+                          if (admission.consultations.isEmpty &&
+                              _addingSection != 'consultation')
                             const AdmissionDetailsEmptyHint(
-                              'No cultures recorded.',
+                              'No consultations recorded.',
                             )
                           else
-                            ...admission.cultures.map(
+                            ...admission.consultations.map(
                               (c) {
-                                if (_isEditingItem('culture', c.id)) {
+                                if (_isEditingItem('consultation', c.id)) {
                                   return _buildGenericEditForm(
-                                    section: 'culture',
-                                    title: 'Edit Culture',
+                                    section: 'consultation',
+                                    title: 'Edit Consultation',
                                     fields: [
                                       AdmissionDetailsFormFieldSpec(
-                                        hint: 'Title',
-                                        controller: _getCtrl('title'),
+                                        hint: 'Speciality (e.g. Cardiology)',
+                                        controller: _getCtrl('speciality'),
                                         isRequired: true,
                                       ),
                                       AdmissionDetailsFormFieldSpec(
-                                        hint: 'Note',
-                                        controller: _getCtrl('note'),
-                                        maxLines: 2,
+                                        hint: 'Reply',
+                                        controller: _getCtrl('reply'),
+                                        maxLines: 3,
                                       ),
                                     ],
                                   );
                                 }
-                                return AdmissionDetailsCultureCard(
-                                  culture: c,
+                                return AdmissionDetailsConsultationCard(
+                                  consultation: c,
                                   onEdit: () => _beginEditItem(
-                                    'culture',
+                                    'consultation',
                                     c.id,
                                     fields: {
-                                      'title': c.title,
-                                      'note': c.note,
+                                      'speciality': c.speciality,
+                                      'reply': c.reply,
                                     },
                                   ),
-                                  onDelete: () => _deleteItem('cultures', c.id),
+                                  onDelete: () =>
+                                      _deleteItem('consultations', c.id),
                                 );
                               },
                             ),

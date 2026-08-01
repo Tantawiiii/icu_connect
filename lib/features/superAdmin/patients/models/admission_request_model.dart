@@ -88,22 +88,19 @@ class AdmissionLabDraft {
 
 class AdmissionMedicationDraft {
   const AdmissionMedicationDraft({
-    required this.type,
-    required this.title,
-    required this.value,
-    required this.duration,
+    required this.drugId,
+    required this.dose,
+    required this.frequency,
   });
 
-  final String type;
-  final String title;
-  final String value;
-  final String duration;
+  final int drugId;
+  final String dose;
+  final String frequency;
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'title': title,
-        'value': value,
-        'duration': duration,
+        'drug_id': drugId,
+        'dose': dose,
+        'frequency': frequency,
       };
 }
 
@@ -123,19 +120,81 @@ class AdmissionUltrasoundDraft {
   Map<String, dynamic> toJson() => {'text': text};
 }
 
+class AdmissionCultureAntibioticDraft {
+  const AdmissionCultureAntibioticDraft({
+    this.id,
+    this.drugId,
+    this.drugName,
+    required this.sensitivity,
+    this.delete = false,
+  });
+
+  final int? id;
+  final int? drugId;
+  final String? drugName;
+  final String sensitivity;
+  final bool delete;
+
+  Map<String, dynamic> toJson() {
+    if (delete && id != null) {
+      return {'id': id, '_delete': true};
+    }
+    final m = <String, dynamic>{
+      'sensitivity': sensitivity.toUpperCase(),
+    };
+    if (id != null) m['id'] = id;
+    if (drugId != null) {
+      m['drug_id'] = drugId;
+    } else {
+      final name = drugName?.trim() ?? '';
+      if (name.isNotEmpty) m['drug_name'] = name;
+    }
+    return m;
+  }
+}
+
 class AdmissionCultureDraft {
   const AdmissionCultureDraft({
     required this.title,
     required this.note,
+    this.antibiotics = const [],
   });
 
   final String title;
   final String note;
+  final List<AdmissionCultureAntibioticDraft> antibiotics;
 
-  Map<String, dynamic> toJson() => {
-        'title': title,
-        'note': note,
-      };
+  Map<String, dynamic> toJson() {
+    final m = <String, dynamic>{
+      'title': title,
+      'note': note,
+    };
+    if (antibiotics.isNotEmpty) {
+      m['antibiotics'] = antibiotics.map((e) => e.toJson()).toList();
+    }
+    return m;
+  }
+}
+
+class AdmissionConsultationDraft {
+  const AdmissionConsultationDraft({
+    this.id,
+    required this.speciality,
+    required this.reply,
+  });
+
+  final int? id;
+  final String speciality;
+  final String reply;
+
+  Map<String, dynamic> toJson() {
+    final m = <String, dynamic>{
+      'speciality': speciality,
+      'reply': reply,
+    };
+    if (id != null) m['id'] = id;
+    return m;
+  }
 }
 
 class AdmissionCreateRequest {
@@ -159,6 +218,7 @@ class AdmissionCreateRequest {
     this.echoes = const [],
     this.ultrasounds = const [],
     this.cultures = const [],
+    this.consultations = const [],
   });
 
   final int patientId;
@@ -180,6 +240,7 @@ class AdmissionCreateRequest {
   final List<AdmissionEchoDraft> echoes;
   final List<AdmissionUltrasoundDraft> ultrasounds;
   final List<AdmissionCultureDraft> cultures;
+  final List<AdmissionConsultationDraft> consultations;
 
   bool get needsMultipart => radiologyImages.any((r) => r.hasFile);
 
@@ -228,6 +289,9 @@ class AdmissionCreateRequest {
     }
     if (cultures.isNotEmpty) {
       m['cultures'] = cultures.map((e) => e.toJson()).toList();
+    }
+    if (consultations.isNotEmpty) {
+      m['consultations'] = consultations.map((e) => e.toJson()).toList();
     }
     return m;
   }
@@ -306,10 +370,9 @@ class AdmissionCreateRequest {
 
     for (var i = 0; i < medications.length; i++) {
       final med = medications[i];
-      addField('medications[$i][type]', med.type);
-      addField('medications[$i][title]', med.title);
-      addField('medications[$i][value]', med.value);
-      addField('medications[$i][duration]', med.duration);
+      addField('medications[$i][drug_id]', '${med.drugId}');
+      addField('medications[$i][dose]', med.dose);
+      addField('medications[$i][frequency]', med.frequency);
     }
 
     for (var i = 0; i < echoes.length; i++) {
@@ -324,6 +387,36 @@ class AdmissionCreateRequest {
       final c = cultures[i];
       addField('cultures[$i][title]', c.title);
       addField('cultures[$i][note]', c.note);
+      for (var j = 0; j < c.antibiotics.length; j++) {
+        final a = c.antibiotics[j];
+        if (a.delete && a.id != null) {
+          addField('cultures[$i][antibiotics][$j][id]', '${a.id}');
+          addField('cultures[$i][antibiotics][$j][_delete]', '1');
+          continue;
+        }
+        if (a.id != null) {
+          addField('cultures[$i][antibiotics][$j][id]', '${a.id}');
+        }
+        if (a.drugId != null) {
+          addField('cultures[$i][antibiotics][$j][drug_id]', '${a.drugId}');
+        } else {
+          final name = a.drugName?.trim() ?? '';
+          if (name.isNotEmpty) {
+            addField('cultures[$i][antibiotics][$j][drug_name]', name);
+          }
+        }
+        addField(
+          'cultures[$i][antibiotics][$j][sensitivity]',
+          a.sensitivity.toUpperCase(),
+        );
+      }
+    }
+
+    for (var i = 0; i < consultations.length; i++) {
+      final c = consultations[i];
+      if (c.id != null) addField('consultations[$i][id]', '${c.id}');
+      addField('consultations[$i][speciality]', c.speciality);
+      addField('consultations[$i][reply]', c.reply);
     }
 
     return fd;
@@ -347,6 +440,7 @@ class AdmissionUpdateRequest {
     this.echoes = const [],
     this.ultrasounds = const [],
     this.cultures = const [],
+    this.consultations = const [],
   });
 
   final String? bedNumber;
@@ -364,6 +458,7 @@ class AdmissionUpdateRequest {
   final List<AdmissionEchoDraft> echoes;
   final List<AdmissionUltrasoundDraft> ultrasounds;
   final List<AdmissionCultureDraft> cultures;
+  final List<AdmissionConsultationDraft> consultations;
 
   bool get needsMultipart => radiologyImages.any((r) => r.hasFile);
 
@@ -382,7 +477,8 @@ class AdmissionUpdateRequest {
       medications.isEmpty &&
       echoes.isEmpty &&
       ultrasounds.isEmpty &&
-      cultures.isEmpty;
+      cultures.isEmpty &&
+      consultations.isEmpty;
 
   Map<String, dynamic> toJson() {
     final m = <String, dynamic>{};
@@ -426,6 +522,9 @@ class AdmissionUpdateRequest {
     }
     if (cultures.isNotEmpty) {
       m['cultures'] = cultures.map((e) => e.toJson()).toList();
+    }
+    if (consultations.isNotEmpty) {
+      m['consultations'] = consultations.map((e) => e.toJson()).toList();
     }
     return m;
   }
@@ -502,10 +601,9 @@ class AdmissionUpdateRequest {
 
     for (var i = 0; i < medications.length; i++) {
       final med = medications[i];
-      addField('medications[$i][type]', med.type);
-      addField('medications[$i][title]', med.title);
-      addField('medications[$i][value]', med.value);
-      addField('medications[$i][duration]', med.duration);
+      addField('medications[$i][drug_id]', '${med.drugId}');
+      addField('medications[$i][dose]', med.dose);
+      addField('medications[$i][frequency]', med.frequency);
     }
 
     for (var i = 0; i < echoes.length; i++) {
@@ -520,6 +618,36 @@ class AdmissionUpdateRequest {
       final c = cultures[i];
       addField('cultures[$i][title]', c.title);
       addField('cultures[$i][note]', c.note);
+      for (var j = 0; j < c.antibiotics.length; j++) {
+        final a = c.antibiotics[j];
+        if (a.delete && a.id != null) {
+          addField('cultures[$i][antibiotics][$j][id]', '${a.id}');
+          addField('cultures[$i][antibiotics][$j][_delete]', '1');
+          continue;
+        }
+        if (a.id != null) {
+          addField('cultures[$i][antibiotics][$j][id]', '${a.id}');
+        }
+        if (a.drugId != null) {
+          addField('cultures[$i][antibiotics][$j][drug_id]', '${a.drugId}');
+        } else {
+          final name = a.drugName?.trim() ?? '';
+          if (name.isNotEmpty) {
+            addField('cultures[$i][antibiotics][$j][drug_name]', name);
+          }
+        }
+        addField(
+          'cultures[$i][antibiotics][$j][sensitivity]',
+          a.sensitivity.toUpperCase(),
+        );
+      }
+    }
+
+    for (var i = 0; i < consultations.length; i++) {
+      final c = consultations[i];
+      if (c.id != null) addField('consultations[$i][id]', '${c.id}');
+      addField('consultations[$i][speciality]', c.speciality);
+      addField('consultations[$i][reply]', c.reply);
     }
 
     return fd;

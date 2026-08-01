@@ -13,7 +13,6 @@ import '../models/hospital_request_model.dart';
 class HospitalFormScreen extends StatelessWidget {
   const HospitalFormScreen({super.key, this.hospital});
 
-  /// Null = create mode, non-null = edit mode.
   final HospitalModel? hospital;
 
   @override
@@ -438,7 +437,6 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-// ── Section header ─────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader(this.title);

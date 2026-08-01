@@ -167,8 +167,9 @@ class DrawerInfoPages {
         heading: 'How to reach us',
         body:
             'Contact your hospital ICU Connect administrator first for access or '
-            'permission issues. For app bugs or technical problems, email your support '
-            'team or IT department with screenshots when possible.',
+            'permission issues. For app bugs or technical problems, call us at '
+            '01156587388 or email your support team or IT department with screenshots '
+            'when possible.',
       ),
       DrawerInfoSection(
         heading: 'Urgent clinical matters',

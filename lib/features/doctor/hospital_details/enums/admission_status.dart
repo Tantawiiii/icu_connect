@@ -104,18 +104,15 @@ class AdmissionClinicalNoteType {
 
   static const historyComplaint = 'history_complaint';
   static const progressNote = 'progress_note';
-  static const dischargeSummary = 'discharge_summary';
 
   static const values = <String>[
     historyComplaint,
     progressNote,
-    dischargeSummary,
   ];
 
   static const labels = <String, String>{
     historyComplaint: 'History & complaint',
     progressNote: 'Progress note',
-    dischargeSummary: 'Discharge summary',
   };
 
   static String labelFor(String type) =>

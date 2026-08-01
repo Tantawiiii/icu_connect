@@ -1,8 +1,8 @@
 name: icu_connect
 description: "ICU Connect — hospital workflows, admissions, and clinical documentation for care teams."
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none'
 
-version: 1.0.2+3
+version: 1.0.5+6
 
 environment:
   sdk: ^3.8.1

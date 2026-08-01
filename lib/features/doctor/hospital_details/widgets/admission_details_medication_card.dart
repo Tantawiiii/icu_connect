@@ -5,7 +5,6 @@ import 'package:icu_connect/features/superAdmin/patients/models/patient_admissio
 
 import 'admission_details_formatters.dart';
 import 'admission_details_item_actions.dart';
-import 'admission_details_type_badge.dart';
 
 class AdmissionDetailsMedicationCard extends StatelessWidget {
   const AdmissionDetailsMedicationCard({
@@ -19,8 +18,21 @@ class AdmissionDetailsMedicationCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
+  String? _detailsLine() {
+    final parts = <String>[
+      if (med.type.trim().isNotEmpty)
+        med.type.replaceAll('_', ' '),
+      if (med.value.trim().isNotEmpty) med.value.trim(),
+      if (med.duration.trim().isNotEmpty) med.duration.trim(),
+    ];
+    if (parts.isEmpty) return null;
+    return parts.join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final details = _detailsLine();
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 8),
@@ -34,41 +46,45 @@ class AdmissionDetailsMedicationCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AdmissionDetailsTypeBadge(type: med.type),
-              const Spacer(),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      med.title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                        height: 1.4,
+                      ),
+                    ),
+                    if (details != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        details,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
               AdmissionDetailsItemActions(onEdit: onEdit, onDelete: onDelete),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            med.title,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          if (med.value.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Value: ${med.value}',
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-              ),
-            ),
-          if (med.duration.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                'Duration: ${med.duration}',
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-              ),
-            ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             admissionDetailsFormatDateTime(med.createdAt),
-            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),

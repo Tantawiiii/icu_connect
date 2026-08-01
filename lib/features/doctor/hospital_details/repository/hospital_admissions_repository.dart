@@ -9,6 +9,8 @@ import '../../../superAdmin/patients/models/patient_model.dart';
 import '../../patients/models/hospital_patients_page_result.dart';
 import '../enums/admission_activity_subject_type.dart';
 import '../models/admission_activity.dart';
+import '../models/admission_timeline_note.dart';
+import '../utils/measurement_title_order.dart';
 import '../../../../core/utils/measurement_title_form_helpers.dart';
 
 class HospitalAdmissionsRepository extends BaseApiService {
@@ -101,6 +103,45 @@ class HospitalAdmissionsRepository extends BaseApiService {
           .whereType<Map<String, dynamic>>()
           .map(AdmissionActivity.fromJson)
           .toList();
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  /// GET /admissions/{id}/notes
+  Future<List<AdmissionTimelineNote>> fetchAdmissionNotes(
+    int admissionId,
+  ) async {
+    try {
+      final data = await get<Map<String, dynamic>>(
+        ApiConstants.admissionNotes(admissionId),
+        cancelTag: 'hospital_admission_notes_$admissionId',
+      );
+      final raw = data['data'];
+      if (raw is! List) return const [];
+      return raw
+          .whereType<Map<String, dynamic>>()
+          .map(AdmissionTimelineNote.fromJson)
+          .toList();
+    } on NetworkException {
+      rethrow;
+    }
+  }
+
+  /// POST /admissions/{id}/notes
+  Future<AdmissionTimelineNote> createAdmissionNote(
+    int admissionId, {
+    required String content,
+  }) async {
+    try {
+      final data = await post<Map<String, dynamic>>(
+        ApiConstants.admissionNotes(admissionId),
+        data: {'content': content.trim()},
+        cancelTag: 'hospital_admission_notes_create_$admissionId',
+      );
+      return AdmissionTimelineNote.fromJson(
+        data['data'] as Map<String, dynamic>,
+      );
     } on NetworkException {
       rethrow;
     }
@@ -331,10 +372,12 @@ class HospitalAdmissionsRepository extends BaseApiService {
         list = const [];
       }
 
-      return list
-          .whereType<Map<String, dynamic>>()
-          .map(MeasurementTitleModel.fromJson)
-          .toList();
+      return MeasurementTitleOrder.sortVitals(
+        list
+            .whereType<Map<String, dynamic>>()
+            .map(MeasurementTitleModel.fromJson)
+            .toList(),
+      );
     } on NetworkException {
       rethrow;
     }
@@ -390,10 +433,12 @@ class HospitalAdmissionsRepository extends BaseApiService {
         list = const [];
       }
 
-      return list
-          .whereType<Map<String, dynamic>>()
-          .map(MeasurementTitleModel.fromJson)
-          .toList();
+      return MeasurementTitleOrder.sortLabs(
+        list
+            .whereType<Map<String, dynamic>>()
+            .map(MeasurementTitleModel.fromJson)
+            .toList(),
+      );
     } on NetworkException {
       rethrow;
     }
@@ -403,6 +448,7 @@ class HospitalAdmissionsRepository extends BaseApiService {
     required int patientId,
     required String title,
     String? unit,
+    String valueType = 'numeric',
     double? normalRangeMin,
     double? normalRangeMax,
   }) async {
@@ -410,6 +456,7 @@ class HospitalAdmissionsRepository extends BaseApiService {
       final body = MeasurementTitleFormValues(
         title: title,
         unit: unit,
+        valueType: valueType,
         normalRangeMin: normalRangeMin,
         normalRangeMax: normalRangeMax,
       ).toLabJson();
@@ -438,9 +485,11 @@ class HospitalAdmissionsRepository extends BaseApiService {
       );
 
       final raw = data['data'] as List<dynamic>? ?? const [];
-      return raw
-          .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return MeasurementTitleOrder.sortVitals(
+        raw
+            .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
     } on NetworkException {
       rethrow;
     }
@@ -454,9 +503,11 @@ class HospitalAdmissionsRepository extends BaseApiService {
       );
 
       final raw = data['data'] as List<dynamic>? ?? const [];
-      return raw
-          .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return MeasurementTitleOrder.sortLabs(
+        raw
+            .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
     } on NetworkException {
       rethrow;
     }

@@ -5,27 +5,26 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
-import 'package:icu_connect/core/network/network_exceptions.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
 import 'package:icu_connect/core/widgets/app_text_field.dart';
-import 'package:icu_connect/features/doctor/patients/screens/patient_form_screen.dart';
 import '../../../superAdmin/patients/models/admission_request_model.dart';
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
 import '../cubit/admission_form_cubit.dart';
 import '../cubit/admission_form_state.dart';
 import '../enums/admission_status.dart';
 import '../utils/admission_update_validation.dart';
-import '../widgets/admission_details_culture_card.dart';
+import '../widgets/admission_cultures_section.dart';
+import '../widgets/admission_details_clinical_notes_section.dart';
+import '../widgets/admission_details_consultation_card.dart';
 import '../widgets/admission_details_empty_hint.dart';
 import '../widgets/admission_details_generic_add_form.dart';
 import '../widgets/admission_details_measurement_section.dart';
-import '../widgets/admission_details_medication_card.dart';
-import '../widgets/admission_details_note_card.dart';
 import '../widgets/admission_details_section_container.dart';
 import '../widgets/admission_details_simple_text_card.dart';
-import '../widgets/admission_details_treatment_plan_card.dart';
 import '../widgets/admission_form_essentials_section.dart';
 import '../widgets/admission_form_radiology_draft_card.dart';
+import '../widgets/admission_medications_section.dart';
+import '../widgets/admission_plans_section.dart';
 import '../widgets/pending_measurement_column_entry.dart';
 
 class AdmissionFormScreen extends StatelessWidget {
@@ -102,6 +101,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
   final List<EchoModel> _echoDrafts = [];
   final List<UltrasoundModel> _ultrasoundDrafts = [];
   final List<CultureModel> _cultureDrafts = [];
+  final List<ConsultationModel> _consultationDrafts = [];
+  final Set<int> _loadedConsultationIds = {};
 
   final List<VitalRecordModel> _vitalDraftRecords = [];
   final List<LabRecordModel> _labDraftRecords = [];
@@ -137,6 +138,28 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
       _dateComes = _parseDate(a.dateComes);
       _dateLeave = _parseDate(a.dateLeave);
       _dateOfDeath = _parseDate(a.dateOfDeath);
+      _clinicalDrafts.addAll(a.clinicalNotes);
+      _treatmentDrafts.addAll(a.treatmentPlans);
+      _medicationDrafts.addAll(a.medications);
+      _echoDrafts.addAll(a.echoes);
+      _ultrasoundDrafts.addAll(a.ultrasounds);
+      _cultureDrafts.addAll(a.cultures);
+      _consultationDrafts.addAll(a.consultations);
+      _loadedConsultationIds.addAll(a.consultations.map((c) => c.id));
+      _vitalDraftRecords.addAll(a.vitals);
+      _labDraftRecords.addAll(a.labs);
+      _radiologyDrafts.addAll(
+        a.radiologyImages.map(
+          (img) => AdmissionFormRadiologyDraft(
+            id: img.id,
+            title: img.title,
+            report: img.report,
+            localMediaPaths:
+                img.imagePath.isNotEmpty ? [img.imagePath] : const [],
+          ),
+        ),
+      );
+      _tempId = _nextTempIdSeed(a);
     } else {
       _dateComes = DateTime.now();
       final preset = widget.initialBedNumber?.trim();
@@ -154,6 +177,46 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
   String _nowIso() => DateTime.now().toIso8601String();
 
   int _nextTempId() => _tempId++;
+
+  int _nextTempIdSeed(PatientAdmissionModel a) {
+    var max = 0;
+    void consider(int id) {
+      if (id > max) max = id;
+    }
+
+    for (final item in a.clinicalNotes) {
+      consider(item.id);
+    }
+    for (final item in a.treatmentPlans) {
+      consider(item.id);
+    }
+    for (final item in a.medications) {
+      consider(item.id);
+    }
+    for (final item in a.echoes) {
+      consider(item.id);
+    }
+    for (final item in a.ultrasounds) {
+      consider(item.id);
+    }
+    for (final item in a.cultures) {
+      consider(item.id);
+    }
+    for (final item in a.consultations) {
+      consider(item.id);
+    }
+    for (final item in a.vitals) {
+      consider(item.id);
+    }
+    for (final item in a.labs) {
+      consider(item.id);
+    }
+    for (final item in a.radiologyImages) {
+      consider(item.id);
+    }
+
+    return max + 1;
+  }
 
   void _applyInitialPatient(List<AdmissionPatientModel> patients) {
     if (_initialPatientApplied || widget.initialPatientId == null) return;
@@ -288,8 +351,9 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
     switch (section) {
       case 'med':
         return AdmissionUpdateValidation.medicationFields(
-          title: _getCtrl('title').text,
-          type: _pendingType,
+          drugId: null,
+          dose: _getCtrl('value').text,
+          frequency: _getCtrl('duration').text,
         );
       case 'clinical_note':
         final contentError = AdmissionUpdateValidation.clinicalNoteContent(
@@ -317,6 +381,11 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           _getCtrl('title').text,
           field: 'Culture title',
         );
+      case 'consultation':
+        return AdmissionUpdateValidation.requiredText(
+          _getCtrl('speciality').text,
+          field: 'Speciality',
+        );
       default:
         return null;
     }
@@ -325,6 +394,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
   void _saveGenericAddLocal() {
     if (_addingSection == null) return;
     final section = _addingSection!;
+    if (section == 'med') return;
     final validationError = _validateGenericSection(section);
     if (validationError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -397,6 +467,17 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
               admissionId: 0,
               title: _getCtrl('title').text.trim(),
               note: _getCtrl('note').text.trim(),
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+        case 'consultation':
+          _consultationDrafts.add(
+            ConsultationModel(
+              id: _nextTempId(),
+              admissionId: 0,
+              speciality: _getCtrl('speciality').text.trim(),
+              reply: _getCtrl('reply').text.trim(),
               createdAt: now,
               updatedAt: now,
             ),
@@ -506,6 +587,18 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
               updatedAt: now,
             );
           }
+        case 'consultation':
+          final i = _consultationDrafts.indexWhere((c) => c.id == id);
+          if (i >= 0) {
+            _consultationDrafts[i] = ConsultationModel(
+              id: id,
+              admissionId: 0,
+              speciality: _getCtrl('speciality').text.trim(),
+              reply: _getCtrl('reply').text.trim(),
+              createdAt: _consultationDrafts[i].createdAt,
+              updatedAt: now,
+            );
+          }
         case 'plan':
           final i = _treatmentDrafts.indexWhere((p) => p.id == id);
           if (i >= 0) {
@@ -540,6 +633,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           _ultrasoundDrafts.removeWhere((u) => u.id == id);
         case 'culture':
           _cultureDrafts.removeWhere((c) => c.id == id);
+        case 'consultation':
+          _consultationDrafts.removeWhere((c) => c.id == id);
       }
     });
   }
@@ -785,39 +880,6 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
     });
   }
 
-  Future<void> _openAddPatient() async {
-    final newId = await Navigator.of(context).push<int?>(
-      MaterialPageRoute(builder: (_) => const PatientFormScreen()),
-    );
-    if (newId == null || !mounted) return;
-
-    final cubit = context.read<AdmissionFormCubit>();
-    try {
-      await cubit.refreshPatients(ensurePatientId: newId);
-    } on NetworkException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: AppColors.error),
-        );
-      }
-      return;
-    }
-
-    final list = cubit.refs?.patients;
-    if (list == null || !mounted) return;
-
-    AdmissionPatientModel? match;
-    for (final p in list) {
-      if (p.id == newId) {
-        match = p;
-        break;
-      }
-    }
-    if (match != null) {
-      setState(() => _selectedPatient = match);
-    }
-  }
-
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedPatient == null) {
@@ -920,12 +982,12 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
         .toList();
 
     final medicationDrafts = _medicationDrafts
+        .where((e) => e.drugId != null)
         .map(
           (e) => AdmissionMedicationDraft(
-            type: e.type,
-            title: e.title,
-            value: e.value,
-            duration: e.duration,
+            drugId: e.drugId!,
+            dose: e.value,
+            frequency: e.duration,
           ),
         )
         .toList();
@@ -942,6 +1004,27 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           (e) => AdmissionCultureDraft(
             title: e.title,
             note: e.note,
+            antibiotics: e.antibiotics
+                .map(
+                  (a) => AdmissionCultureAntibioticDraft(
+                    drugId: a.drugId,
+                    drugName: a.drugName.isEmpty ? null : a.drugName,
+                    sensitivity: a.sensitivity,
+                  ),
+                )
+                .toList(),
+          ),
+        )
+        .toList();
+
+    final consultationDrafts = _consultationDrafts
+        .map(
+          (e) => AdmissionConsultationDraft(
+            id: _isEdit && _loadedConsultationIds.contains(e.id)
+                ? e.id
+                : null,
+            speciality: e.speciality,
+            reply: e.reply,
           ),
         )
         .toList();
@@ -963,6 +1046,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
         echoes: echoDrafts,
         ultrasounds: ultrasoundDrafts,
         cultures: cultureDrafts,
+        consultations: consultationDrafts,
       );
       cubit.updateAdmission(widget.admission!.id, req);
     } else {
@@ -986,6 +1070,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
         echoes: echoDrafts,
         ultrasounds: ultrasoundDrafts,
         cultures: cultureDrafts,
+        consultations: consultationDrafts,
       );
       cubit.createAdmission(req);
     }
@@ -1058,80 +1143,37 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
 
   List<Widget> _buildRecordSections(AdmissionFormRefsReady refs) {
     return [
-      AdmissionDetailsSectionContainer(
-        title: 'Clinical Notes',
-        headerAction: _addingSection == 'clinical_note' ||
-                _editingSection == 'clinical_note'
-            ? null
-            : IconButton(
-                icon: const Icon(
-                  Icons.add_circle_outline,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-                onPressed: () => _startAddGeneric(
-                  'clinical_note',
-                  defaultType: 'progress_note',
-                ),
-              ),
-        child: Column(
-          children: [
-            if (_addingSection == 'clinical_note')
-              AdmissionDetailsGenericAddForm(
-                title: 'Add Clinical Note',
-                saving: false,
-                onCancel: () {
-                  _cancelAddGeneric();
-                  _disposeGenericCtrls();
-                  setState(() {});
-                },
-                onSave: _saveGenericAddLocal,
-                typeLabel: 'Note Type',
-                typeValue: _pendingType,
-                types: AdmissionClinicalNoteType.values,
-                onTypeChanged: (v) => setState(() => _pendingType = v),
-                fields: [
-                  AdmissionDetailsFormFieldSpec(
-                    hint: 'Content',
-                    controller: _getCtrl('content'),
-                    maxLines: 5,
-                    isRequired: true,
-                  ),
-                ],
-              ),
-            if (_clinicalDrafts.isEmpty && _addingSection != 'clinical_note')
-              const AdmissionDetailsEmptyHint('No clinical notes recorded.')
-            else
-              ..._clinicalDrafts.map((n) {
-                if (_isEditingItem('clinical_note', n.id)) {
-                  return _buildGenericEditForm(
-                    section: 'clinical_note',
-                    title: 'Edit Clinical Note',
-                    typeLabel: 'Note Type',
-                    types: AdmissionClinicalNoteType.values,
-                    fields: [
-                      AdmissionDetailsFormFieldSpec(
-                        hint: 'Content',
-                        controller: _getCtrl('content'),
-                        maxLines: 5,
-                        isRequired: true,
-                      ),
-                    ],
-                  );
-                }
-                return AdmissionDetailsNoteCard(
-                  note: n,
-                  onEdit: () => _beginEditItem(
-                    'clinical_note',
-                    n.id,
-                    type: n.type,
-                    fields: {'content': n.content},
-                  ),
-                  onDelete: () => _deleteDraftItem('clinical_note', n.id),
-                );
-              }),
-          ],
+      AdmissionDetailsClinicalNotesSection(
+        notes: _clinicalDrafts,
+        adding: _addingSection == 'clinical_note',
+        editingItemId:
+            _editingSection == 'clinical_note' ? _editingItemId : null,
+        pendingType: _pendingType,
+        saving: false,
+        contentController: _getCtrl('content'),
+        onStartAdd: (type) => _startAddGeneric(
+          'clinical_note',
+          defaultType: type,
         ),
+        onCancelAdd: () {
+          _cancelAddGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveAdd: _saveGenericAddLocal,
+        onBeginEdit: (note) => _beginEditItem(
+          'clinical_note',
+          note.id,
+          type: note.type,
+          fields: {'content': note.content},
+        ),
+        onCancelEdit: () {
+          _cancelEditGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveEdit: _saveGenericEditLocal,
+        onDelete: (id) => _deleteDraftItem('clinical_note', id),
       ),
       AdmissionDetailsSectionContainer(
         title: 'Radiology',
@@ -1236,70 +1278,31 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           ],
         ),
       ),
-      AdmissionDetailsSectionContainer(
-        title: 'Treatment Plans',
-        headerAction:
-            _addingSection == 'plan' || _editingSection == 'plan'
-                ? null
-                : IconButton(
-                    icon: const Icon(
-                      Icons.add_circle_outline,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                    onPressed: () => _startAddGeneric('plan'),
-                  ),
-        child: Column(
-          children: [
-            if (_addingSection == 'plan')
-              AdmissionDetailsGenericAddForm(
-                title: 'Add Treatment Plan',
-                saving: false,
-                onCancel: () {
-                  _cancelAddGeneric();
-                  _disposeGenericCtrls();
-                  setState(() {});
-                },
-                onSave: _saveGenericAddLocal,
-                fields: [
-                  AdmissionDetailsFormFieldSpec(
-                    hint: 'Plan content',
-                    controller: _getCtrl('plan'),
-                    maxLines: 4,
-                    isRequired: true,
-                  ),
-                ],
-              ),
-            if (_treatmentDrafts.isEmpty && _addingSection != 'plan')
-              const AdmissionDetailsEmptyHint('No treatment plans recorded.')
-            else
-              ..._treatmentDrafts.map((p) {
-                if (_isEditingItem('plan', p.id)) {
-                  return _buildGenericEditForm(
-                    section: 'plan',
-                    title: 'Edit Treatment Plan',
-                    fields: [
-                      AdmissionDetailsFormFieldSpec(
-                        hint: 'Plan content',
-                        controller: _getCtrl('plan'),
-                        maxLines: 4,
-                        isRequired: true,
-                      ),
-                    ],
-                  );
-                }
-                return AdmissionDetailsTreatmentPlanCard(
-                  plan: p,
-                  onEdit: () => _beginEditItem(
-                    'plan',
-                    p.id,
-                    fields: {'plan': p.planContent},
-                  ),
-                  onDelete: () => _deleteDraftItem('plan', p.id),
-                );
-              }),
-          ],
+      AdmissionPlansSection(
+        plans: _treatmentDrafts,
+        adding: _addingSection == 'plan',
+        editingItemId: _editingSection == 'plan' ? _editingItemId : null,
+        saving: false,
+        contentController: _getCtrl('plan'),
+        onStartAdd: () => _startAddGeneric('plan'),
+        onCancelAdd: () {
+          _cancelAddGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveAdd: _saveGenericAddLocal,
+        onBeginEdit: (plan) => _beginEditItem(
+          'plan',
+          plan.id,
+          fields: {'plan': plan.planContent},
         ),
+        onCancelEdit: () {
+          _cancelEditGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveEdit: _saveGenericEditLocal,
+        onDelete: (id) => _deleteDraftItem('plan', id),
       ),
       AdmissionDetailsMeasurementSection(
         title: AppTexts.vitalSigns,
@@ -1335,106 +1338,89 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           onPick: (d) => setState(() => _pendingLab?.date = d),
         ),
       ),
-      AdmissionDetailsSectionContainer(
-        title: 'Medications',
-        headerAction:
-            _addingSection == 'med' || _editingSection == 'med'
-                ? null
-                : IconButton(
-                    icon: const Icon(
-                      Icons.add_circle_outline,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                    onPressed: () =>
-                        _startAddGeneric('med', defaultType: 'other'),
-                  ),
-        child: Column(
-          children: [
-            if (_addingSection == 'med')
-              AdmissionDetailsGenericAddForm(
-                title: 'Add Medication',
-                saving: false,
-                onCancel: () {
-                  _cancelAddGeneric();
-                  _disposeGenericCtrls();
-                  setState(() {});
-                },
-                onSave: _saveGenericAddLocal,
-                fields: [
-                  AdmissionDetailsFormFieldSpec(
-                    hint: 'Title',
-                    controller: _getCtrl('title'),
-                    isRequired: true,
-                  ),
-                  AdmissionDetailsFormFieldSpec(
-                    hint: 'Value (e.g. 1g IV)',
-                    controller: _getCtrl('value'),
-                  ),
-                  AdmissionDetailsFormFieldSpec(
-                    hint: 'Duration (e.g. 5 days)',
-                    controller: _getCtrl('duration'),
-                  ),
-                ],
-                typeLabel: 'Type',
-                typeValue: _pendingType,
-                types: const [
-                  'infusion',
-                  'syring_pump',
-                  'bolus',
-                  'other',
-                ],
-                onTypeChanged: (v) => setState(() => _pendingType = v),
+      AdmissionMedicationsSection(
+        medications: _medicationDrafts,
+        adding: _addingSection == 'med',
+        editingItemId: _editingSection == 'med' ? _editingItemId : null,
+        saving: false,
+        onStartAdd: () => _startAddGeneric('med', defaultType: 'PO'),
+        onCancelAdd: () {
+          _cancelAddGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveAdd: ({
+          required drugId,
+          required title,
+          required dose,
+          required frequency,
+          type = 'PO',
+        }) {
+          final now = _nowIso();
+          setState(() {
+            _medicationDrafts.add(
+              MedicationModel(
+                id: _nextTempId(),
+                admissionId: 0,
+                type: type,
+                title: title,
+                value: dose,
+                duration: frequency,
+                drugId: drugId,
+                createdAt: now,
+                updatedAt: now,
               ),
-            if (_medicationDrafts.isEmpty && _addingSection != 'med')
-              const AdmissionDetailsEmptyHint('No medications recorded.')
-            else
-              ..._medicationDrafts.map((m) {
-                if (_isEditingItem('med', m.id)) {
-                  return _buildGenericEditForm(
-                    section: 'med',
-                    title: 'Edit Medication',
-                    typeLabel: 'Type',
-                    types: const [
-                      'infusion',
-                      'syring_pump',
-                      'bolus',
-                      'other',
-                    ],
-                    fields: [
-                      AdmissionDetailsFormFieldSpec(
-                        hint: 'Title',
-                        controller: _getCtrl('title'),
-                        isRequired: true,
-                      ),
-                      AdmissionDetailsFormFieldSpec(
-                        hint: 'Value (e.g. 1g IV)',
-                        controller: _getCtrl('value'),
-                      ),
-                      AdmissionDetailsFormFieldSpec(
-                        hint: 'Duration (e.g. 5 days)',
-                        controller: _getCtrl('duration'),
-                      ),
-                    ],
-                  );
-                }
-                return AdmissionDetailsMedicationCard(
-                  med: m,
-                  onEdit: () => _beginEditItem(
-                    'med',
-                    m.id,
-                    type: m.type,
-                    fields: {
-                      'title': m.title,
-                      'value': m.value,
-                      'duration': m.duration,
-                    },
-                  ),
-                  onDelete: () => _deleteDraftItem('med', m.id),
-                );
-              }),
-          ],
+            );
+            _cancelAddGeneric();
+            _disposeGenericCtrls();
+          });
+        },
+        onBeginEdit: (med) => _beginEditItem(
+          'med',
+          med.id,
+          type: med.type,
+          fields: {
+            'title': med.title,
+            'value': med.value,
+            'duration': med.duration,
+          },
         ),
+        onCancelEdit: () {
+          _cancelEditGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveEdit: ({
+          required drugId,
+          required title,
+          required dose,
+          required frequency,
+          type = 'PO',
+        }) {
+          final id = _editingItemId;
+          if (id == null) return;
+          final now = _nowIso();
+          setState(() {
+            final i = _medicationDrafts.indexWhere((m) => m.id == id);
+            if (i >= 0) {
+              _medicationDrafts[i] = MedicationModel(
+                id: id,
+                admissionId: 0,
+                type: type,
+                title: title,
+                value: dose,
+                duration: frequency,
+                drugId: drugId,
+                createdAt: _medicationDrafts[i].createdAt,
+                updatedAt: now,
+              );
+            }
+            _cancelEditGeneric();
+            _disposeGenericCtrls();
+          });
+        },
+        onDiscontinue: (med) => _deleteDraftItem('med', med.id),
+        onDelete: (med) => _deleteDraftItem('med', med.id),
       ),
       AdmissionDetailsSectionContainer(
         title: 'Echo',
@@ -1568,10 +1554,94 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           ],
         ),
       ),
+      AdmissionCulturesSection(
+        cultures: _cultureDrafts,
+        adding: _addingSection == 'culture',
+        editingItemId:
+            _editingSection == 'culture' ? _editingItemId : null,
+        saving: false,
+        onStartAdd: () => _startAddGeneric('culture'),
+        onCancelAdd: () {
+          _cancelAddGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveAdd: ({
+          required title,
+          required note,
+          required antibiotics,
+          required deletedAntibioticIds,
+        }) {
+          final now = _nowIso();
+          setState(() {
+            _cultureDrafts.add(
+              CultureModel(
+                id: _nextTempId(),
+                admissionId: 0,
+                title: title,
+                note: note,
+                createdAt: now,
+                updatedAt: now,
+                antibiotics: [
+                  for (var i = 0; i < antibiotics.length; i++)
+                    antibiotics[i].toModel(_nextTempId()),
+                ],
+              ),
+            );
+            _cancelAddGeneric();
+            _disposeGenericCtrls();
+          });
+        },
+        onBeginEdit: (culture) => _beginEditItem(
+          'culture',
+          culture.id,
+          fields: {
+            'title': culture.title,
+            'note': culture.note,
+          },
+        ),
+        onCancelEdit: () {
+          _cancelEditGeneric();
+          _disposeGenericCtrls();
+          setState(() {});
+        },
+        onSaveEdit: ({
+          required title,
+          required note,
+          required antibiotics,
+          required deletedAntibioticIds,
+        }) {
+          final id = _editingItemId;
+          if (id == null) return;
+          final now = _nowIso();
+          setState(() {
+            final i = _cultureDrafts.indexWhere((c) => c.id == id);
+            if (i >= 0) {
+              _cultureDrafts[i] = CultureModel(
+                id: id,
+                admissionId: 0,
+                title: title,
+                note: note,
+                createdAt: _cultureDrafts[i].createdAt,
+                updatedAt: now,
+                antibiotics: [
+                  for (var j = 0; j < antibiotics.length; j++)
+                    antibiotics[j].toModel(
+                      antibiotics[j].id ?? _nextTempId(),
+                    ),
+                ],
+              );
+            }
+            _cancelEditGeneric();
+            _disposeGenericCtrls();
+          });
+        },
+        onDelete: (id) => _deleteDraftItem('culture', id),
+      ),
       AdmissionDetailsSectionContainer(
-        title: 'Cultures',
-        headerAction: _addingSection == 'culture' ||
-                _editingSection == 'culture'
+        title: 'Consultations',
+        headerAction: _addingSection == 'consultation' ||
+                _editingSection == 'consultation'
             ? null
             : IconButton(
                 icon: const Icon(
@@ -1579,13 +1649,13 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                   color: AppColors.primary,
                   size: 20,
                 ),
-                onPressed: () => _startAddGeneric('culture'),
+                onPressed: () => _startAddGeneric('consultation'),
               ),
         child: Column(
           children: [
-            if (_addingSection == 'culture')
+            if (_addingSection == 'consultation')
               AdmissionDetailsGenericAddForm(
-                title: 'Add Culture',
+                title: 'Add Consultation',
                 saving: false,
                 onCancel: () {
                   _cancelAddGeneric();
@@ -1595,50 +1665,51 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                 onSave: _saveGenericAddLocal,
                 fields: [
                   AdmissionDetailsFormFieldSpec(
-                    hint: 'Title',
-                    controller: _getCtrl('title'),
+                    hint: 'Speciality (e.g. Cardiology)',
+                    controller: _getCtrl('speciality'),
                     isRequired: true,
                   ),
                   AdmissionDetailsFormFieldSpec(
-                    hint: 'Note',
-                    controller: _getCtrl('note'),
-                    maxLines: 2,
+                    hint: 'Reply',
+                    controller: _getCtrl('reply'),
+                    maxLines: 3,
                   ),
                 ],
               ),
-            if (_cultureDrafts.isEmpty && _addingSection != 'culture')
-              const AdmissionDetailsEmptyHint('No cultures recorded.')
+            if (_consultationDrafts.isEmpty &&
+                _addingSection != 'consultation')
+              const AdmissionDetailsEmptyHint('No consultations recorded.')
             else
-              ..._cultureDrafts.map((c) {
-                if (_isEditingItem('culture', c.id)) {
+              ..._consultationDrafts.map((c) {
+                if (_isEditingItem('consultation', c.id)) {
                   return _buildGenericEditForm(
-                    section: 'culture',
-                    title: 'Edit Culture',
+                    section: 'consultation',
+                    title: 'Edit Consultation',
                     fields: [
                       AdmissionDetailsFormFieldSpec(
-                        hint: 'Title',
-                        controller: _getCtrl('title'),
+                        hint: 'Speciality (e.g. Cardiology)',
+                        controller: _getCtrl('speciality'),
                         isRequired: true,
                       ),
                       AdmissionDetailsFormFieldSpec(
-                        hint: 'Note',
-                        controller: _getCtrl('note'),
-                        maxLines: 2,
+                        hint: 'Reply',
+                        controller: _getCtrl('reply'),
+                        maxLines: 3,
                       ),
                     ],
                   );
                 }
-                return AdmissionDetailsCultureCard(
-                  culture: c,
+                return AdmissionDetailsConsultationCard(
+                  consultation: c,
                   onEdit: () => _beginEditItem(
-                    'culture',
+                    'consultation',
                     c.id,
                     fields: {
-                      'title': c.title,
-                      'note': c.note,
+                      'speciality': c.speciality,
+                      'reply': c.reply,
                     },
                   ),
-                  onDelete: () => _deleteDraftItem('culture', c.id),
+                  onDelete: () => _deleteDraftItem('consultation', c.id),
                 );
               }),
           ],
@@ -1808,12 +1879,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                       dateComes: _dateComes,
                       dateLeave: _dateLeave,
                       dateOfDeath: _dateOfDeath,
-                      patients: refs.patients,
                       selectedPatient: _selectedPatient,
-                      hospitalGroupId: widget.hospitalGroupId,
-                      onPatientChanged: (patient) =>
-                          setState(() => _selectedPatient = patient),
-                      onAddPatient: _openAddPatient,
                       onStatusChanged: (status) => setState(
                         () => _status = status ?? AdmissionStatus.admitted,
                       ),
@@ -1867,7 +1933,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                       bedValidator: (value) =>
                           (value?.trim() ?? '').isEmpty ? 'Required' : null,
                       patientValidator: (patient) =>
-                          patient == null ? 'Select a patient' : null,
+                          patient == null ? 'Patient is required' : null,
                     ),
                     ..._buildRecordSections(refs),
                   ],

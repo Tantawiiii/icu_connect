@@ -21,6 +21,7 @@ abstract class BaseApiService {
   Future<T> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
+    dynamic data,
     String? cancelTag,
     Options? options,
   }) async {
@@ -28,6 +29,7 @@ abstract class BaseApiService {
       final response = await _dio.get<T>(
         path,
         queryParameters: queryParameters,
+        data: data,
         cancelToken: _token(cancelTag),
         options: options,
       );

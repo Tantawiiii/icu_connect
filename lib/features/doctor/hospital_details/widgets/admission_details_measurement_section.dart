@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/features/superAdmin/patients/models/patient_admission_models.dart';
 
+import '../utils/measurement_title_order.dart';
 import 'admission_details_formatters.dart';
 import 'admission_details_section_container.dart';
 import 'pending_measurement_column_entry.dart';
@@ -54,6 +55,10 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
   static const _headerHeight = 40.0;
   static const _dateHeaderHeight = 52.0;
   static const _rowHeight = 44.0;
+
+  List<MeasurementTitleModel> get _sortedTitles => isLabs
+      ? MeasurementTitleOrder.sortLabs(titles)
+      : MeasurementTitleOrder.sortVitals(titles);
 
   String _columnKey(dynamic record) {
     if (isLabs) {
@@ -119,7 +124,7 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
     if (isEditingInPlace && pendingColumn != null) {
       return _EditingReadingColumn(
         pending: pendingColumn!,
-        titles: titles,
+        titles: _sortedTitles,
         width: _readingWidth,
         dateHeaderHeight: _dateHeaderHeight,
         rowHeight: _rowHeight,
@@ -133,7 +138,7 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
     return _ReadingColumn(
       columnKey: key,
       dateLabel: _columnDateLabel(key),
-      titles: titles,
+      titles: _sortedTitles,
       width: _readingWidth,
       dateHeaderHeight: _dateHeaderHeight,
       rowHeight: _rowHeight,
@@ -238,7 +243,7 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
                         height: _dateHeaderHeight,
                         child: const SizedBox.shrink(),
                       ),
-                      ...titles.map(
+                      ..._sortedTitles.map(
                         (t) => _TitleCell(
                           width: _titleWidth,
                           height: _rowHeight,
@@ -291,7 +296,7 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _RangeColumn(
-                                titles: titles,
+                                titles: _sortedTitles,
                                 width: _rangeWidth,
                                 dateHeaderHeight: _dateHeaderHeight,
                                 rowHeight: _rowHeight,
@@ -303,7 +308,7 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
                                   pendingColumn!.isNewColumn)
                                 _EditingReadingColumn(
                                   pending: pendingColumn!,
-                                  titles: titles,
+                                  titles: _sortedTitles,
                                   width: _readingWidth,
                                   dateHeaderHeight: _dateHeaderHeight,
                                   rowHeight: _rowHeight,

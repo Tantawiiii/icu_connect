@@ -202,8 +202,10 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
             AppTextField(
               controller: _nationalIdCtrl,
               hintText: AppTexts.nationalId,
+              keyboardType: TextInputType.number,
               validator: _validateNationalId,
               inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(_maxNationalIdLen),
               ],
             ),
@@ -245,6 +247,7 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
               keyboardType: TextInputType.phone,
               validator: _validatePhone,
               inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(_maxPhoneLen),
               ],
             ),

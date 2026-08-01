@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 
@@ -47,11 +48,28 @@ class AddEditPatientScreen extends StatelessWidget {
             const SizedBox(height: 16),
              _buildTextField(context, 'Email', keyboardType: TextInputType.emailAddress),
             const SizedBox(height: 16),
-             _buildTextField(context, 'Phone Number', keyboardType: TextInputType.phone),
+             _buildTextField(
+               context,
+               'Phone Number',
+               keyboardType: TextInputType.phone,
+               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+             ),
             const SizedBox(height: 16),
              _buildTextField(context, AppTexts.bedNo),
             const SizedBox(height: 16),
-             _buildTextField(context, AppTexts.age, keyboardType: TextInputType.number),
+             _buildTextField(
+               context,
+               AppTexts.nationalId,
+               keyboardType: TextInputType.number,
+               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+             ),
+            const SizedBox(height: 16),
+             _buildTextField(
+               context,
+               AppTexts.age,
+               keyboardType: TextInputType.number,
+               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+             ),
              const SizedBox(height: 40),
              
              // Save Button
@@ -67,9 +85,15 @@ class AddEditPatientScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(BuildContext context, String label, {TextInputType? keyboardType}) {
+  Widget _buildTextField(
+    BuildContext context,
+    String label, {
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
     return TextField(
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         hintText: label.toUpperCase(),
         filled: true,

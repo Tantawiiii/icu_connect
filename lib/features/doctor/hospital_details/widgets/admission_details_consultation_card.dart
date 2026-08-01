@@ -6,15 +6,15 @@ import 'package:icu_connect/features/superAdmin/patients/models/patient_admissio
 import 'admission_details_formatters.dart';
 import 'admission_details_item_actions.dart';
 
-class AdmissionDetailsTreatmentPlanCard extends StatelessWidget {
-  const AdmissionDetailsTreatmentPlanCard({
+class AdmissionDetailsConsultationCard extends StatelessWidget {
+  const AdmissionDetailsConsultationCard({
     super.key,
-    required this.plan,
+    required this.consultation,
     required this.onEdit,
     required this.onDelete,
   });
 
-  final TreatmentPlanModel plan;
+  final ConsultationModel consultation;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -36,23 +36,34 @@ class AdmissionDetailsTreatmentPlanCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  plan.planContent,
+                  consultation.speciality,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
                     fontSize: 13,
-                    height: 1.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
               AdmissionDetailsItemActions(onEdit: onEdit, onDelete: onDelete),
             ],
           ),
-          const SizedBox(height: 6),
+          if (consultation.reply.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              consultation.reply,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ],
+          const SizedBox(height: 4),
           Text(
-            admissionDetailsFormatDateTime(plan.createdAt),
+            admissionDetailsFormatDateTime(consultation.createdAt),
             style: const TextStyle(
-              color: AppColors.textSecondary,
               fontSize: 11,
+              color: AppColors.textSecondary,
             ),
           ),
         ],

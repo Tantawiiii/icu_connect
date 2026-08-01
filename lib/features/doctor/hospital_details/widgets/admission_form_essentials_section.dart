@@ -20,10 +20,7 @@ class AdmissionFormEssentialsSection extends StatelessWidget {
     required this.dateComes,
     required this.dateLeave,
     required this.dateOfDeath,
-    required this.patients,
     required this.selectedPatient,
-    required this.onPatientChanged,
-    required this.onAddPatient,
     required this.onStatusChanged,
     required this.onPickDateComes,
     required this.onPickDateLeave,
@@ -32,7 +29,6 @@ class AdmissionFormEssentialsSection extends StatelessWidget {
     required this.onClearDateOfDeath,
     required this.bedValidator,
     required this.patientValidator,
-    this.hospitalGroupId,
   });
 
   final bool isEdit;
@@ -42,10 +38,7 @@ class AdmissionFormEssentialsSection extends StatelessWidget {
   final DateTime? dateComes;
   final DateTime? dateLeave;
   final DateTime? dateOfDeath;
-  final List<AdmissionPatientModel> patients;
   final AdmissionPatientModel? selectedPatient;
-  final ValueChanged<AdmissionPatientModel?> onPatientChanged;
-  final VoidCallback onAddPatient;
   final ValueChanged<AdmissionStatus?> onStatusChanged;
   final VoidCallback onPickDateComes;
   final VoidCallback onPickDateLeave;
@@ -54,16 +47,6 @@ class AdmissionFormEssentialsSection extends StatelessWidget {
   final VoidCallback onClearDateOfDeath;
   final String? Function(String?)? bedValidator;
   final String? Function(AdmissionPatientModel?)? patientValidator;
-  final int? hospitalGroupId;
-
-  AdmissionPatientModel? _dropdownValue() {
-    final selected = selectedPatient;
-    if (selected == null) return null;
-    for (final patient in patients) {
-      if (patient.id == selected.id) return patient;
-    }
-    return null;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,151 +55,96 @@ class AdmissionFormEssentialsSection extends StatelessWidget {
       children: [
         AdmissionDetailsSectionContainer(
           title: AppTexts.patientLabel,
-          child: isEdit
-              ? _PatientSummary(patient: selectedPatient)
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<AdmissionPatientModel>(
-                            value: _dropdownValue(),
-                            decoration: const InputDecoration(
-                              labelText: AppTexts.patientLabel,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
-                                ),
-                              ),
-                            ),
-                            hint: Text(AppTexts.selectPatient),
-                            isExpanded: true,
-                            items: patients
-                                .map(
-                                  (patient) => DropdownMenuItem(
-                                    value: patient,
-                                    child: Text(
-                                      '${patient.name} · ${patient.nationalId}',
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: submitting ? null : onPatientChanged,
-                            validator: (_) => patientValidator?.call(
-                              selectedPatient,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: IconButton(
-                            tooltip: AppTexts.addPatientAdmin,
-                            style: IconButton.styleFrom(
-                              backgroundColor:
-                                  AppColors.primary.withValues(alpha: 0.1),
-                              foregroundColor: AppColors.primary,
-                            ),
-                            onPressed: submitting ? null : onAddPatient,
-                            icon: const Icon(Icons.person_add_outlined),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (selectedPatient != null) ...[
-                      const SizedBox(height: 12),
-                      _PatientSummary(patient: selectedPatient),
-                    ] else if (patients.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Text(
-                          'No patients found. Add a patient first.',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13,
-                          ),
+          child: FormField<AdmissionPatientModel>(
+            validator: (_) => patientValidator?.call(selectedPatient),
+            builder: (field) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _PatientSummary(patient: selectedPatient),
+                  if (field.hasError)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        field.errorText!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 12,
                         ),
                       ),
-                  ],
-                ),
-        ),
-        AdmissionDetailsSectionContainer(
-          title: isEdit ? AppTexts.editAdmission : AppTexts.createAdmission,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppTextField(
-                controller: bedCtrl,
-                hintText: AppTexts.bedNo,
-                keyboardType: TextInputType.number,
-                validator: bedValidator,
-              ),
-              if (hospitalGroupId != null) ...[
-                const SizedBox(height: 10),
-                AdmissionDetailsMetaChip(
-                  label: AppTexts.hospitalGroupsSummary,
-                  value: '#$hospitalGroupId',
-                  icon: Icons.local_hospital_outlined,
-                ),
-              ],
-              const SizedBox(height: 12),
-              if (isEdit)
-                DropdownButtonFormField<AdmissionStatus>(
-                  value: status,
-                  decoration: const InputDecoration(
-                    labelText: AppTexts.status,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
                     ),
-                  ),
-                  items: AdmissionStatus.editable
-                      .map(
-                        (item) => DropdownMenuItem(
-                          value: item,
-                          child: Text(item.displayLabel),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: submitting ? null : onStatusChanged,
-                ),
-              _DateTile(
-                icon: Icons.login,
-                label: AppTexts.admitted,
-                value: dateComes != null
-                    ? admissionDetailsSqlDateTime(dateComes!)
-                    : AppTexts.notAvailable,
-                onTap: isEdit || submitting ? null : onPickDateComes,
-              ),
-              if (isEdit) ...[
-                _DateTile(
-                  icon: Icons.logout,
-                  label: AppTexts.dischargedLabel,
-                  value: dateLeave != null
-                      ? admissionDetailsSqlDateTime(dateLeave!)
-                      : 'Not set',
-                  onTap: submitting ? null : onPickDateLeave,
-                  onClear: dateLeave != null && !submitting
-                      ? onClearDateLeave
-                      : null,
-                ),
-                _DateTile(
-                  icon: Icons.event_busy,
-                  label: AppTexts.dateOfDeathLabel,
-                  value: dateOfDeath != null
-                      ? admissionDetailsSqlDateTime(dateOfDeath!)
-                      : 'Not set',
-                  onTap: submitting ? null : onPickDateOfDeath,
-                  onClear: dateOfDeath != null && !submitting
-                      ? onClearDateOfDeath
-                      : null,
-                ),
-              ],
-            ],
+                ],
+              );
+            },
           ),
         ),
+        // AdmissionDetailsSectionContainer(
+        //   title: isEdit ? AppTexts.editAdmission : AppTexts.createAdmission,
+        //   child: Column(
+        //     crossAxisAlignment: CrossAxisAlignment.stretch,
+        //     children: [
+        //       AppTextField(
+        //         controller: bedCtrl,
+        //         labelText: AppTexts.bedNo,
+        //         hintText: AppTexts.bedNo,
+        //         keyboardType: TextInputType.number,
+        //         validator: bedValidator,
+        //       ),
+        //       const SizedBox(height: 12),
+        //       if (isEdit)
+        //         DropdownButtonFormField<AdmissionStatus>(
+        //           value: status,
+        //           decoration: const InputDecoration(
+        //             labelText: AppTexts.status,
+        //             border: OutlineInputBorder(
+        //               borderRadius: BorderRadius.all(Radius.circular(12)),
+        //             ),
+        //           ),
+        //           items: AdmissionStatus.editable
+        //               .map(
+        //                 (item) => DropdownMenuItem(
+        //                   value: item,
+        //                   child: Text(item.displayLabel),
+        //                 ),
+        //               )
+        //               .toList(),
+        //           onChanged: submitting ? null : onStatusChanged,
+        //         ),
+        //       _DateTile(
+        //         icon: Icons.login,
+        //         label: AppTexts.admitted,
+        //         value: dateComes != null
+        //             ? admissionDetailsSqlDateTime(dateComes!)
+        //             : AppTexts.notAvailable,
+        //         onTap: isEdit || submitting ? null : onPickDateComes,
+        //       ),
+        //       if (isEdit) ...[
+        //         _DateTile(
+        //           icon: Icons.logout,
+        //           label: AppTexts.dischargedLabel,
+        //           value: dateLeave != null
+        //               ? admissionDetailsSqlDateTime(dateLeave!)
+        //               : 'Not set',
+        //           onTap: submitting ? null : onPickDateLeave,
+        //           onClear: dateLeave != null && !submitting
+        //               ? onClearDateLeave
+        //               : null,
+        //         ),
+        //         _DateTile(
+        //           icon: Icons.event_busy,
+        //           label: AppTexts.dateOfDeathLabel,
+        //           value: dateOfDeath != null
+        //               ? admissionDetailsSqlDateTime(dateOfDeath!)
+        //               : 'Not set',
+        //           onTap: submitting ? null : onPickDateOfDeath,
+        //           onClear: dateOfDeath != null && !submitting
+        //               ? onClearDateOfDeath
+        //               : null,
+        //         ),
+        //       ],
+        //     ],
+        //   ),
+        // ),
       ],
     );
   }
@@ -227,6 +155,8 @@ class _PatientSummary extends StatelessWidget {
 
   final AdmissionPatientModel? patient;
 
+  bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
     if (patient == null) {
@@ -236,44 +166,57 @@ class _PatientSummary extends StatelessWidget {
       );
     }
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 8,
+    final chips = <Widget>[
+      AdmissionDetailsMetaChip(
+        label: AppTexts.age,
+        value: '${patient!.age}',
+        icon: Icons.cake_outlined,
+      ),
+      if (_hasText(patient!.gender))
+        AdmissionDetailsMetaChip(
+          label: AppTexts.gender,
+          value: patient!.gender,
+          icon: Icons.wc_outlined,
+        ),
+      if (_hasText(patient!.bloodGroup))
+        AdmissionDetailsMetaChip(
+          label: AppTexts.bloodGroup,
+          value: patient!.bloodGroup,
+          icon: Icons.bloodtype,
+        ),
+      if (_hasText(patient!.phone))
+        AdmissionDetailsMetaChip(
+          label: AppTexts.phone,
+          value: patient!.phone,
+          icon: Icons.phone_outlined,
+        ),
+      if (_hasText(patient!.nationalId))
+        AdmissionDetailsMetaChip(
+          label: AppTexts.nationalId,
+          value: patient!.nationalId,
+          icon: Icons.badge_outlined,
+        ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AdmissionDetailsMetaChip(
-          label: AppTexts.name,
-          value: patient!.name,
-          icon: Icons.person_outline,
+        Text(
+          patient!.name,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
         ),
-        AdmissionDetailsMetaChip(
-          label: AppTexts.age,
-          value: '${patient!.age}',
-          icon: Icons.cake_outlined,
-        ),
-        if (patient!.gender.trim().isNotEmpty)
-          AdmissionDetailsMetaChip(
-            label: AppTexts.gender,
-            value: patient!.gender,
-            icon: Icons.wc_outlined,
+        if (chips.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: chips,
           ),
-        if (patient!.bloodGroup.trim().isNotEmpty)
-          AdmissionDetailsMetaChip(
-            label: AppTexts.bloodGroup,
-            value: patient!.bloodGroup,
-            icon: Icons.bloodtype,
-          ),
-        if (patient!.phone.trim().isNotEmpty)
-          AdmissionDetailsMetaChip(
-            label: AppTexts.phone,
-            value: patient!.phone,
-            icon: Icons.phone_outlined,
-          ),
-        if (patient!.nationalId.trim().isNotEmpty)
-          AdmissionDetailsMetaChip(
-            label: AppTexts.nationalId,
-            value: patient!.nationalId,
-            icon: Icons.badge_outlined,
-          ),
+        ],
       ],
     );
   }
