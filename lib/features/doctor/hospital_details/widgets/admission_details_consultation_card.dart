@@ -53,6 +53,7 @@ class AdmissionDetailsConsultationCard extends StatelessWidget {
               consultation.reply,
               style: const TextStyle(
                 fontSize: 12,
+                fontWeight: FontWeight.bold,
                 color: AppColors.textSecondary,
                 height: 1.4,
               ),

@@ -6,6 +6,7 @@ import '../../../../core/constants/app_texts.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/network_exceptions.dart';
 import '../../../../core/network/token_storage.dart';
+import '../../../../core/utils/date_formatters.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../auth/login/screens/login_screen.dart';
@@ -360,11 +361,7 @@ class _ProfileHeader extends StatelessWidget {
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
-  String? _shortDate(String? iso) {
-    if (iso == null || iso.isEmpty) return null;
-    final i = iso.indexOf('T');
-    return i > 0 ? iso.substring(0, i) : iso;
-  }
+  String? _shortDate(String? iso) => isoDateOnlyOrNull(iso);
 
   @override
   Widget build(BuildContext context) {

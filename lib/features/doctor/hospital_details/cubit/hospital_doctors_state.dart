@@ -61,4 +61,3 @@ class HospitalDoctorsFailure extends HospitalDoctorsState {
   @override
   List<Object?> get props => [message];
 }
-

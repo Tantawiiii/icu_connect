@@ -9,9 +9,7 @@ import '../widgets/admission_details_formatters.dart';
 class AdmissionPdfBuilder {
   AdmissionPdfBuilder._();
 
-  static Future<Uint8List> build({
-    required PatientAdmissionModel admission,
-  }) {
+  static Future<Uint8List> build({required PatientAdmissionModel admission}) {
     return _AdmissionPdfRenderer(admission: admission).render();
   }
 }
@@ -64,11 +62,8 @@ class _PdfFonts {
     );
   }
 
-  pw.ThemeData get theme => pw.ThemeData.withFont(
-        base: base,
-        bold: bold,
-        fontFallback: [arabic],
-      );
+  pw.ThemeData get theme =>
+      pw.ThemeData.withFont(base: base, bold: bold, fontFallback: [arabic]);
 }
 
 final _arabicScript = RegExp(
@@ -78,9 +73,7 @@ final _arabicScript = RegExp(
 bool _containsArabic(String text) => _arabicScript.hasMatch(text);
 
 class _AdmissionPdfRenderer {
-  _AdmissionPdfRenderer({
-    required this.admission,
-  });
+  _AdmissionPdfRenderer({required this.admission});
 
   final PatientAdmissionModel admission;
 
@@ -185,11 +178,7 @@ class _AdmissionPdfRenderer {
     );
   }
 
-  pw.Widget _txt(
-    String text, {
-    pw.TextStyle? style,
-    pw.TextAlign? textAlign,
-  }) {
+  pw.Widget _txt(String text, {pw.TextStyle? style, pw.TextAlign? textAlign}) {
     final rtl = _containsArabic(text);
     // Arabic only joins/shapes correctly when the Arabic font is the PRIMARY
     // font. Via fontFallback each glyph is drawn in isolation (disconnected,
@@ -230,9 +219,7 @@ class _AdmissionPdfRenderer {
       margin: const pw.EdgeInsets.only(bottom: 16),
       padding: const pw.EdgeInsets.only(bottom: 12),
       decoration: pw.BoxDecoration(
-        border: pw.Border(
-          bottom: pw.BorderSide(color: _border, width: 1),
-        ),
+        border: pw.Border(bottom: pw.BorderSide(color: _border, width: 1)),
       ),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -281,9 +268,7 @@ class _AdmissionPdfRenderer {
       margin: const pw.EdgeInsets.only(top: 10),
       padding: const pw.EdgeInsets.only(top: 8),
       decoration: pw.BoxDecoration(
-        border: pw.Border(
-          top: pw.BorderSide(color: _border, width: 0.5),
-        ),
+        border: pw.Border(top: pw.BorderSide(color: _border, width: 0.5)),
       ),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -334,8 +319,10 @@ class _AdmissionPdfRenderer {
                 ),
               ),
               pw.Container(
-                padding:
-                    const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: pw.BoxDecoration(
                   color: _accent,
                   borderRadius: pw.BorderRadius.circular(999),
@@ -361,7 +348,8 @@ class _AdmissionPdfRenderer {
               ),
               if (admission.hospitalGroup != null)
                 _heroChip(admission.hospitalGroup!.name),
-              if (admission.hospital != null) _heroChip(admission.hospital!.name),
+              if (admission.hospital != null)
+                _heroChip(admission.hospital!.name),
             ],
           ),
           pw.SizedBox(height: 12),
@@ -381,10 +369,7 @@ class _AdmissionPdfRenderer {
         color: PdfColor.fromHex('#2A3150'),
         borderRadius: pw.BorderRadius.circular(999),
       ),
-      child: _txt(
-        label,
-        style: _style(fontSize: 9, color: PdfColors.white),
-      ),
+      child: _txt(label, style: _style(fontSize: 9, color: PdfColors.white)),
     );
   }
 
@@ -400,10 +385,7 @@ class _AdmissionPdfRenderer {
           ),
         ),
         pw.SizedBox(width: 10),
-        _txt(
-          title,
-          style: _style(fontSize: 14, bold: true, color: _primary),
-        ),
+        _txt(title, style: _style(fontSize: 14, bold: true, color: _primary)),
       ],
     );
   }
@@ -443,10 +425,7 @@ class _AdmissionPdfRenderer {
             ),
           ),
           pw.Expanded(
-            child: _txt(
-              display,
-              style: _style(fontSize: 10, color: _primary),
-            ),
+            child: _txt(display, style: _style(fontSize: 10, color: _primary)),
           ),
         ],
       ),
@@ -715,11 +694,7 @@ class _AdmissionPdfRenderer {
     );
   }
 
-  pw.Widget _readingCell(
-    String text, {
-    bool bold = false,
-    PdfColor? color,
-  }) {
+  pw.Widget _readingCell(String text, {bool bold = false, PdfColor? color}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: _txt(
@@ -738,12 +713,13 @@ class _AdmissionPdfRenderer {
         headers: const ['Medication', 'Details', 'Recorded'],
         rows: admission.medications.map((m) {
           final details = [
+            if (m.isDiscontinued) 'DC',
             if (m.type.isNotEmpty) m.type,
             if (m.value.isNotEmpty) m.value,
             if (m.duration.isNotEmpty) m.duration,
           ].join(' · ');
           return [
-            m.title,
+            m.isDiscontinued ? '${m.title} (DC)' : m.title,
             details.isEmpty ? AppTexts.notAvailable : details,
             admissionDetailsFormatDateTime(m.createdAt),
           ];
@@ -848,14 +824,15 @@ class _AdmissionPdfRenderer {
                     pw.Expanded(
                       child: _txt(
                         title,
-                        style: _style(fontSize: 10, bold: true, color: _primary),
+                        style: _style(
+                          fontSize: 10,
+                          bold: true,
+                          color: _primary,
+                        ),
                       ),
                     ),
                     pw.SizedBox(width: 8),
-                    _txt(
-                      subtitle,
-                      style: _style(fontSize: 8, color: _muted),
-                    ),
+                    _txt(subtitle, style: _style(fontSize: 8, color: _muted)),
                   ],
                 ),
                 pw.SizedBox(height: 6),
@@ -919,30 +896,28 @@ class _AdmissionPdfRenderer {
                   )
                   .toList(),
             ),
-            ...rows.asMap().entries.map(
-              (entry) {
-                final isEven = entry.key.isEven;
-                return pw.TableRow(
-                  decoration: pw.BoxDecoration(
-                    color: isEven ? PdfColors.white : _surface,
-                  ),
-                  children: entry.value
-                      .map(
-                        (cell) => pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 5,
-                          ),
-                          child: _txt(
-                            cell.isEmpty ? AppTexts.notAvailable : cell,
-                            style: _style(fontSize: 9, color: _primary),
-                          ),
+            ...rows.asMap().entries.map((entry) {
+              final isEven = entry.key.isEven;
+              return pw.TableRow(
+                decoration: pw.BoxDecoration(
+                  color: isEven ? PdfColors.white : _surface,
+                ),
+                children: entry.value
+                    .map(
+                      (cell) => pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 5,
                         ),
-                      )
-                      .toList(),
-                );
-              },
-            ),
+                        child: _txt(
+                          cell.isEmpty ? AppTexts.notAvailable : cell,
+                          style: _style(fontSize: 9, color: _primary),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            }),
           ],
         ),
       ),

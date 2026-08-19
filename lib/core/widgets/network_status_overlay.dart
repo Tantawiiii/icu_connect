@@ -45,7 +45,11 @@ class _NetworkStatusOverlayState extends State<NetworkStatusOverlay>
     );
 
     _startListening();
-    _checkInitialConnection();
+    // Defer the initial connectivity probe (up to 4 retries, ~3.5s worst
+    // case) until after the first frame so it never delays app startup.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _checkInitialConnection();
+    });
   }
 
   void _startListening() {

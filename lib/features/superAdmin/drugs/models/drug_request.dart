@@ -25,6 +25,32 @@ class DrugRequest {
   final String? notes;
   final bool isActive;
 
+  /// Parses a drug JSON payload (drug record or AI lookup result — same
+  /// shape minus server-only fields) into editable form values.
+  factory DrugRequest.fromJson(Map<String, dynamic> json) {
+    return DrugRequest(
+      genericName: json['generic_name']?.toString() ?? '',
+      tradeNames: _stringList(json['trade_names']),
+      dosingGuidelines: _stringList(json['dosing_guidelines']),
+      indications: _stringList(json['indications']),
+      contraindications: _stringList(json['contraindications']),
+      sideEffects: _stringList(json['side_effects']),
+      pregnancy: _stringList(json['pregnancy']),
+      renalDoseAdjustment: json['renal_dose_adjustment']?.toString(),
+      hepaticDoseAdjustment: json['hepatic_dose_adjustment']?.toString(),
+      notes: json['notes']?.toString(),
+      isActive: json['is_active'] as bool? ?? true,
+    );
+  }
+
+  static List<String> _stringList(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .map((e) => e.toString().trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
   Map<String, dynamic> toJson() {
     final body = <String, dynamic>{
       'generic_name': genericName.trim(),

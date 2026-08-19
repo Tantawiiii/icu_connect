@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -40,6 +41,8 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
   late Future<List<PatientAdmissionModel>> _admissionsFuture;
   late final ScrollController _scrollController;
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  String _searchQuery = '';
   int? _selectedGroupId;
   bool _swapMode = false;
   SwapBedSelection? _firstSwapBed;
@@ -49,7 +52,7 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _searchController.addListener(() => setState(() {}));
+    _searchController.addListener(_onSearchChanged);
     final groups = widget.hospital.groups;
     if (groups.isNotEmpty) {
       _selectedGroupId = groups.first.id;
@@ -57,8 +60,17 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
     _admissionsFuture = _fetchAdmissions();
   }
 
+  void _onSearchChanged() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _searchQuery = _searchController.text);
+    });
+  }
+
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -82,7 +94,9 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
     });
   }
 
-  List<HospitalGroup> _effectiveGroups(List<PatientAdmissionModel>? admissions) {
+  List<HospitalGroup> _effectiveGroups(
+    List<PatientAdmissionModel>? admissions,
+  ) {
     if (widget.hospital.groups.isNotEmpty) return widget.hospital.groups;
     if (admissions == null) return const [];
 
@@ -143,8 +157,7 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
     List<HospitalGroup> groups,
   ) {
     final bedKey = bedOccupancyLookupKey(groupId, bedNumber);
-    final patientName =
-        occupancy.patientNameByBedKey[bedKey]?.trim() ?? '';
+    final patientName = occupancy.patientNameByBedKey[bedKey]?.trim() ?? '';
     return SwapBedSelection(
       bedLabel: bedNumber,
       admissionId: admissionId,
@@ -178,9 +191,9 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
     if (swapped) {
       _exitSwapMode();
       _refreshAdmissionsAndBeds();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppTexts.swapBedsSuccess)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(AppTexts.swapBedsSuccess)));
     }
   }
 
@@ -247,12 +260,9 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
     } catch (_) {}
   }
 
-  Future<void> _openEmptyBedFlow(
-    String bedNumber,
-    int? hospitalGroupId,
-  ) async {
+  Future<void> _openEmptyBedFlow(String bedNumber, int? hospitalGroupId) async {
     final patientId = await Navigator.of(context).push<int?>(
-      MaterialPageRoute(builder: (_) => const PatientFormScreen()),
+      MaterialPageRoute(builder: (_) => const DoctorPatientFormScreen()),
     );
     if (patientId == null || !mounted) return;
 
@@ -369,7 +379,10 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                   final selectedGroup = _resolveSelectedGroup(groups);
                   final groupId = selectedGroup?.id;
 
-                  final occupancy = buildBedOccupancyForGroup(admissions, groupId);
+                  final occupancy = buildBedOccupancyForGroup(
+                    admissions,
+                    groupId,
+                  );
                   final hospitalOccupiedCount = countOccupiedBeds(admissions);
                   final occupiedByGroup = occupiedCountByGroupId(admissions);
                   final baseTotalBeds =
@@ -379,8 +392,12 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                       .whereType<int>()
                       .fold(0, (max, bed) => bed > max ? bed : max);
                   final totalBeds = math.max(baseTotalBeds, maxOccupiedBed);
-                  final availableBeds = selectedGroup?.availableBeds ??
-                      math.max(0, totalBeds - occupancy.occupiedBedLabels.length);
+                  final availableBeds =
+                      selectedGroup?.availableBeds ??
+                      math.max(
+                        0,
+                        totalBeds - occupancy.occupiedBedLabels.length,
+                      );
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -388,7 +405,8 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                       if (groups.isNotEmpty) ...[
                         HospitalGroupDropdown(
                           groups: groups,
-                          selectedGroupId: _selectedGroupId ?? selectedGroup?.id,
+                          selectedGroupId:
+                              _selectedGroupId ?? selectedGroup?.id,
                           onChanged: (nextGroupId) {
                             setState(() => _selectedGroupId = nextGroupId);
                           },
@@ -400,7 +418,8 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                           const SizedBox(height: 10),
                           HospitalSwapGroupQuickPicker(
                             groups: groups,
-                            selectedGroupId: _selectedGroupId ?? selectedGroup?.id,
+                            selectedGroupId:
+                                _selectedGroupId ?? selectedGroup?.id,
                             firstGroupId: _firstSwapBed!.groupId,
                             occupiedByGroupId: occupiedByGroup,
                             onGroupSelected: (nextGroupId) {
@@ -452,7 +471,8 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                               _firstSwapBed != null &&
                               _secondSwapBed == null,
                           onCancel: _exitSwapMode,
-                          onReview: _firstSwapBed != null && _secondSwapBed != null
+                          onReview:
+                              _firstSwapBed != null && _secondSwapBed != null
                               ? _maybeConfirmSwap
                               : null,
                         ),
@@ -467,20 +487,15 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                       HospitalGroupBedCard(
                         totalBeds: totalBeds,
                         groupId: groupId,
-                        searchQuery: _searchController.text,
+                        searchQuery: _searchQuery,
                         occupiedBedLabels: occupancy.occupiedBedLabels,
                         admissionIdByBedKey: occupancy.admissionIdByBedKey,
                         patientNameByBedKey: occupancy.patientNameByBedKey,
                         swapMode: _swapMode,
                         firstSwapBedKey: _firstSwapBed?.bedKey,
                         secondSwapBedKey: _secondSwapBed?.bedKey,
-                        onBedTap: (bed, gid, admissionId) => _onBedTap(
-                          bed,
-                          gid,
-                          admissionId,
-                          occupancy,
-                          groups,
-                        ),
+                        onBedTap: (bed, gid, admissionId) =>
+                            _onBedTap(bed, gid, admissionId, occupancy, groups),
                         onOccupiedBedLongPress: (bed, gid, admissionId, name) {
                           _onOccupiedBedLongPress(
                             bed,

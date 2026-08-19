@@ -32,7 +32,6 @@ Future<void> showAdmissionAiRecommendationsSheet({
   );
 }
 
-
 typedef AdmissionAiRecommendationsSheet = AiRecommendationsSheet;
 
 class AiRecommendationsSheet extends StatefulWidget {
@@ -61,7 +60,7 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
   final _selected = <String>{};
 
   late AiRecommendFeature _feature;
-  String _language = 'en';
+  final String _language = 'en';
   bool _loading = false;
   bool _refreshing = false;
   bool _applying = false;
@@ -158,13 +157,6 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
     _load();
   }
 
-  void _setLanguage(String language) {
-    if (language == _language) return;
-    HapticFeedback.selectionClick();
-    setState(() => _language = language);
-    _load();
-  }
-
   void _toggleItem(String item) {
     setState(() {
       if (_selected.contains(item)) {
@@ -217,8 +209,8 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
                       t == AiApplyTarget.timelineNote
                           ? Icons.forum_outlined
                           : t == AiApplyTarget.progressNote
-                              ? Icons.notes_outlined
-                              : Icons.checklist_rtl_outlined,
+                          ? Icons.notes_outlined
+                          : Icons.checklist_rtl_outlined,
                       color: AppColors.primary,
                     ),
                     title: Text(
@@ -400,14 +392,6 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: Row(
               children: [
-                // Expanded(
-                //   child: _LanguageToggle(
-                //     language: _language,
-                //     enabled: !_loading,
-                //     onChanged: _setLanguage,
-                //   ),
-                // ),
-                // const SizedBox(width: 10),
                 _ConfidencePill(confidence: _result?.recommendation.confidence),
               ],
             ),
@@ -565,10 +549,7 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
       key: ValueKey('result_${_feature.name}_$_language'),
       children: [
         FadeTransition(
-          opacity: CurvedAnimation(
-            parent: _revealCtrl,
-            curve: Curves.easeOut,
-          ),
+          opacity: CurvedAnimation(parent: _revealCtrl, curve: Curves.easeOut),
           child: _AiResultView(
             result: result,
             language: _language,
@@ -595,62 +576,6 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
   }
 }
 
-class _LanguageToggle extends StatelessWidget {
-  const _LanguageToggle({
-    required this.language,
-    required this.enabled,
-    required this.onChanged,
-  });
-
-  final String language;
-  final bool enabled;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          _langBtn('EN', 'en'),
-          _langBtn('AR', 'ar'),
-        ],
-      ),
-    );
-  }
-
-  Widget _langBtn(String label, String code) {
-    final selected = language == code;
-    return Expanded(
-      child: Material(
-        color: selected ? AppColors.primary : Colors.transparent,
-        borderRadius: BorderRadius.circular(9),
-        child: InkWell(
-          onTap: enabled ? () => onChanged(code) : null,
-          borderRadius: BorderRadius.circular(9),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: selected ? Colors.white : AppColors.textSecondary,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ConfidencePill extends StatelessWidget {
   const _ConfidencePill({required this.confidence});
 
@@ -664,9 +589,9 @@ class _ConfidencePill extends StatelessWidget {
       AiConfidence.medium => (const Color(0xFFFFF8E1), const Color(0xFFF57F17)),
       AiConfidence.low => (const Color(0xFFFFEBEE), const Color(0xFFC62828)),
       AiConfidence.unknown => (
-          const Color(0xFFF2F3F5),
-          AppColors.textSecondary,
-        ),
+        const Color(0xFFF2F3F5),
+        AppColors.textSecondary,
+      ),
     };
 
     return Container(
@@ -844,7 +769,8 @@ class _AiErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final notConfigured = message.toLowerCase().contains('not_configured') ||
+    final notConfigured =
+        message.toLowerCase().contains('not_configured') ||
         message.toLowerCase().contains('not configured') ||
         message.toLowerCase().contains('ai_api_key');
 
@@ -902,6 +828,10 @@ class _AiResultView extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
         children: [
+          if (rec.criticalAlert.isNotEmpty) ...[
+            _CriticalAlertBanner(message: rec.criticalAlert),
+            const SizedBox(height: 12),
+          ],
           _SummaryCard(summary: rec.summary),
           const SizedBox(height: 10),
           Text(
@@ -963,6 +893,10 @@ class _AiResultView extends StatelessWidget {
               onToggle: onToggle,
             ),
           ],
+          if (rec.report.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _ReportSection(report: rec.report),
+          ],
           const SizedBox(height: 14),
           Text(
             AppTexts.aiCachedHint,
@@ -971,6 +905,157 @@ class _AiResultView extends StatelessWidget {
               color: AppColors.textSecondary.withValues(alpha: 0.9),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CriticalAlertBanner extends StatelessWidget {
+  const _CriticalAlertBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFFC62828);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEBEE),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: const BoxDecoration(
+              color: accent,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.bolt_rounded,
+              size: 18,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  AppTexts.aiCriticalAlert,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: accent,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReportSection extends StatefulWidget {
+  const _ReportSection({required this.report});
+
+  final String report;
+
+  @override
+  State<_ReportSection> createState() => _ReportSectionState();
+}
+
+class _ReportSectionState extends State<_ReportSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.description_outlined,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        AppTexts.aiFullReport,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      _expanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: SelectableText(
+                widget.report,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.55,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/list_error_view.dart';
+import '../../../../core/widgets/list_search_field.dart';
+import '../../../../core/widgets/paginated_list_footer.dart';
 import '../../admins/models/pagination_model.dart';
 import '../cubit/vitals_titles_cubit.dart';
 import '../cubit/vitals_titles_state.dart';
@@ -44,8 +49,15 @@ class _VitalsTitlesListView extends StatefulWidget {
 
 class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
   final _searchController = TextEditingController();
+  Timer? _debounce;
+  String _query = '';
 
-  void _onSearchChanged() => setState(() {});
+  void _onSearchChanged() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _query = _searchController.text);
+    });
+  }
 
   @override
   void initState() {
@@ -55,6 +67,7 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController
       ..removeListener(_onSearchChanged)
       ..dispose();
@@ -65,19 +78,21 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
     final cubit = context.read<VitalsTitlesCubit>();
     Navigator.of(context)
         .push(
-      MaterialPageRoute<void>(
-        builder: (_) => BlocProvider.value(
-          value: cubit,
-          child: VitalTitleFormScreen(vital: vital),
-        ),
-      ),
-    )
+          MaterialPageRoute<void>(
+            builder: (_) => BlocProvider.value(
+              value: cubit,
+              child: VitalTitleFormScreen(vital: vital),
+            ),
+          ),
+        )
         .then((_) {
-      if (!context.mounted) return;
-      final state = cubit.state;
-      final page = state is VitalsTitlesLoaded ? state.pagination.currentPage : 1;
-      cubit.fetchVitalsTitles(page: page);
-    });
+          if (!context.mounted) return;
+          final state = cubit.state;
+          final page = state is VitalsTitlesLoaded
+              ? state.pagination.currentPage
+              : 1;
+          cubit.fetchVitalsTitles(page: page);
+        });
   }
 
   @override
@@ -98,8 +113,9 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
             onPressed: () {
               final cubit = context.read<VitalsTitlesCubit>();
               final state = cubit.state;
-              final page =
-                  state is VitalsTitlesLoaded ? state.pagination.currentPage : 1;
+              final page = state is VitalsTitlesLoaded
+                  ? state.pagination.currentPage
+                  : 1;
               cubit.fetchVitalsTitles(page: page);
             },
           ),
@@ -117,43 +133,13 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
+            child: ListSearchField(
               controller: _searchController,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: AppTexts.searchVitalsTitlesHint,
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: AppColors.textSecondary,
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => _searchController.clear(),
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: AppColors.primary,
-                    width: 1.5,
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-              ),
+              hintText: AppTexts.searchVitalsTitlesHint,
+              onClear: () {
+                _debounce?.cancel();
+                setState(() => _query = '');
+              },
             ),
           ),
           Expanded(
@@ -179,24 +165,23 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
                 }
               },
               builder: (context, state) {
-                if (state is VitalsTitlesLoading || state is VitalsTitlesInitial) {
+                if (state is VitalsTitlesLoading ||
+                    state is VitalsTitlesInitial) {
                   return const Center(
                     child: CircularProgressIndicator(color: AppColors.primary),
                   );
                 }
                 if (state is VitalsTitlesFailure) {
-                  return _ErrorView(
+                  return ListErrorView(
                     message: state.message,
-                    onRetry: () =>
-                        context.read<VitalsTitlesCubit>().fetchVitalsTitles(page: 1),
+                    onRetry: () => context
+                        .read<VitalsTitlesCubit>()
+                        .fetchVitalsTitles(page: 1),
                   );
                 }
                 if (state is VitalsTitlesLoaded) {
-                  final filtered = _filterVitalsTitles(
-                    state.items,
-                    _searchController.text,
-                  );
-                  final searchActive = _searchController.text.trim().isNotEmpty;
+                  final filtered = _filterVitalsTitles(state.items, _query);
+                  final searchActive = _query.trim().isNotEmpty;
                   final list = _VitalsList(
                     items: filtered,
                     allItemsCount: state.items.length,
@@ -270,89 +255,53 @@ class _VitalsList extends StatelessWidget {
       );
     }
 
+    final showFooter = !emptyFromSearch || allItemsCount == 0;
+    final itemCount = items.length + 1 + (showFooter ? 1 : 0);
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: () => context
-          .read<VitalsTitlesCubit>()
-          .fetchVitalsTitles(page: pagination.currentPage),
-      child: ListView(
+      onRefresh: () => context.read<VitalsTitlesCubit>().fetchVitalsTitles(
+        page: pagination.currentPage,
+      ),
+      child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Showing ${pagination.from}-${pagination.to} '
-              'of ${pagination.total} vitals titles',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
+        itemCount: itemCount,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Showing ${pagination.from}-${pagination.to} '
+                'of ${pagination.total} vitals titles',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
               ),
-            ),
-          ),
-          ...items.map((e) => _VitalCard(vital: e)),
-          if (!emptyFromSearch || allItemsCount == 0) ...[
-            const SizedBox(height: 6),
-            _PaginationControls(pagination: pagination),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _PaginationControls extends StatelessWidget {
-  const _PaginationControls({required this.pagination});
-
-  final PaginationModel pagination;
-
-  @override
-  Widget build(BuildContext context) {
-    final isFirst = pagination.currentPage <= 1;
-    final isLast = pagination.currentPage >= pagination.lastPage;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE9E9E9)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: isFirst
-                  ? null
-                  : () => context
-                      .read<VitalsTitlesCubit>()
-                      .fetchVitalsTitles(page: pagination.currentPage - 1),
-              icon: const Icon(Icons.chevron_left),
-              label: const Text('Previous'),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              '${pagination.currentPage}/${pagination.lastPage}',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
+            );
+          }
+          if (showFooter && index == itemCount - 1) {
+            final isFirst = pagination.currentPage <= 1;
+            final isLast = pagination.currentPage >= pagination.lastPage;
+            return Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: PaginatedListFooter(
+                currentPage: pagination.currentPage,
+                lastPage: pagination.lastPage,
+                onPrevious: isFirst
+                    ? null
+                    : () => context.read<VitalsTitlesCubit>().fetchVitalsTitles(
+                        page: pagination.currentPage - 1,
+                      ),
+                onNext: isLast
+                    ? null
+                    : () => context.read<VitalsTitlesCubit>().fetchVitalsTitles(
+                        page: pagination.currentPage + 1,
+                      ),
               ),
-            ),
-          ),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: isLast
-                  ? null
-                  : () => context
-                      .read<VitalsTitlesCubit>()
-                      .fetchVitalsTitles(page: pagination.currentPage + 1),
-              iconAlignment: IconAlignment.end,
-              icon: const Icon(Icons.chevron_right),
-              label: const Text('Next'),
-            ),
-          ),
-        ],
+            );
+          }
+          return _VitalCard(vital: items[index - 1]);
+        },
       ),
     );
   }
@@ -379,8 +328,11 @@ class _VitalCard extends StatelessWidget {
                 color: Colors.redAccent.withAlpha(20),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.monitor_heart_outlined,
-                  color: Colors.redAccent, size: 22),
+              child: const Icon(
+                Icons.monitor_heart_outlined,
+                color: Colors.redAccent,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -424,14 +376,20 @@ class _VitalCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined,
-                      color: AppColors.accent, size: 20),
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.accent,
+                    size: 20,
+                  ),
                   tooltip: AppTexts.editVitalTitle,
                   onPressed: () => _openEdit(context),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline,
-                      color: AppColors.error, size: 20),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: AppColors.error,
+                    size: 20,
+                  ),
                   tooltip: AppTexts.deleteVitalTitle,
                   onPressed: () => _confirmDelete(context),
                 ),
@@ -447,19 +405,21 @@ class _VitalCard extends StatelessWidget {
     final cubit = context.read<VitalsTitlesCubit>();
     Navigator.of(context)
         .push(
-      MaterialPageRoute<void>(
-        builder: (_) => BlocProvider.value(
-          value: cubit,
-          child: VitalTitleFormScreen(vital: vital),
-        ),
-      ),
-    )
+          MaterialPageRoute<void>(
+            builder: (_) => BlocProvider.value(
+              value: cubit,
+              child: VitalTitleFormScreen(vital: vital),
+            ),
+          ),
+        )
         .then((_) {
-      if (!context.mounted) return;
-      final state = cubit.state;
-      final page = state is VitalsTitlesLoaded ? state.pagination.currentPage : 1;
-      cubit.fetchVitalsTitles(page: page);
-    });
+          if (!context.mounted) return;
+          final state = cubit.state;
+          final page = state is VitalsTitlesLoaded
+              ? state.pagination.currentPage
+              : 1;
+          cubit.fetchVitalsTitles(page: page);
+        });
   }
 
   void _confirmDelete(BuildContext context) {
@@ -485,38 +445,6 @@ class _VitalCard extends StatelessWidget {
             child: const Text(AppTexts.deleteVitalTitle),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
-            const SizedBox(height: 16),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary)),
-            const SizedBox(height: 20),
-            TextButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
-            ),
-          ],
-        ),
       ),
     );
   }

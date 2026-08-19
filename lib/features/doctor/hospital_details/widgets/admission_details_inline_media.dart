@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/network/api_storage_fetch.dart';
 import 'package:icu_connect/core/widgets/storage_network_image.dart';
-import 'package:video_player/video_player.dart';
+import 'package:video_player/video_player.dart' deferred as video_player;
 
 class AdmissionDetailsInlineImage extends StatelessWidget {
   const AdmissionDetailsInlineImage({
@@ -88,7 +88,10 @@ class AdmissionDetailsInlineVideoPlayer extends StatefulWidget {
 
 class _AdmissionDetailsInlineVideoPlayerState
     extends State<AdmissionDetailsInlineVideoPlayer> {
-  VideoPlayerController? _ctrl;
+  // Can't use the deferred `video_player.VideoPlayerController` type directly
+  // in a field declaration, so this is stored dynamically and only ever
+  // accessed after `video_player.loadLibrary()` has resolved.
+  dynamic _ctrl;
   bool _initialized = false;
   bool _error = false;
 
@@ -104,9 +107,12 @@ class _AdmissionDetailsInlineVideoPlayerState
         ? await apiStorageAuthHeaders()
         : const <String, String>{};
 
-    VideoPlayerController? c;
+    dynamic c;
     try {
-      c = VideoPlayerController.networkUrl(
+      // video_player is a heavy, rarely-needed package: only load its code
+      // when a radiology attachment is actually a video.
+      await video_player.loadLibrary();
+      c = video_player.VideoPlayerController.networkUrl(
         Uri.parse(canonical),
         httpHeaders: headers,
       );
@@ -162,27 +168,27 @@ class _AdmissionDetailsInlineVideoPlayerState
               child: SizedBox(
                 width: ctrl.value.size.width,
                 height: ctrl.value.size.height,
-                child: VideoPlayer(ctrl),
+                child: video_player.VideoPlayer(ctrl),
               ),
             ),
           ),
-        GestureDetector(
-          onTap: () => setState(() {
-            ctrl.value.isPlaying ? ctrl.pause() : ctrl.play();
-          }),
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: const BoxDecoration(
-              color: Colors.black54,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              ctrl.value.isPlaying ? Icons.pause : Icons.play_arrow,
-              color: Colors.white,
+          GestureDetector(
+            onTap: () => setState(() {
+              ctrl.value.isPlaying ? ctrl.pause() : ctrl.play();
+            }),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                ctrl.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                color: Colors.white,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }

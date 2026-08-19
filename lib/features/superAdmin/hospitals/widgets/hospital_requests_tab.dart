@@ -3,6 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/list_error_view.dart';
+import '../../../../core/widgets/paginated_list_footer.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../../admins/models/pagination_model.dart';
 import '../cubit/hospital_requests_cubit.dart';
 import '../cubit/hospital_requests_state.dart';
@@ -101,7 +104,7 @@ class _HospitalRequestsTabViewState extends State<_HospitalRequestsTabView> {
                 );
               }
               if (state is HospitalRequestsFailure) {
-                return _ErrorView(
+                return ListErrorView(
                   message: state.message,
                   onRetry: () => context
                       .read<HospitalRequestsCubit>()
@@ -194,30 +197,51 @@ class _RequestsList extends StatelessWidget {
     return RefreshIndicator(
       color: AppColors.primary,
       onRefresh: () => context.read<HospitalRequestsCubit>().fetchRequests(
-            approvalStatus: statusFilter,
-            page: pagination.currentPage,
-          ),
-      child: ListView(
+        approvalStatus: statusFilter,
+        page: pagination.currentPage,
+      ),
+      child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Showing ${pagination.from}-${pagination.to} '
-              'of ${pagination.total} requests',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
+        itemCount: requests.length + 2,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Showing ${pagination.from}-${pagination.to} '
+                'of ${pagination.total} requests',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
               ),
-            ),
-          ),
-          ...requests.map((r) => _RequestCard(request: r)),
-          const SizedBox(height: 6),
-          _PaginationControls(
-            pagination: pagination,
-            statusFilter: statusFilter,
-          ),
-        ],
+            );
+          }
+          if (index == requests.length + 1) {
+            final isFirst = pagination.currentPage <= 1;
+            final isLast = pagination.currentPage >= pagination.lastPage;
+            return Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: PaginatedListFooter(
+                currentPage: pagination.currentPage,
+                lastPage: pagination.lastPage,
+                onPrevious: isFirst
+                    ? null
+                    : () => context.read<HospitalRequestsCubit>().fetchRequests(
+                        approvalStatus: statusFilter,
+                        page: pagination.currentPage - 1,
+                      ),
+                onNext: isLast
+                    ? null
+                    : () => context.read<HospitalRequestsCubit>().fetchRequests(
+                        approvalStatus: statusFilter,
+                        page: pagination.currentPage + 1,
+                      ),
+              ),
+            );
+          }
+          return _RequestCard(request: requests[index - 1]);
+        },
       ),
     );
   }
@@ -298,7 +322,7 @@ class _RequestCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                _Badge(label: _statusLabel, color: _statusColor),
+                StatusBadge(label: _statusLabel, color: _statusColor),
               ],
             ),
             const SizedBox(height: 12),
@@ -416,70 +440,6 @@ class _RequestCard extends StatelessWidget {
   }
 }
 
-class _PaginationControls extends StatelessWidget {
-  const _PaginationControls({
-    required this.pagination,
-    required this.statusFilter,
-  });
-
-  final PaginationModel pagination;
-  final String? statusFilter;
-
-  @override
-  Widget build(BuildContext context) {
-    final isFirst = pagination.currentPage <= 1;
-    final isLast = pagination.currentPage >= pagination.lastPage;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE9E9E9)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: isFirst
-                  ? null
-                  : () => context.read<HospitalRequestsCubit>().fetchRequests(
-                        approvalStatus: statusFilter,
-                        page: pagination.currentPage - 1,
-                      ),
-              icon: const Icon(Icons.chevron_left),
-              label: const Text('Previous'),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              '${pagination.currentPage}/${pagination.lastPage}',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: isLast
-                  ? null
-                  : () => context.read<HospitalRequestsCubit>().fetchRequests(
-                        approvalStatus: statusFilter,
-                        page: pagination.currentPage + 1,
-                      ),
-              iconAlignment: IconAlignment.end,
-              icon: const Icon(Icons.chevron_right),
-              label: const Text('Next'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _BedStat extends StatelessWidget {
   const _BedStat({
     required this.label,
@@ -557,67 +517,6 @@ class _ActionButton extends StatelessWidget {
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withAlpha(77)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 20),
-            TextButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
             ),
           ],
         ),

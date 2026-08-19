@@ -8,18 +8,14 @@ class AdminDashboardRepository extends BaseApiService {
   const AdminDashboardRepository() : super(UserRole.admin);
 
   Future<AdminDashboardData> fetchDashboard() async {
-    try {
-      final body = await get<Map<String, dynamic>>(
-        ApiConstants.dashboard,
-        cancelTag: 'admin_dashboard',
-      );
-      final data = body['data'] as Map<String, dynamic>?;
-      if (data == null) {
-        throw const NetworkException(message: 'Invalid dashboard response.');
-      }
-      return AdminDashboardData.fromJson(data);
-    } on NetworkException {
-      rethrow;
+    final body = await get<Map<String, dynamic>>(
+      ApiConstants.dashboard,
+      cancelTag: 'admin_dashboard',
+    );
+    final data = body['data'] as Map<String, dynamic>?;
+    if (data == null) {
+      throw const NetworkException(message: 'Invalid dashboard response.');
     }
+    return AdminDashboardData.fromJson(data);
   }
 }

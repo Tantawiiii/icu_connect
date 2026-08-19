@@ -133,9 +133,7 @@ class _DrugFormViewState extends State<_DrugFormView> {
                     controller: _genericNameCtrl,
                     labelText: '${AppTexts.genericName} *',
                     enabled: !isLoading,
-                    inputFormatters: [
-                      LengthLimitingTextInputFormatter(255),
-                    ],
+                    inputFormatters: [LengthLimitingTextInputFormatter(255)],
                     validator: (v) {
                       if ((v?.trim() ?? '').isEmpty) {
                         return AppTexts.genericNameRequired;
@@ -202,9 +200,7 @@ class _DrugFormViewState extends State<_DrugFormView> {
                     labelText: AppTexts.renalDoseAdjustment,
                     enabled: !isLoading,
                     maxLines: 3,
-                    inputFormatters: [
-                      LengthLimitingTextInputFormatter(2000),
-                    ],
+                    inputFormatters: [LengthLimitingTextInputFormatter(2000)],
                   ),
                   const SizedBox(height: 12),
                   AppTextField(
@@ -212,9 +208,7 @@ class _DrugFormViewState extends State<_DrugFormView> {
                     labelText: AppTexts.hepaticDoseAdjustment,
                     enabled: !isLoading,
                     maxLines: 3,
-                    inputFormatters: [
-                      LengthLimitingTextInputFormatter(2000),
-                    ],
+                    inputFormatters: [LengthLimitingTextInputFormatter(2000)],
                   ),
                   const SizedBox(height: 12),
                   AppTextField(
@@ -222,9 +216,7 @@ class _DrugFormViewState extends State<_DrugFormView> {
                     labelText: AppTexts.notes,
                     enabled: !isLoading,
                     maxLines: 4,
-                    inputFormatters: [
-                      LengthLimitingTextInputFormatter(5000),
-                    ],
+                    inputFormatters: [LengthLimitingTextInputFormatter(5000)],
                   ),
                   const SizedBox(height: 28),
                   AppButton(
@@ -232,9 +224,7 @@ class _DrugFormViewState extends State<_DrugFormView> {
                     isLoading: isLoading,
                     onPressed: isLoading ? null : _submit,
                     leadingIcon: Icon(
-                      _isEdit
-                          ? Icons.save_outlined
-                          : Icons.medication_outlined,
+                      _isEdit ? Icons.save_outlined : Icons.medication_outlined,
                       color: Colors.white,
                       size: 18,
                     ),

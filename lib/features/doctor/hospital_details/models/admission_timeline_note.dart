@@ -73,6 +73,13 @@ class AdmissionTimelineNote extends Equatable {
       );
 
   @override
-  List<Object?> get props =>
-      [id, admissionId, content, createdAt, updatedAt, deletedAt, author];
+  List<Object?> get props => [
+    id,
+    admissionId,
+    content,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    author,
+  ];
 }

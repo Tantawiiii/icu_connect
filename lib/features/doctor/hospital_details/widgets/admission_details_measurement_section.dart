@@ -163,55 +163,49 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
     return AdmissionDetailsSectionContainer(
       title: title,
       headerAction: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (addingColumn) ...[
-                  if (saving)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 4),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  else ...[
-                    IconButton(
-                      tooltip: 'Save column',
-                      onPressed: onSaveColumn,
-                      icon: const Icon(
-                        Icons.check_circle,
-                        color: AppColors.success,
-                        size: 22,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Cancel',
-                      onPressed: onCancelAddColumn,
-                      icon: const Icon(
-                        Icons.close,
-                        color: AppColors.error,
-                        size: 22,
-                      ),
-                    ),
-                  ],
-                ],
-                if (!saving)
-                  IconButton(
-                    tooltip: addingColumn
-                        ? 'Add new date column'
-                        : 'Add readings column',
-                    onPressed: onStartAddColumn,
-                    icon: Icon(
-                      addingColumn
-                          ? Icons.add_circle_outline
-                          : Icons.edit_outlined,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
-              ],
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (addingColumn) ...[
+            if (saving)
+              const Padding(
+                padding: EdgeInsets.only(right: 4),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else ...[
+              IconButton(
+                tooltip: 'Save column',
+                onPressed: onSaveColumn,
+                icon: const Icon(
+                  Icons.check_circle,
+                  color: AppColors.success,
+                  size: 22,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Cancel',
+                onPressed: onCancelAddColumn,
+                icon: const Icon(Icons.close, color: AppColors.error, size: 22),
+              ),
+            ],
+          ],
+          if (!saving)
+            IconButton(
+              tooltip: addingColumn
+                  ? 'Add new date column'
+                  : 'Add readings column',
+              onPressed: onStartAddColumn,
+              icon: Icon(
+                addingColumn ? Icons.add_circle_outline : Icons.edit_outlined,
+                color: AppColors.primary,
+                size: 20,
+              ),
             ),
+        ],
+      ),
       child: titles.isEmpty && onAddTitle == null
           ? const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
@@ -227,105 +221,108 @@ class AdmissionDetailsMeasurementSection extends StatelessWidget {
                   border: Border.all(color: AppColors.border),
                   borderRadius: BorderRadius.circular(12),
                 ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                    children: [
-                      _TitleCell(
-                        width: _titleWidth,
-                        height: _headerHeight,
-                        isHeader: true,
-                        child: const Text('Title', style: _headerStyle),
-                      ),
-                      _TitleCell(
-                        width: _titleWidth,
-                        height: _dateHeaderHeight,
-                        child: const SizedBox.shrink(),
-                      ),
-                      ..._sortedTitles.map(
-                        (t) => _TitleCell(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
+                      children: [
+                        _TitleCell(
                           width: _titleWidth,
-                          height: _rowHeight,
-                          child: Text(
-                            t.title.toUpperCase(),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
+                          height: _headerHeight,
+                          isHeader: true,
+                          child: const Text('Title', style: _headerStyle),
+                        ),
+                        _TitleCell(
+                          width: _titleWidth,
+                          height: _dateHeaderHeight,
+                          child: const SizedBox.shrink(),
+                        ),
+                        ..._sortedTitles.map(
+                          (t) => _TitleCell(
+                            width: _titleWidth,
+                            height: _rowHeight,
+                            child: Text(
+                              t.title.toUpperCase(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      if (onAddTitle != null) _buildAddTitleRow(),
-                    ],
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              _ScrollCell(
-                                width: _rangeWidth,
-                                height: _headerHeight,
-                                isHeader: true,
-                                child: const Text('Range', style: _headerStyle),
-                              ),
-                              SizedBox(
-                                width: _readingAreaWidth(columnKeys),
-                                height: _headerHeight,
-                                child: const Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Padding(
-                                    padding: EdgeInsets.only(left: 8),
-                                    child: Text(
-                                      'Reading',
-                                      style: _headerStyle,
+                        if (onAddTitle != null) _buildAddTitleRow(),
+                      ],
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                _ScrollCell(
+                                  width: _rangeWidth,
+                                  height: _headerHeight,
+                                  isHeader: true,
+                                  child: const Text(
+                                    'Range',
+                                    style: _headerStyle,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: _readingAreaWidth(columnKeys),
+                                  height: _headerHeight,
+                                  child: const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Padding(
+                                      padding: EdgeInsets.only(left: 8),
+                                      child: Text(
+                                        'Reading',
+                                        style: _headerStyle,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _RangeColumn(
-                                titles: _sortedTitles,
-                                width: _rangeWidth,
-                                dateHeaderHeight: _dateHeaderHeight,
-                                rowHeight: _rowHeight,
-                                showAddTitleRow: onAddTitle != null,
-                              ),
-                              ...columnKeys.map(_buildReadingColumn),
-                              if (addingColumn &&
-                                  pendingColumn != null &&
-                                  pendingColumn!.isNewColumn)
-                                _EditingReadingColumn(
-                                  pending: pendingColumn!,
+                              ],
+                            ),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _RangeColumn(
                                   titles: _sortedTitles,
-                                  width: _readingWidth,
+                                  width: _rangeWidth,
                                   dateHeaderHeight: _dateHeaderHeight,
                                   rowHeight: _rowHeight,
-                                  saving: saving,
-                                  onPickDate: onPickColumnDate,
                                   showAddTitleRow: onAddTitle != null,
-                                  isLabs: isLabs,
                                 ),
-                            ],
-                          ),
-                        ],
+                                ...columnKeys.map(_buildReadingColumn),
+                                if (addingColumn &&
+                                    pendingColumn != null &&
+                                    pendingColumn!.isNewColumn)
+                                  _EditingReadingColumn(
+                                    pending: pendingColumn!,
+                                    titles: _sortedTitles,
+                                    width: _readingWidth,
+                                    dateHeaderHeight: _dateHeaderHeight,
+                                    rowHeight: _rowHeight,
+                                    saving: saving,
+                                    onPickDate: onPickColumnDate,
+                                    showAddTitleRow: onAddTitle != null,
+                                    isLabs: isLabs,
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
             ),
     );
   }
@@ -400,10 +397,7 @@ class _TitleCell extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: child,
-          ),
+          child: Align(alignment: Alignment.centerLeft, child: child),
         ),
       ),
     );
@@ -568,11 +562,12 @@ class _ReadingColumn extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
                 child: Container(
                   alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: hasValue
-                        ? AppColors.background
-                        : Colors.transparent,
+                    color: hasValue ? AppColors.background : Colors.transparent,
                     borderRadius: BorderRadius.circular(6),
                     border: hasValue
                         ? Border.all(color: AppColors.border)

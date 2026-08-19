@@ -6,7 +6,7 @@ import 'doctor_hospital_requests_state.dart';
 
 class DoctorHospitalRequestsCubit extends Cubit<DoctorHospitalRequestsState> {
   DoctorHospitalRequestsCubit(this._repository)
-      : super(const DoctorHospitalRequestsInitial());
+    : super(const DoctorHospitalRequestsInitial());
 
   final DoctorHospitalsRepository _repository;
 

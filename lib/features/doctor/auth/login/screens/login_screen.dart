@@ -84,9 +84,9 @@ class _LoginViewState extends State<_LoginView> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     context.read<DoctorLoginCubit>().login(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
   }
 
   @override
@@ -137,13 +137,17 @@ class _LoginViewState extends State<_LoginView> {
                   return SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                     child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight - 40),
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight - 40,
+                      ),
                       child: Column(
                         children: [
                           const SizedBox(height: 12),
-                          _LoginHeader(onLongPressLogo: () {
-                            showAdminLoginDialog(context);
-                          }),
+                          _LoginHeader(
+                            onLongPressLogo: () {
+                              showAdminLoginDialog(context);
+                            },
+                          ),
                           const SizedBox(height: 28),
                           _LoginFormCard(
                             formKey: _formKey,
@@ -299,10 +303,7 @@ class _LoginFormCard extends StatelessWidget {
             const SizedBox(height: 6),
             const Text(
               'Enter your credentials to continue.',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 22),
             AppTextField(
@@ -369,11 +370,7 @@ class _LoginFormCard extends StatelessWidget {
                 child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 18,
-                      color: AppColors.error,
-                    ),
+                    Icon(Icons.info_outline, size: 18, color: AppColors.error),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(

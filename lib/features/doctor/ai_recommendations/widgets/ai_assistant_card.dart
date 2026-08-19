@@ -5,10 +5,7 @@ import 'package:icu_connect/core/constants/app_texts.dart';
 
 /// Compact teaser card shown on admission details.
 class AiAssistantCard extends StatelessWidget {
-  const AiAssistantCard({
-    super.key,
-    required this.onOpen,
-  });
+  const AiAssistantCard({super.key, required this.onOpen});
 
   final VoidCallback onOpen;
 
@@ -48,10 +45,7 @@ class AiAssistantCard extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(
-                      Icons.auto_awesome,
-                      color: Colors.white,
-                    ),
+                    child: const Icon(Icons.auto_awesome, color: Colors.white),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(

@@ -127,7 +127,8 @@ class AdmissionDetailsPatientHeaderSection extends StatelessWidget {
       );
     }
 
-    if (admission.dateOfDeath != null && admission.dateOfDeath!.trim().isNotEmpty) {
+    if (admission.dateOfDeath != null &&
+        admission.dateOfDeath!.trim().isNotEmpty) {
       chips.add(
         AdmissionDetailsMetaChip(
           label: AppTexts.dateOfDeathLabel,
@@ -158,7 +159,9 @@ class AdmissionDetailsPatientHeaderSection extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                admission.bedNumber.isEmpty ? AppTexts.notAvailable : admission.bedNumber,
+                admission.bedNumber.isEmpty
+                    ? AppTexts.notAvailable
+                    : admission.bedNumber,
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -206,8 +209,9 @@ class AdmissionDetailsPatientHeaderSection extends StatelessWidget {
                 AppTextField(
                   controller: nationalIdCtrl!,
                   hintText: AppTexts.nationalId,
-                  validator: (v) =>
-                      (v?.trim() ?? '').isEmpty ? 'National ID is required' : null,
+                  validator: (v) => (v?.trim() ?? '').isEmpty
+                      ? 'National ID is required'
+                      : null,
                   inputFormatters: [LengthLimitingTextInputFormatter(50)],
                 ),
                 const SizedBox(height: 10),
@@ -220,7 +224,9 @@ class AdmissionDetailsPatientHeaderSection extends StatelessWidget {
                     final t = v?.trim() ?? '';
                     if (t.isEmpty) return 'Age is required';
                     final n = int.tryParse(t);
-                    if (n == null || n < 0 || n > 150) return 'Enter a valid age';
+                    if (n == null || n < 0 || n > 150) {
+                      return 'Enter a valid age';
+                    }
                     return null;
                   },
                 ),
@@ -262,9 +268,13 @@ class AdmissionDetailsPatientHeaderSection extends StatelessWidget {
                   hint: const Text('Select blood group'),
                   isExpanded: true,
                   items: [
-                    const DropdownMenuItem<String?>(value: null, child: Text('—')),
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('—'),
+                    ),
                     ...bloodGroups.map(
-                      (b) => DropdownMenuItem<String?>(value: b, child: Text(b)),
+                      (b) =>
+                          DropdownMenuItem<String?>(value: b, child: Text(b)),
                     ),
                   ],
                   onChanged: saving ? null : onBloodGroupChanged,
@@ -298,11 +308,7 @@ class AdmissionDetailsPatientHeaderSection extends StatelessWidget {
             ),
           )
         else if (metaChips.isNotEmpty)
-          Wrap(
-            spacing: 16,
-            runSpacing: 4,
-            children: metaChips,
-          ),
+          Wrap(spacing: 16, runSpacing: 4, children: metaChips),
       ],
     );
   }

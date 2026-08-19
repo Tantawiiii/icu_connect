@@ -10,11 +10,7 @@ import '../repository/drugs_repository.dart';
 import 'drug_form_screen.dart';
 
 class DrugDetailsScreen extends StatefulWidget {
-  const DrugDetailsScreen({
-    super.key,
-    required this.drugId,
-    this.initialDrug,
-  });
+  const DrugDetailsScreen({super.key, required this.drugId, this.initialDrug});
 
   final int drugId;
   final DrugModel? initialDrug;
@@ -158,113 +154,110 @@ class _DrugDetailsScreenState extends State<DrugDetailsScreen> {
               child: CircularProgressIndicator(color: AppColors.primary),
             )
           : _error != null && drug == null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: AppColors.error),
-                        ),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                          onPressed: _load,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                          ),
-                          child: const Text('Retry'),
-                        ),
-                      ],
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.error),
                     ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: _load,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                      ),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : drug == null
+          ? const SizedBox.shrink()
+          : RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                children: [
+                  _HeaderCard(drug: drug),
+                  const SizedBox(height: 12),
+                  _StringListCard(
+                    title: AppTexts.tradeNames,
+                    items: drug.tradeNames,
                   ),
-                )
-              : drug == null
-                  ? const SizedBox.shrink()
-                  : RefreshIndicator(
-                      color: AppColors.primary,
-                      onRefresh: _load,
-                      child: ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                        children: [
-                          _HeaderCard(drug: drug),
-                          const SizedBox(height: 12),
-                          _StringListCard(
-                            title: AppTexts.tradeNames,
-                            items: drug.tradeNames,
-                          ),
-                          _StringListCard(
-                            title: AppTexts.dosingGuidelines,
-                            items: drug.dosingGuidelines,
-                          ),
-                          _StringListCard(
-                            title: AppTexts.indications,
-                            items: drug.indications,
-                          ),
-                          _StringListCard(
-                            title: AppTexts.contraindications,
-                            items: drug.contraindications,
-                          ),
-                          _StringListCard(
-                            title: AppTexts.sideEffects,
-                            items: drug.sideEffects,
-                          ),
-                          _StringListCard(
-                            title: AppTexts.pregnancy,
-                            items: drug.pregnancy,
-                          ),
-                          _TextCard(
-                            title: AppTexts.renalDoseAdjustment,
-                            value: drug.renalDoseAdjustment,
-                          ),
-                          _TextCard(
-                            title: AppTexts.hepaticDoseAdjustment,
-                            value: drug.hepaticDoseAdjustment,
-                          ),
-                          _TextCard(
-                            title: AppTexts.notes,
-                            value: drug.notes,
-                          ),
-                          const SizedBox(height: 8),
-                          if (drug.isArchived)
-                            FilledButton.icon(
-                              onPressed: _restore,
-                              icon: const Icon(Icons.restore_outlined),
-                              label: const Text(AppTexts.restoreDrug),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.success,
-                                foregroundColor: Colors.white,
-                                minimumSize: const Size.fromHeight(48),
-                              ),
-                            )
-                          else ...[
-                            FilledButton.icon(
-                              onPressed: _openEdit,
-                              icon: const Icon(Icons.edit_outlined),
-                              label: const Text(AppTexts.editDrug),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                minimumSize: const Size.fromHeight(48),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              onPressed: _archive,
-                              icon: const Icon(Icons.archive_outlined),
-                              label: const Text(AppTexts.archiveDrug),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.error,
-                                side: const BorderSide(color: AppColors.error),
-                                minimumSize: const Size.fromHeight(48),
-                              ),
-                            ),
-                          ],
-                        ],
+                  _StringListCard(
+                    title: AppTexts.dosingGuidelines,
+                    items: drug.dosingGuidelines,
+                  ),
+                  _StringListCard(
+                    title: AppTexts.indications,
+                    items: drug.indications,
+                  ),
+                  _StringListCard(
+                    title: AppTexts.contraindications,
+                    items: drug.contraindications,
+                  ),
+                  _StringListCard(
+                    title: AppTexts.sideEffects,
+                    items: drug.sideEffects,
+                  ),
+                  _StringListCard(
+                    title: AppTexts.pregnancy,
+                    items: drug.pregnancy,
+                  ),
+                  _TextCard(
+                    title: AppTexts.renalDoseAdjustment,
+                    value: drug.renalDoseAdjustment,
+                  ),
+                  _TextCard(
+                    title: AppTexts.hepaticDoseAdjustment,
+                    value: drug.hepaticDoseAdjustment,
+                  ),
+                  _TextCard(title: AppTexts.notes, value: drug.notes),
+                  const SizedBox(height: 8),
+                  if (drug.isArchived)
+                    FilledButton.icon(
+                      onPressed: _restore,
+                      icon: const Icon(Icons.restore_outlined),
+                      label: const Text(AppTexts.restoreDrug),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                    )
+                  else ...[
+                    FilledButton.icon(
+                      onPressed: _openEdit,
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text(AppTexts.editDrug),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: _archive,
+                      icon: const Icon(Icons.archive_outlined),
+                      label: const Text(AppTexts.archiveDrug),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
     );
   }
 }
@@ -304,13 +297,13 @@ class _HeaderCard extends StatelessWidget {
                 label: drug.isArchived
                     ? AppTexts.drugArchivedFilter
                     : drug.isActive
-                        ? AppTexts.drugActive
-                        : AppTexts.drugInactive,
+                    ? AppTexts.drugActive
+                    : AppTexts.drugInactive,
                 color: drug.isArchived
                     ? AppColors.error
                     : drug.isActive
-                        ? AppColors.success
-                        : AppColors.textSecondary,
+                    ? AppColors.success
+                    : AppColors.textSecondary,
               ),
               if ((drug.createdBy?.displayName ?? '').isNotEmpty)
                 _Chip(
@@ -442,10 +435,7 @@ class _TextCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              height: 1.45,
-            ),
+            style: const TextStyle(color: AppColors.textPrimary, height: 1.45),
           ),
         ],
       ),

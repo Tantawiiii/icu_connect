@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/list_error_view.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../cubit/patients_cubit.dart';
 import '../cubit/patients_state.dart';
 import '../models/patient_model.dart';
@@ -78,7 +80,7 @@ class _PatientsListView extends StatelessWidget {
             );
           }
           if (state is PatientsFailure) {
-            return _ErrorView(
+            return ListErrorView(
               message: state.message,
               onRetry: () => context.read<PatientsCubit>().fetchPatients(),
             );
@@ -107,12 +109,14 @@ class _PatientsListView extends StatelessWidget {
 
   void _openForm(BuildContext context, {required PatientModel? patient}) {
     Navigator.of(context)
-        .push(MaterialPageRoute(
-          builder: (_) => PatientFormScreen(patient: patient),
-        ))
+        .push(
+          MaterialPageRoute(
+            builder: (_) => AdminPatientFormScreen(patient: patient),
+          ),
+        )
         .then((_) {
-      if (context.mounted) context.read<PatientsCubit>().fetchPatients();
-    });
+          if (context.mounted) context.read<PatientsCubit>().fetchPatients();
+        });
   }
 }
 
@@ -130,11 +134,16 @@ class _PatientsList extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.personal_injury_outlined,
-                size: 56, color: AppColors.secondary),
+            Icon(
+              Icons.personal_injury_outlined,
+              size: 56,
+              color: AppColors.secondary,
+            ),
             SizedBox(height: 12),
-            Text('No patients found',
-                style: TextStyle(color: AppColors.textSecondary)),
+            Text(
+              'No patients found',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ],
         ),
       );
@@ -143,22 +152,25 @@ class _PatientsList extends StatelessWidget {
     return RefreshIndicator(
       color: AppColors.primary,
       onRefresh: () => context.read<PatientsCubit>().fetchPatients(),
-      child: ListView(
+      child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              '${patients.length} '
-              '${patients.length == 1 ? 'patient' : 'patients'}',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
+        itemCount: patients.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                '${patients.length} '
+                '${patients.length == 1 ? 'patient' : 'patients'}',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
               ),
-            ),
-          ),
-          ...patients.map((p) => _PatientCard(patient: p)),
-        ],
+            );
+          }
+          return _PatientCard(patient: patients[index - 1]);
+        },
       ),
     );
   }
@@ -200,11 +212,9 @@ class _PatientCard extends StatelessWidget {
                           patient.gender.toLowerCase() == 'male'
                               ? Icons.male
                               : patient.gender.toLowerCase() == 'female'
-                                  ? Icons.female
-                                  : Icons.person_outline,
-                          color: deleted
-                              ? AppColors.error
-                              : AppColors.primary,
+                              ? Icons.female
+                              : Icons.person_outline,
+                          color: deleted ? AppColors.error : AppColors.primary,
                           size: 22,
                         ),
                       ),
@@ -248,7 +258,7 @@ class _PatientCard extends StatelessWidget {
                         ),
                       ),
                       if (patient.bloodGroup.isNotEmpty)
-                        _Badge(
+                        StatusBadge(
                           label: patient.bloodGroup,
                           color: AppColors.error,
                         ),
@@ -274,14 +284,20 @@ class _PatientCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.edit_outlined,
-                            color: AppColors.accent, size: 20),
+                        icon: const Icon(
+                          Icons.edit_outlined,
+                          color: AppColors.accent,
+                          size: 20,
+                        ),
                         tooltip: AppTexts.editPatientAdmin,
                         onPressed: () => _openEdit(context),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline,
-                            color: AppColors.error, size: 20),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: AppColors.error,
+                          size: 20,
+                        ),
                         tooltip: AppTexts.deletePatientAdmin,
                         onPressed: () => _confirmDelete(context),
                       ),
@@ -293,9 +309,7 @@ class _PatientCard extends StatelessWidget {
             if (deleted)
               Positioned.fill(
                 child: IgnorePointer(
-                  child: ColoredBox(
-                    color: AppColors.error.withAlpha(10),
-                  ),
+                  child: ColoredBox(color: AppColors.error.withAlpha(10)),
                 ),
               ),
           ],
@@ -306,18 +320,22 @@ class _PatientCard extends StatelessWidget {
 
   void _openEdit(BuildContext context) {
     Navigator.of(context)
-        .push(MaterialPageRoute(
-          builder: (_) => PatientFormScreen(patient: patient),
-        ))
+        .push(
+          MaterialPageRoute(
+            builder: (_) => AdminPatientFormScreen(patient: patient),
+          ),
+        )
         .then((_) {
-      if (context.mounted) context.read<PatientsCubit>().fetchPatients();
-    });
+          if (context.mounted) context.read<PatientsCubit>().fetchPatients();
+        });
   }
 
   void _openDetails(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => PatientDetailsScreen(patientId: patient.id),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PatientDetailsScreen(patientId: patient.id),
+      ),
+    );
   }
 
   void _confirmDelete(BuildContext context) {
@@ -347,67 +365,3 @@ class _PatientCard extends StatelessWidget {
     );
   }
 }
-
-// ── Badge ─────────────────────────────────────────────────────────────────────
-
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withAlpha(77)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-// ── Error view ────────────────────────────────────────────────────────────────
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
-            const SizedBox(height: 16),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary)),
-            const SizedBox(height: 20),
-            TextButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-

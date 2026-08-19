@@ -60,7 +60,12 @@ class HospitalRequestsActionSuccess extends HospitalRequestsLoaded {
   final String message;
 
   @override
-  List<Object?> get props => [requests, pagination, approvalStatusFilter, message];
+  List<Object?> get props => [
+    requests,
+    pagination,
+    approvalStatusFilter,
+    message,
+  ];
 }
 
 class HospitalRequestsActionFailure extends HospitalRequestsLoaded {
@@ -74,5 +79,10 @@ class HospitalRequestsActionFailure extends HospitalRequestsLoaded {
   final String message;
 
   @override
-  List<Object?> get props => [requests, pagination, approvalStatusFilter, message];
+  List<Object?> get props => [
+    requests,
+    pagination,
+    approvalStatusFilter,
+    message,
+  ];
 }

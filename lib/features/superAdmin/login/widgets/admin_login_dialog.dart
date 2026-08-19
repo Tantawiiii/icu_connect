@@ -96,7 +96,9 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
                   enabled: !isLoading,
                   autofillHints: const [AutofillHints.email],
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return AppTexts.emailRequired;
+                    if (v == null || v.trim().isEmpty) {
+                      return AppTexts.emailRequired;
+                    }
                     if (!v.contains('@')) return AppTexts.emailInvalid;
                     return null;
                   },
@@ -112,7 +114,9 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
                   autofillHints: const [AutofillHints.password],
                   onFieldSubmitted: (_) => _submit(),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return AppTexts.passwordRequired;
+                    if (v == null || v.isEmpty) {
+                      return AppTexts.passwordRequired;
+                    }
                     return null;
                   },
                 ),

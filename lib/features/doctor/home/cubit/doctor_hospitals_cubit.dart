@@ -5,7 +5,8 @@ import '../repository/doctor_hospitals_repository.dart';
 import 'doctor_hospitals_state.dart';
 
 class DoctorHospitalsCubit extends Cubit<DoctorHospitalsState> {
-  DoctorHospitalsCubit(this._repository) : super(const DoctorHospitalsInitial());
+  DoctorHospitalsCubit(this._repository)
+    : super(const DoctorHospitalsInitial());
 
   final DoctorHospitalsRepository _repository;
 

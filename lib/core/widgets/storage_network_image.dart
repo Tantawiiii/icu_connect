@@ -64,11 +64,21 @@ class _StorageNetworkImageState extends State<StorageNetworkImage> {
         if (data == null || data.isEmpty) {
           return widget.errorBuilder?.call(context) ?? const SizedBox.shrink();
         }
+
+        final dpr = MediaQuery.of(context).devicePixelRatio;
+        final cacheWidth = widget.width != null
+            ? (widget.width! * dpr).round()
+            : null;
+        final cacheHeight = widget.height != null
+            ? (widget.height! * dpr).round()
+            : null;
         return Image.memory(
           data,
           width: widget.width,
           height: widget.height,
           fit: widget.fit,
+          cacheWidth: cacheWidth,
+          cacheHeight: cacheHeight,
           errorBuilder: widget.errorBuilder != null
               ? (c, _, __) => widget.errorBuilder!(c)
               : null,

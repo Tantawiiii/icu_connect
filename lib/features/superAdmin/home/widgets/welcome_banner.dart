@@ -30,9 +30,7 @@ class WelcomeBanner extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(28),
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const AdminProfileScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const AdminProfileScreen()),
               ),
               child: CircleAvatar(
                 radius: 28,
@@ -70,8 +68,10 @@ class WelcomeBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white24,
                     borderRadius: BorderRadius.circular(20),

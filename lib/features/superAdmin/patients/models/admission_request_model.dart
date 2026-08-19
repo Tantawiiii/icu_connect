@@ -4,18 +4,12 @@ import 'package:dio/dio.dart';
 
 /// Draft row for POST /admissions or nested arrays on PUT.
 class AdmissionClinicalNoteDraft {
-  const AdmissionClinicalNoteDraft({
-    required this.type,
-    required this.content,
-  });
+  const AdmissionClinicalNoteDraft({required this.type, required this.content});
 
   final String type;
   final String content;
 
-  Map<String, dynamic> toJson() => {
-        'type': type,
-        'content': content,
-      };
+  Map<String, dynamic> toJson() => {'type': type, 'content': content};
 }
 
 class AdmissionRadiologyDraft {
@@ -62,10 +56,10 @@ class AdmissionVitalDraft {
   final String date;
 
   Map<String, dynamic> toJson() => {
-        'vitals_title_id': vitalsTitleId,
-        'value': value,
-        'date': date,
-      };
+    'vitals_title_id': vitalsTitleId,
+    'value': value,
+    'date': date,
+  };
 }
 
 class AdmissionLabDraft {
@@ -80,10 +74,10 @@ class AdmissionLabDraft {
   final String date;
 
   Map<String, dynamic> toJson() => {
-        'labs_title_id': labsTitleId,
-        'value': value,
-        'date': date,
-      };
+    'labs_title_id': labsTitleId,
+    'value': value,
+    'date': date,
+  };
 }
 
 class AdmissionMedicationDraft {
@@ -91,17 +85,20 @@ class AdmissionMedicationDraft {
     required this.drugId,
     required this.dose,
     required this.frequency,
+    this.isDiscontinued = false,
   });
 
   final int drugId;
   final String dose;
   final String frequency;
+  final bool isDiscontinued;
 
   Map<String, dynamic> toJson() => {
-        'drug_id': drugId,
-        'dose': dose,
-        'frequency': frequency,
-      };
+    'drug_id': drugId,
+    'dose': dose,
+    'frequency': frequency,
+    'is_discontinued': isDiscontinued,
+  };
 }
 
 class AdmissionEchoDraft {
@@ -139,9 +136,7 @@ class AdmissionCultureAntibioticDraft {
     if (delete && id != null) {
       return {'id': id, '_delete': true};
     }
-    final m = <String, dynamic>{
-      'sensitivity': sensitivity.toUpperCase(),
-    };
+    final m = <String, dynamic>{'sensitivity': sensitivity.toUpperCase()};
     if (id != null) m['id'] = id;
     if (drugId != null) {
       m['drug_id'] = drugId;
@@ -165,10 +160,7 @@ class AdmissionCultureDraft {
   final List<AdmissionCultureAntibioticDraft> antibiotics;
 
   Map<String, dynamic> toJson() {
-    final m = <String, dynamic>{
-      'title': title,
-      'note': note,
-    };
+    final m = <String, dynamic>{'title': title, 'note': note};
     if (antibiotics.isNotEmpty) {
       m['antibiotics'] = antibiotics.map((e) => e.toJson()).toList();
     }
@@ -188,10 +180,7 @@ class AdmissionConsultationDraft {
   final String reply;
 
   Map<String, dynamic> toJson() {
-    final m = <String, dynamic>{
-      'speciality': speciality,
-      'reply': reply,
-    };
+    final m = <String, dynamic>{'speciality': speciality, 'reply': reply};
     if (id != null) m['id'] = id;
     return m;
   }
@@ -265,12 +254,10 @@ class AdmissionCreateRequest {
       m['clinical_notes'] = clinicalNotes.map((e) => e.toJson()).toList();
     }
     if (radiologyImages.isNotEmpty) {
-      m['radiology_images'] =
-          radiologyImages.map((e) => e.toJson()).toList();
+      m['radiology_images'] = radiologyImages.map((e) => e.toJson()).toList();
     }
     if (treatmentPlans.isNotEmpty) {
-      m['treatment_plans'] =
-          treatmentPlans.map((e) => e.toJson()).toList();
+      m['treatment_plans'] = treatmentPlans.map((e) => e.toJson()).toList();
     }
     if (vitals.isNotEmpty) {
       m['vitals'] = vitals.map((e) => e.toJson()).toList();
@@ -373,6 +360,10 @@ class AdmissionCreateRequest {
       addField('medications[$i][drug_id]', '${med.drugId}');
       addField('medications[$i][dose]', med.dose);
       addField('medications[$i][frequency]', med.frequency);
+      addField(
+        'medications[$i][is_discontinued]',
+        med.isDiscontinued ? '1' : '0',
+      );
     }
 
     for (var i = 0; i < echoes.length; i++) {
@@ -498,12 +489,10 @@ class AdmissionUpdateRequest {
       m['clinical_notes'] = clinicalNotes.map((e) => e.toJson()).toList();
     }
     if (radiologyImages.isNotEmpty) {
-      m['radiology_images'] =
-          radiologyImages.map((e) => e.toJson()).toList();
+      m['radiology_images'] = radiologyImages.map((e) => e.toJson()).toList();
     }
     if (treatmentPlans.isNotEmpty) {
-      m['treatment_plans'] =
-          treatmentPlans.map((e) => e.toJson()).toList();
+      m['treatment_plans'] = treatmentPlans.map((e) => e.toJson()).toList();
     }
     if (vitals.isNotEmpty) {
       m['vitals'] = vitals.map((e) => e.toJson()).toList();
@@ -604,6 +593,10 @@ class AdmissionUpdateRequest {
       addField('medications[$i][drug_id]', '${med.drugId}');
       addField('medications[$i][dose]', med.dose);
       addField('medications[$i][frequency]', med.frequency);
+      addField(
+        'medications[$i][is_discontinued]',
+        med.isDiscontinued ? '1' : '0',
+      );
     }
 
     for (var i = 0; i < echoes.length; i++) {

@@ -10,10 +10,10 @@ class DoctorHospitalCreationRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'location': location,
-        'groups': groups.map((g) => g.toJson()).toList(),
-      };
+    'name': name,
+    'location': location,
+    'groups': groups.map((g) => g.toJson()).toList(),
+  };
 }
 
 class DoctorHospitalRequestGroup {
@@ -26,8 +26,8 @@ class DoctorHospitalRequestGroup {
   });
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'total_beds': totalBeds,
-        'available_beds': totalBeds,
-      };
+    'name': name,
+    'total_beds': totalBeds,
+    'available_beds': totalBeds,
+  };
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 import 'package:icu_connect/core/network/network_exceptions.dart';
+import 'package:icu_connect/core/utils/date_formatters.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
 import 'package:icu_connect/features/doctor/hospital_details/repository/hospital_admissions_repository.dart';
 import 'package:icu_connect/features/doctor/hospital_details/screens/admission_details_screen.dart';
@@ -87,17 +88,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   Future<void> _openEdit(PatientModel patient) async {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => PatientFormScreen(existing: _draftFrom(patient)),
+        builder: (_) => DoctorPatientFormScreen(existing: _draftFrom(patient)),
       ),
     );
     if (saved == true && mounted) _reload();
   }
 
-  String _shortDate(String raw) {
-    if (raw.isEmpty) return AppTexts.notAvailable;
-    final t = raw.indexOf('T');
-    return t > 0 ? raw.substring(0, t) : raw;
-  }
+  String _shortDate(String raw) => isoDateOnly(raw);
 
   @override
   Widget build(BuildContext context) {

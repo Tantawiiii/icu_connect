@@ -124,9 +124,7 @@ class DoctorCard extends StatelessWidget {
                         )
                       : const Icon(Icons.person_remove_outlined, size: 18),
                   label: Text(
-                    removing
-                        ? '…'
-                        : AppTexts.removeDoctorFromHospital,
+                    removing ? '…' : AppTexts.removeDoctorFromHospital,
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.error,

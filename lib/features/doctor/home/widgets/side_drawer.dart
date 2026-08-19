@@ -10,6 +10,7 @@ import '../../profile/repository/doctor_profile_repository.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../session/doctor_session_display.dart';
 import '../data/drawer_info_pages.dart';
+import '../screens/contact_us_screen.dart';
 import '../screens/doctor_hospital_requests_screen.dart';
 import '../screens/drawer_info_screen.dart';
 
@@ -44,9 +45,9 @@ class SideDrawer extends StatelessWidget {
 
   void _openInfoPage(BuildContext context, DrawerInfoPage page) {
     Navigator.pop(context);
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => DrawerInfoScreen(page: page)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => DrawerInfoScreen(page: page)));
   }
 
   @override
@@ -151,6 +152,17 @@ class SideDrawer extends StatelessWidget {
               Icons.report_problem_outlined,
               onTap: () =>
                   _openInfoPage(context, DrawerInfoPages.reportProblem),
+            ),
+            _buildDrawerItem(
+              context,
+              AppTexts.contactUs,
+              Icons.chat_bubble_outline,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ContactUsScreen()),
+                );
+              },
             ),
             const Spacer(),
             _buildDrawerItem(

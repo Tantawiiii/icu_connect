@@ -10,7 +10,6 @@ import '../../session/doctor_session_display.dart';
 import '../screens/request_hospital_screen.dart';
 import '../widgets/side_drawer.dart';
 
-
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
 
@@ -75,4 +74,3 @@ class _MainViewState extends State<_MainView> {
     }
   }
 }
-

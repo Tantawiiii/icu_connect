@@ -20,17 +20,23 @@ class LabTitleModel extends Equatable {
   final String updatedAt;
 
   factory LabTitleModel.fromJson(Map<String, dynamic> json) => LabTitleModel(
-        id: (json['id'] as num).toInt(),
-        title: json['title'] as String,
-        unit: json['unit'] as String? ?? '',
-        normalRangeMin: json['normal_range_min']?.toString() ?? '',
-        normalRangeMax: json['normal_range_max']?.toString() ?? '',
-        createdAt: json['created_at'] as String,
-        updatedAt: json['updated_at'] as String,
-      );
+    id: (json['id'] as num).toInt(),
+    title: json['title'] as String,
+    unit: json['unit'] as String? ?? '',
+    normalRangeMin: json['normal_range_min']?.toString() ?? '',
+    normalRangeMax: json['normal_range_max']?.toString() ?? '',
+    createdAt: json['created_at'] as String,
+    updatedAt: json['updated_at'] as String,
+  );
 
   @override
-  List<Object?> get props =>
-      [id, title, unit, normalRangeMin, normalRangeMax, createdAt, updatedAt];
+  List<Object?> get props => [
+    id,
+    title,
+    unit,
+    normalRangeMin,
+    normalRangeMax,
+    createdAt,
+    updatedAt,
+  ];
 }
-

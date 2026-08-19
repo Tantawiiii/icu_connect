@@ -38,71 +38,89 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 1600),
     );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.4,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.7, curve: Curves.easeOutBack),
-    ));
+    _scaleAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOutBack),
+      ),
+    );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+      ),
+    );
 
-    _textFadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.4, 1.0, curve: Curves.easeIn),
-    ));
+    _textFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.4, 1.0, curve: Curves.easeIn),
+      ),
+    );
 
-    _textSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
-    ));
+    _textSlideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(
-      begin: 0.9,
-      end: 1.15,
-    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+    _pulseAnimation = Tween<double>(begin: 0.9, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 3), () async {
-      if (!mounted) return;
+    // Start resolving the destination screen immediately instead of waiting
+    // a fixed 3s before even starting. The intro animation (1.6s) sets a
+    // minimum display time so the splash doesn't flash off too fast, while
+    // a 3s timeout on resolution caps the *maximum* wait if the network is
+    // slow, instead of always blocking for a fixed 3s.
+    _bootstrap();
+  }
 
-      final target = await _resolveNextScreen();
-      if (!mounted) return;
+  Future<void> _bootstrap() async {
+    final minDisplay = Future<void>.delayed(const Duration(milliseconds: 1600));
 
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, animation, __) => target,
-          transitionsBuilder: (_, animation, __, child) =>
-              FadeTransition(opacity: animation, child: child),
-          transitionDuration: const Duration(milliseconds: 600),
-        ),
+    Widget target;
+    try {
+      target = await _resolveNextScreen().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => const OnboardingScreen(),
       );
-    });
+    } catch (_) {
+      target = const OnboardingScreen();
+    }
+
+    await minDisplay;
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, animation, __) => target,
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+        transitionDuration: const Duration(milliseconds: 600),
+      ),
+    );
   }
 
   Future<Widget> _resolveNextScreen() async {
-    final accessToken = await TokenStorage.instance.getAccessToken();
-    final refreshToken = await TokenStorage.instance.getRefreshToken();
-    final storedRole = await TokenStorage.instance.getUserRole();
+    final tokens = await Future.wait([
+      TokenStorage.instance.getAccessToken(),
+      TokenStorage.instance.getRefreshToken(),
+      TokenStorage.instance.getUserRole(),
+    ]);
+    final accessToken = tokens[0];
+    final refreshToken = tokens[1];
+    final storedRole = tokens[2];
 
     debugPrint(
       '[Splash] access token exists: ${accessToken != null && accessToken.isNotEmpty}',
@@ -110,12 +128,6 @@ class _SplashScreenState extends State<SplashScreen>
     debugPrint(
       '[Splash] refresh token exists: ${refreshToken != null && refreshToken.isNotEmpty}',
     );
-    if (accessToken != null && accessToken.isNotEmpty) {
-      debugPrint('[Splash] access token: $accessToken');
-    }
-    if (refreshToken != null && refreshToken.isNotEmpty) {
-      debugPrint('[Splash] refresh token: $refreshToken');
-    }
 
     if ((accessToken?.isNotEmpty ?? false) &&
         (refreshToken?.isNotEmpty ?? false)) {
@@ -237,11 +249,7 @@ class _SplashScreenState extends State<SplashScreen>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppColors.primary,
-              Color(0xFF2A3050),
-              AppColors.accent,
-            ],
+            colors: [AppColors.primary, Color(0xFF2A3050), AppColors.accent],
           ),
         ),
         child: Stack(
@@ -252,7 +260,10 @@ class _SplashScreenState extends State<SplashScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   AnimatedBuilder(
-                    animation: Listenable.merge([_controller, _pulseController]),
+                    animation: Listenable.merge([
+                      _controller,
+                      _pulseController,
+                    ]),
                     builder: (context, child) {
                       return Opacity(
                         opacity: _fadeAnimation.value,
@@ -272,15 +283,15 @@ class _SplashScreenState extends State<SplashScreen>
                             shape: BoxShape.circle,
                             gradient: RadialGradient(
                               colors: [
-                                Colors.white.withOpacity(0.15),
-                                Colors.white.withOpacity(0.0),
+                                Colors.white.withValues(alpha: 0.15),
+                                Colors.white.withValues(alpha: 0.0),
                               ],
                               stops: const [0.5, 1.0],
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.accent.withOpacity(
-                                  0.35 * _pulseAnimation.value / 1.15,
+                                color: AppColors.accent.withValues(
+                                  alpha: 0.35 * _pulseAnimation.value / 1.15,
                                 ),
                                 blurRadius: 40 * _pulseAnimation.value,
                                 spreadRadius: 4 * _pulseAnimation.value,
@@ -296,7 +307,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 color: Colors.white,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
+                                    color: Colors.black.withValues(alpha: 0.15),
                                     blurRadius: 20,
                                     offset: const Offset(0, 8),
                                   ),
@@ -341,7 +352,7 @@ class _SplashScreenState extends State<SplashScreen>
                           Text(
                             'Care, connected in real time',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.75),
+                              color: Colors.white.withValues(alpha: 0.75),
                               fontSize: 14,
                               letterSpacing: 0.3,
                             ),
@@ -366,7 +377,7 @@ class _SplashScreenState extends State<SplashScreen>
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.white.withOpacity(0.8),
+                        Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                   ),
@@ -391,7 +402,7 @@ class _SplashScreenState extends State<SplashScreen>
             height: 260,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.accent.withOpacity(0.15),
+              color: AppColors.accent.withValues(alpha: 0.15),
             ),
           ),
         );

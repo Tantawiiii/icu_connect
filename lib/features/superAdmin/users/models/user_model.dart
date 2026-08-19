@@ -1,10 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 class UserHospitalPivot extends Equatable {
-  const UserHospitalPivot({
-    required this.roleInHospital,
-    required this.status,
-  });
+  const UserHospitalPivot({required this.roleInHospital, required this.status});
 
   final String roleInHospital;
   final String status;
@@ -38,7 +35,8 @@ class UserHospitalModel extends Equatable {
         name: json['name'] as String,
         location: json['location'] as String? ?? '',
         pivot: UserHospitalPivot.fromJson(
-            json['pivot'] as Map<String, dynamic>),
+          json['pivot'] as Map<String, dynamic>,
+        ),
       );
 
   @override
@@ -77,36 +75,35 @@ class UserModel extends Equatable {
   bool get isDeleted => deletedAt != null;
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
-        id: json['id'] as int,
-        name: json['name'] as String,
-        email: json['email'] as String,
-        phone: json['phone'] as String? ?? '',
-        role: json['role'] as String,
-        isActive: json['is_active'] as bool,
-        lastLoginAt: json['last_login_at'] as String?,
-        emailVerifiedAt: json['email_verified_at'] as String?,
-        createdAt: json['created_at'] as String,
-        updatedAt: json['updated_at'] as String,
-        deletedAt: json['deleted_at'] as String?,
-        hospitals: (json['hospitals'] as List<dynamic>? ?? [])
-            .map((e) =>
-                UserHospitalModel.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+    id: json['id'] as int,
+    name: json['name'] as String,
+    email: json['email'] as String,
+    phone: json['phone'] as String? ?? '',
+    role: json['role'] as String,
+    isActive: json['is_active'] as bool,
+    lastLoginAt: json['last_login_at'] as String?,
+    emailVerifiedAt: json['email_verified_at'] as String?,
+    createdAt: json['created_at'] as String,
+    updatedAt: json['updated_at'] as String,
+    deletedAt: json['deleted_at'] as String?,
+    hospitals: (json['hospitals'] as List<dynamic>? ?? [])
+        .map((e) => UserHospitalModel.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        email,
-        phone,
-        role,
-        isActive,
-        lastLoginAt,
-        emailVerifiedAt,
-        createdAt,
-        updatedAt,
-        deletedAt,
-        hospitals,
-      ];
+    id,
+    name,
+    email,
+    phone,
+    role,
+    isActive,
+    lastLoginAt,
+    emailVerifiedAt,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    hospitals,
+  ];
 }

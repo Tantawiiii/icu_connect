@@ -76,12 +76,14 @@ class _UserFormViewState extends State<_UserFormView> {
 
     if (u != null) {
       _assignments = u.hospitals
-          .map((h) => HospitalEntry(
-                hospitalId: h.id,
-                hospitalName: h.name,
-                role: h.pivot.roleInHospital,
-                status: h.pivot.status,
-              ))
+          .map(
+            (h) => HospitalEntry(
+              hospitalId: h.id,
+              hospitalName: h.name,
+              role: h.pivot.roleInHospital,
+              status: h.pivot.status,
+            ),
+          )
           .toList();
     }
 
@@ -90,8 +92,9 @@ class _UserFormViewState extends State<_UserFormView> {
 
   Future<void> _loadHospitals() async {
     try {
-      final response =
-          await const HospitalsRepository().fetchHospitals(perPage: 100);
+      final response = await const HospitalsRepository().fetchHospitals(
+        perPage: 100,
+      );
       if (mounted) {
         setState(() {
           _availableHospitals = response.data;
@@ -120,19 +123,20 @@ class _UserFormViewState extends State<_UserFormView> {
       name: _nameCtrl.text.trim(),
       email: _emailCtrl.text.trim(),
       phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
-      password:
-          _passwordCtrl.text.isEmpty ? null : _passwordCtrl.text,
+      password: _passwordCtrl.text.isEmpty ? null : _passwordCtrl.text,
       passwordConfirmation: _confirmPasswordCtrl.text.isEmpty
           ? null
           : _confirmPasswordCtrl.text,
       role: _selectedRole,
       isActive: _isActive,
       hospitals: _assignments
-          .map((a) => HospitalAssignment(
-                hospitalId: a.hospitalId,
-                roleInHospital: a.role,
-                status: a.status,
-              ))
+          .map(
+            (a) => HospitalAssignment(
+              hospitalId: a.hospitalId,
+              roleInHospital: a.role,
+              status: a.status,
+            ),
+          )
           .toList(),
     );
 
@@ -166,8 +170,9 @@ class _UserFormViewState extends State<_UserFormView> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           title: const Text(AppTexts.addHospitalAssignment),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -178,16 +183,20 @@ class _UserFormViewState extends State<_UserFormView> {
                 decoration: InputDecoration(
                   labelText: AppTexts.hospitalsLabel,
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
                 items: unassigned
-                    .map((h) => DropdownMenuItem(
-                          value: h.id,
-                          child: Text(h.name,
-                              overflow: TextOverflow.ellipsis),
-                        ))
+                    .map(
+                      (h) => DropdownMenuItem(
+                        value: h.id,
+                        child: Text(h.name, overflow: TextOverflow.ellipsis),
+                      ),
+                    )
                     .toList(),
                 onChanged: (v) =>
                     setDialogState(() => selectedId = v ?? selectedId),
@@ -199,16 +208,20 @@ class _UserFormViewState extends State<_UserFormView> {
                 decoration: InputDecoration(
                   labelText: AppTexts.roleInHospital,
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
                 items: _hospitalRoles
-                    .map((r) => DropdownMenuItem(
-                          value: r,
-                          child: Text(
-                              r[0].toUpperCase() + r.substring(1)),
-                        ))
+                    .map(
+                      (r) => DropdownMenuItem(
+                        value: r,
+                        child: Text(r[0].toUpperCase() + r.substring(1)),
+                      ),
+                    )
                     .toList(),
                 onChanged: (v) =>
                     setDialogState(() => selectedRole = v ?? selectedRole),
@@ -220,9 +233,12 @@ class _UserFormViewState extends State<_UserFormView> {
                 decoration: InputDecoration(
                   labelText: AppTexts.status,
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
                 items: _hospitalStatuses
                     .map(
@@ -247,18 +263,22 @@ class _UserFormViewState extends State<_UserFormView> {
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: () {
-                final hospital = unassigned
-                    .firstWhere((h) => h.id == selectedId);
+                final hospital = unassigned.firstWhere(
+                  (h) => h.id == selectedId,
+                );
                 setState(() {
-                  _assignments.add(HospitalEntry(
-                    hospitalId: hospital.id,
-                    hospitalName: hospital.name,
-                    role: selectedRole,
-                    status: selectedStatus,
-                  ));
+                  _assignments.add(
+                    HospitalEntry(
+                      hospitalId: hospital.id,
+                      hospitalName: hospital.name,
+                      role: selectedRole,
+                      status: selectedStatus,
+                    ),
+                  );
                 });
                 Navigator.of(ctx).pop();
               },
@@ -292,7 +312,9 @@ class _UserFormViewState extends State<_UserFormView> {
         title: Text(
           _isEdit ? AppTexts.editUser : AppTexts.addUser,
           style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -334,7 +356,8 @@ class _UserFormViewState extends State<_UserFormView> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -342,8 +365,7 @@ class _UserFormViewState extends State<_UserFormView> {
                           AppTextField(
                             controller: _nameCtrl,
                             labelText: AppTexts.name,
-                            prefixIcon:
-                                const Icon(Icons.person_outline),
+                            prefixIcon: const Icon(Icons.person_outline),
                             textInputAction: TextInputAction.next,
                             enabled: !isLoading,
                             validator: (v) {
@@ -357,8 +379,7 @@ class _UserFormViewState extends State<_UserFormView> {
                           AppTextField(
                             controller: _emailCtrl,
                             labelText: AppTexts.emailLabel,
-                            prefixIcon:
-                                const Icon(Icons.email_outlined),
+                            prefixIcon: const Icon(Icons.email_outlined),
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
                             enabled: !isLoading,
@@ -377,8 +398,7 @@ class _UserFormViewState extends State<_UserFormView> {
                           AppTextField(
                             controller: _phoneCtrl,
                             labelText: AppTexts.phone,
-                            prefixIcon:
-                                const Icon(Icons.phone_outlined),
+                            prefixIcon: const Icon(Icons.phone_outlined),
                             keyboardType: TextInputType.phone,
                             textInputAction: TextInputAction.next,
                             enabled: !isLoading,
@@ -396,7 +416,8 @@ class _UserFormViewState extends State<_UserFormView> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Column(
                       children: [
                         // Role dropdown
@@ -407,33 +428,41 @@ class _UserFormViewState extends State<_UserFormView> {
                             isExpanded: true,
                             decoration: InputDecoration(
                               labelText: AppTexts.roleLabel,
-                              prefixIcon:
-                                  const Icon(Icons.manage_accounts_outlined),
+                              prefixIcon: const Icon(
+                                Icons.manage_accounts_outlined,
+                              ),
                               border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10)),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                               contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
                             ),
                             items: _userRoles
-                                .map((r) => DropdownMenuItem(
-                                      value: r,
-                                      child: Text(r[0].toUpperCase() +
-                                          r.substring(1)),
-                                    ))
+                                .map(
+                                  (r) => DropdownMenuItem(
+                                    value: r,
+                                    child: Text(
+                                      r[0].toUpperCase() + r.substring(1),
+                                    ),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: isLoading
                                 ? null
                                 : (v) => setState(
-                                    () => _selectedRole = v ?? _selectedRole),
+                                    () => _selectedRole = v ?? _selectedRole,
+                                  ),
                           ),
                         ),
                         SwitchListTile(
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 4),
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
                           title: Text(
-                            _isActive
-                                ? AppTexts.active
-                                : AppTexts.inactive,
+                            _isActive ? AppTexts.active : AppTexts.inactive,
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: _isActive
@@ -444,8 +473,9 @@ class _UserFormViewState extends State<_UserFormView> {
                           subtitle: const Text(
                             AppTexts.enableOrDisableThisAccount,
                             style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary),
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                           value: _isActive,
                           activeColor: AppColors.success,
@@ -467,7 +497,8 @@ class _UserFormViewState extends State<_UserFormView> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -477,23 +508,18 @@ class _UserFormViewState extends State<_UserFormView> {
                             labelText: _isEdit
                                 ? AppTexts.passwordLeaveBlank
                                 : AppTexts.passwordLabel,
-                            prefixIcon:
-                                const Icon(Icons.lock_outline),
+                            prefixIcon: const Icon(Icons.lock_outline),
                             isPassword: true,
                             textInputAction: TextInputAction.next,
                             enabled: !isLoading,
-                            autofillHints: const [
-                              AutofillHints.newPassword
-                            ],
+                            autofillHints: const [AutofillHints.newPassword],
                             validator: (v) {
-                              if (!_isEdit &&
-                                  (v == null || v.isEmpty)) {
+                              if (!_isEdit && (v == null || v.isEmpty)) {
                                 return AppTexts.passwordRequired;
                               }
-                              if (v != null &&
-                                  v.isNotEmpty &&
-                                  v.length < 8) {
-                                return AppTexts.passwordMustBeAtLeast8Characters;
+                              if (v != null && v.isNotEmpty && v.length < 8) {
+                                return AppTexts
+                                    .passwordMustBeAtLeast8Characters;
                               }
                               return null;
                             },
@@ -504,8 +530,7 @@ class _UserFormViewState extends State<_UserFormView> {
                             labelText: _isEdit
                                 ? AppTexts.confirmPasswordLeaveBlank
                                 : AppTexts.confirmPassword,
-                            prefixIcon:
-                                const Icon(Icons.lock_outline),
+                            prefixIcon: const Icon(Icons.lock_outline),
                             isPassword: true,
                             textInputAction: TextInputAction.done,
                             enabled: !isLoading,
@@ -535,8 +560,7 @@ class _UserFormViewState extends State<_UserFormView> {
                               ? null
                               : _showAddHospitalDialog,
                           icon: const Icon(Icons.add, size: 16),
-                          label: const Text(
-                              AppTexts.addHospitalAssignment),
+                          label: const Text(AppTexts.addHospitalAssignment),
                           style: TextButton.styleFrom(
                             foregroundColor: AppColors.primary,
                           ),
@@ -547,7 +571,8 @@ class _UserFormViewState extends State<_UserFormView> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: _hospitalsLoading
                         ? const Padding(
                             padding: EdgeInsets.all(20),
@@ -556,57 +581,52 @@ class _UserFormViewState extends State<_UserFormView> {
                                 height: 24,
                                 width: 24,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.primary),
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
                           )
                         : _assignments.isEmpty
-                            ? const Padding(
-                                padding: EdgeInsets.all(20),
-                                child: Center(
-                                  child: Text(
-                                    AppTexts.noHospitalsAssigned,
-                                    style: TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 13),
-                                  ),
+                        ? const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Center(
+                              child: Text(
+                                AppTexts.noHospitalsAssigned,
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
                                 ),
-                              )
-                            : Column(
-                                children: [
-                                  for (int i = 0;
-                                      i < _assignments.length;
-                                      i++)
-                                    HospitalAssignmentRow(
-                                      entry: _assignments[i],
-                                      roles: _hospitalRoles,
-                                      statuses: _hospitalStatuses,
-                                      onRoleChanged: (r) =>
-                                          _changeAssignmentRole(i, r),
-                                      onStatusChanged: (s) =>
-                                          _changeAssignmentStatus(i, s),
-                                      onRemove: () =>
-                                          _removeAssignment(i),
-                                      isLast: i ==
-                                          _assignments.length - 1,
-                                    ),
-                                ],
                               ),
+                            ),
+                          )
+                        : Column(
+                            children: [
+                              for (int i = 0; i < _assignments.length; i++)
+                                HospitalAssignmentRow(
+                                  entry: _assignments[i],
+                                  roles: _hospitalRoles,
+                                  statuses: _hospitalStatuses,
+                                  onRoleChanged: (r) =>
+                                      _changeAssignmentRole(i, r),
+                                  onStatusChanged: (s) =>
+                                      _changeAssignmentStatus(i, s),
+                                  onRemove: () => _removeAssignment(i),
+                                  isLast: i == _assignments.length - 1,
+                                ),
+                            ],
+                          ),
                   ),
 
                   const SizedBox(height: 28),
 
                   // ── Submit ──────────────────────────────────────────────
                   AppButton(
-                    label:
-                        _isEdit ? AppTexts.editUser : AppTexts.addUser,
+                    label: _isEdit ? AppTexts.editUser : AppTexts.addUser,
                     isLoading: isLoading,
                     onPressed: isLoading ? null : _submit,
                     leadingIcon: Icon(
-                      _isEdit
-                          ? Icons.save_outlined
-                          : Icons.person_add_outlined,
+                      _isEdit ? Icons.save_outlined : Icons.person_add_outlined,
                       color: Colors.white,
                       size: 18,
                     ),

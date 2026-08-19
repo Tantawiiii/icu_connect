@@ -46,6 +46,7 @@ class AdmissionDetailsGenericAddForm extends StatelessWidget {
   final String? typeValue;
   final List<String>? types;
   final ValueChanged<String?>? onTypeChanged;
+
   /// Inserted after text fields (e.g. radiology image/video pickers).
   final List<Widget> childrenAfterFields;
   final bool isEditing;
@@ -96,7 +97,11 @@ class AdmissionDetailsGenericAddForm extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: saving ? null : onCancel,
-                icon: const Icon(Icons.close, size: 18, color: AppColors.textSecondary),
+                icon: const Icon(
+                  Icons.close,
+                  size: 18,
+                  color: AppColors.textSecondary,
+                ),
                 visualDensity: VisualDensity.compact,
               ),
             ],
@@ -128,7 +133,9 @@ class AdmissionDetailsGenericAddForm extends StatelessWidget {
               onChanged: saving ? null : onTypeChanged,
               decoration: InputDecoration(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -153,8 +160,8 @@ class AdmissionDetailsGenericAddForm extends StatelessWidget {
               label: saving
                   ? 'Saving...'
                   : isEditing
-                      ? AppTexts.saveChanges
-                      : 'Save Entry',
+                  ? AppTexts.saveChanges
+                  : 'Save Entry',
               onPressed: saving ? null : onSave,
             ),
           ),

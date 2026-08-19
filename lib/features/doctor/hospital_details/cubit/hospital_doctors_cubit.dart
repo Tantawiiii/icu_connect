@@ -5,7 +5,8 @@ import '../repository/hospital_doctors_repository.dart';
 import 'hospital_doctors_state.dart';
 
 class HospitalDoctorsCubit extends Cubit<HospitalDoctorsState> {
-  HospitalDoctorsCubit(this._repository) : super(const HospitalDoctorsInitial());
+  HospitalDoctorsCubit(this._repository)
+    : super(const HospitalDoctorsInitial());
 
   final HospitalDoctorsRepository _repository;
 
@@ -32,7 +33,10 @@ class HospitalDoctorsCubit extends Cubit<HospitalDoctorsState> {
     final accepting = {...s.acceptingIds, doctorId};
     emit(s.copyWith(acceptingIds: accepting));
     try {
-      await _repository.acceptDoctor(hospitalId: hospitalId, doctorId: doctorId);
+      await _repository.acceptDoctor(
+        hospitalId: hospitalId,
+        doctorId: doctorId,
+      );
       await refresh(hospitalId);
     } on NetworkException catch (e) {
       emit(s.copyWith(acceptingIds: accepting..remove(doctorId)));
@@ -92,4 +96,3 @@ class HospitalDoctorsCubit extends Cubit<HospitalDoctorsState> {
     }
   }
 }
-

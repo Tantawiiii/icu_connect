@@ -7,10 +7,7 @@ import 'package:icu_connect/core/widgets/app_button.dart';
 import 'package:icu_connect/core/widgets/measurement_title_form_fields.dart';
 
 class AddPatientMeasurementTitleSheet extends StatefulWidget {
-  const AddPatientMeasurementTitleSheet({
-    super.key,
-    required this.isLabs,
-  });
+  const AddPatientMeasurementTitleSheet({super.key, required this.isLabs});
 
   final bool isLabs;
 

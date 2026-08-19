@@ -140,10 +140,7 @@ class _HospitalDoctorsView extends StatelessWidget {
     );
   }
 
-  Future<void> _showAddDoctorSheet(
-    BuildContext context,
-    int hospitalId,
-  ) async {
+  Future<void> _showAddDoctorSheet(BuildContext context, int hospitalId) async {
     final cubit = context.read<HospitalDoctorsCubit>();
     await showModalBottomSheet<void>(
       context: context,
@@ -167,9 +164,7 @@ class _HospitalDoctorsView extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(AppTexts.removeDoctorFromHospital),
-        content: Text(
-          '${AppTexts.removeDoctorConfirmation}\n\n${doctor.name}',
-        ),
+        content: Text('${AppTexts.removeDoctorConfirmation}\n\n${doctor.name}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),

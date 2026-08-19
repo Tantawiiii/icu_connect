@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
 import '../../../../core/network/network_exceptions.dart';
+import '../../../../core/utils/date_formatters.dart';
 import '../cubit/patient_details_cubit.dart';
 import '../cubit/patient_details_state.dart';
 import '../models/patient_admission_models.dart';
@@ -34,8 +35,7 @@ class _PatientDetailsView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<PatientDetailsCubit, PatientDetailsState>(
       builder: (context, state) {
-        final patient =
-            state is PatientDetailsLoaded ? state.patient : null;
+        final patient = state is PatientDetailsLoaded ? state.patient : null;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -44,7 +44,10 @@ class _PatientDetailsView extends StatelessWidget {
             iconTheme: const IconThemeData(color: Colors.white),
             title: const Text(
               AppTexts.patientDetailsTitle,
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             centerTitle: true,
           ),
@@ -60,9 +63,9 @@ class _PatientDetailsView extends StatelessWidget {
                       ),
                     );
                     if (saved == true && context.mounted) {
-                      context
-                          .read<PatientDetailsCubit>()
-                          .fetchPatient(patientId);
+                      context.read<PatientDetailsCubit>().fetchPatient(
+                        patientId,
+                      );
                     }
                   },
                   backgroundColor: AppColors.primary,
@@ -89,8 +92,7 @@ class _PatientDetailsView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline,
-                  color: AppColors.error, size: 48),
+              const Icon(Icons.error_outline, color: AppColors.error, size: 48),
               const SizedBox(height: 16),
               Text(
                 state.message,
@@ -117,14 +119,14 @@ class _DetailsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Card(
             elevation: 1,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(8),
               child: Row(
@@ -136,8 +138,8 @@ class _DetailsContent extends StatelessWidget {
                       patient.gender.toLowerCase() == 'male'
                           ? Icons.male
                           : patient.gender.toLowerCase() == 'female'
-                              ? Icons.female
-                              : Icons.person_outline,
+                          ? Icons.female
+                          : Icons.person_outline,
                       color: AppColors.primary,
                       size: 26,
                     ),
@@ -168,9 +170,11 @@ class _DetailsContent extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 4),
                             child: Row(
                               children: [
-                                const Icon(Icons.bloodtype_outlined,
-                                    size: 14,
-                                    color: AppColors.textSecondary),
+                                const Icon(
+                                  Icons.bloodtype_outlined,
+                                  size: 14,
+                                  color: AppColors.textSecondary,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   patient.bloodGroup,
@@ -194,8 +198,9 @@ class _DetailsContent extends StatelessWidget {
 
           Card(
             elevation: 1,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -229,7 +234,7 @@ class _DetailsContent extends StatelessWidget {
                     value: patient.gender.isEmpty
                         ? AppTexts.notAvailable
                         : patient.gender[0].toUpperCase() +
-                            patient.gender.substring(1),
+                              patient.gender.substring(1),
                   ),
                 ],
               ),
@@ -240,8 +245,9 @@ class _DetailsContent extends StatelessWidget {
 
           Card(
             elevation: 1,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -274,8 +280,9 @@ class _DetailsContent extends StatelessWidget {
 
           Card(
             elevation: 1,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -338,16 +345,8 @@ class _DetailsContent extends StatelessWidget {
   }
 }
 
-String _formatIsoDateTime(String raw) {
-  if (raw.isEmpty) return AppTexts.notAvailable;
-  final t = raw.indexOf('T');
-  if (t <= 0) return raw;
-  final date = raw.substring(0, t);
-  final time = raw.length > t + 1
-      ? raw.substring(t + 1, raw.length > t + 9 ? t + 9 : raw.length)
-      : '';
-  return time.isEmpty ? date : '$date $time${AppTexts.utcTimeZoneSuffix}';
-}
+String _formatIsoDateTime(String raw) =>
+    isoDateTime(raw, suffix: AppTexts.utcTimeZoneSuffix);
 
 class _AdmissionCard extends StatelessWidget {
   const _AdmissionCard({required this.patient, required this.admission});
@@ -418,8 +417,11 @@ class _AdmissionCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.local_hospital_outlined,
-                    size: 20, color: AppColors.primary),
+                const Icon(
+                  Icons.local_hospital_outlined,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -437,8 +439,10 @@ class _AdmissionCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withAlpha(28),
                     borderRadius: BorderRadius.circular(8),
@@ -470,9 +474,9 @@ class _AdmissionCard extends StatelessWidget {
                       ),
                     );
                     if (saved == true && context.mounted) {
-                      context
-                          .read<PatientDetailsCubit>()
-                          .fetchPatient(patient.id);
+                      context.read<PatientDetailsCubit>().fetchPatient(
+                        patient.id,
+                      );
                     }
                   },
                   icon: const Icon(Icons.edit_outlined, size: 18),
@@ -500,10 +504,7 @@ class _AdmissionCard extends StatelessWidget {
               const SizedBox(height: 6),
               _InfoRow(label: AppTexts.location, value: h.location),
               const SizedBox(height: 6),
-              _InfoRow(
-                label: AppTexts.totalBeds,
-                value: '${h.totalBeds}',
-              ),
+              _InfoRow(label: AppTexts.totalBeds, value: '${h.totalBeds}'),
               const SizedBox(height: 6),
               _InfoRow(
                 label: AppTexts.availableBeds,
@@ -525,7 +526,10 @@ class _AdmissionCard extends StatelessWidget {
               const SizedBox(height: 6),
               _InfoRow(label: AppTexts.emailLabel, value: d.email),
               const SizedBox(height: 6),
-              _InfoRow(label: AppTexts.phone, value: d.phone.isEmpty ? AppTexts.notAvailable : d.phone),
+              _InfoRow(
+                label: AppTexts.phone,
+                value: d.phone.isEmpty ? AppTexts.notAvailable : d.phone,
+              ),
               const SizedBox(height: 6),
               _InfoRow(
                 label: AppTexts.roleLabel,
@@ -540,14 +544,16 @@ class _AdmissionCard extends StatelessWidget {
             const SizedBox(height: 8),
             _InfoRow(
               label: AppTexts.dischargedLabel,
-              value: admission.dateLeave != null && admission.dateLeave!.isNotEmpty
+              value:
+                  admission.dateLeave != null && admission.dateLeave!.isNotEmpty
                   ? _formatIsoDateTime(admission.dateLeave!)
                   : AppTexts.notAvailable,
             ),
             const SizedBox(height: 8),
             _InfoRow(
               label: AppTexts.dateOfDeathLabel,
-              value: admission.dateOfDeath != null &&
+              value:
+                  admission.dateOfDeath != null &&
                       admission.dateOfDeath!.isNotEmpty
                   ? _formatIsoDateTime(admission.dateOfDeath!)
                   : AppTexts.notAvailable,
@@ -564,7 +570,10 @@ class _AdmissionCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               admission.notes.isEmpty ? AppTexts.notAvailable : admission.notes,
-              style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textPrimary,
+              ),
             ),
             if (admission.clinicalNotes.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -726,7 +735,8 @@ class _AdmissionCard extends StatelessWidget {
                 (v) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _MeasurementRow(
-                    title: v.vitalsTitle?.title ??
+                    title:
+                        v.vitalsTitle?.title ??
                         AppTexts.defaultVitalMeasurementTitle,
                     unit: v.vitalsTitle?.unit ?? '',
                     value: v.value,
@@ -752,7 +762,8 @@ class _AdmissionCard extends StatelessWidget {
                 (lab) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _MeasurementRow(
-                    title: lab.labsTitle?.title ??
+                    title:
+                        lab.labsTitle?.title ??
                         AppTexts.defaultLabMeasurementTitle,
                     unit: lab.labsTitle?.unit ?? '',
                     value: lab.value,
@@ -789,7 +800,8 @@ class _MeasurementRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final range = (normalMin != null &&
+    final range =
+        (normalMin != null &&
             normalMax != null &&
             normalMin!.isNotEmpty &&
             normalMax!.isNotEmpty)
@@ -828,13 +840,19 @@ class _MeasurementRow extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               '${AppTexts.normalRangePrefix} $range',
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
           const SizedBox(height: 4),
           Text(
             _formatIsoDateTime(date),
-            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -868,14 +886,10 @@ class _InfoRow extends StatelessWidget {
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.textPrimary,
-            ),
+            style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
           ),
         ),
       ],
     );
   }
 }
-

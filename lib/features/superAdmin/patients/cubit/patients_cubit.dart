@@ -28,15 +28,14 @@ class PatientsCubit extends Cubit<PatientsState> {
     emit(PatientsActionLoading(current.patients));
     try {
       await _repo.deletePatient(id);
-      final updated =
-          current.patients.where((p) => p.id != id).toList();
+      final updated = current.patients.where((p) => p.id != id).toList();
       emit(PatientsActionSuccess(updated, 'Patient deleted successfully'));
     } on NetworkException catch (e) {
       emit(PatientsActionFailure(current.patients, e.message));
     } catch (_) {
-      emit(PatientsActionFailure(
-          current.patients, 'An unexpected error occurred'));
+      emit(
+        PatientsActionFailure(current.patients, 'An unexpected error occurred'),
+      );
     }
   }
 }
-

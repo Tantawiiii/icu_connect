@@ -15,7 +15,9 @@ class AdminFormCubit extends Cubit<AdminFormState> {
     emit(const AdminFormLoading());
     try {
       final admin = await _repository.createAdmin(request);
-      emit(AdminFormSuccess(admin: admin, message: 'Admin created successfully'));
+      emit(
+        AdminFormSuccess(admin: admin, message: 'Admin created successfully'),
+      );
     } on NetworkException catch (e) {
       emit(AdminFormFailure(e.message));
     } catch (_) {
@@ -28,7 +30,9 @@ class AdminFormCubit extends Cubit<AdminFormState> {
     emit(const AdminFormLoading());
     try {
       final admin = await _repository.updateAdmin(id, request);
-      emit(AdminFormSuccess(admin: admin, message: 'Admin updated successfully'));
+      emit(
+        AdminFormSuccess(admin: admin, message: 'Admin updated successfully'),
+      );
     } on NetworkException catch (e) {
       emit(AdminFormFailure(e.message));
     } catch (_) {

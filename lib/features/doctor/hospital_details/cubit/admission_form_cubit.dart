@@ -22,14 +22,14 @@ AdmissionPatientModel _admissionPatientFromModel(PatientModel m) =>
       deletedAt: m.deletedAt,
     );
 
-class AdmissionFormCubit extends Cubit<AdmissionFormState> {
-  AdmissionFormCubit() : super(const AdmissionFormInitial());
+class DoctorAdmissionFormCubit extends Cubit<DoctorAdmissionFormState> {
+  DoctorAdmissionFormCubit() : super(const DoctorAdmissionFormInitial());
 
   final _repository = const HospitalAdmissionsRepository();
-  AdmissionFormRefsReady? refs;
+  DoctorAdmissionFormRefsReady? refs;
 
   Future<void> loadReferenceData({int? ensurePatientId}) async {
-    emit(const AdmissionFormLoadingRefs());
+    emit(const DoctorAdmissionFormLoadingRefs());
     try {
       final vitals = await _repository.listVitalsTitles();
       final labs = await _repository.listLabsTitles();
@@ -42,7 +42,7 @@ class AdmissionFormCubit extends Cubit<AdmissionFormState> {
         }
       }
       final profile = await const DoctorProfileRepository().fetchProfile();
-      refs = AdmissionFormRefsReady(
+      refs = DoctorAdmissionFormRefsReady(
         vitalsTitles: vitals,
         labsTitles: labs,
         patients: patients,
@@ -50,7 +50,7 @@ class AdmissionFormCubit extends Cubit<AdmissionFormState> {
       );
       emit(refs!);
     } on NetworkException catch (e) {
-      emit(AdmissionFormFailure(e.message));
+      emit(DoctorAdmissionFormFailure(e.message));
     }
   }
 
@@ -71,7 +71,7 @@ class AdmissionFormCubit extends Cubit<AdmissionFormState> {
           patients = [_admissionPatientFromModel(pm), ...patients];
         }
       }
-      refs = AdmissionFormRefsReady(
+      refs = DoctorAdmissionFormRefsReady(
         vitalsTitles: r.vitalsTitles,
         labsTitles: r.labsTitles,
         patients: patients,
@@ -84,25 +84,24 @@ class AdmissionFormCubit extends Cubit<AdmissionFormState> {
   }
 
   Future<void> createAdmission(AdmissionCreateRequest req) async {
-    emit(const AdmissionFormSubmitting());
+    emit(const DoctorAdmissionFormSubmitting());
     try {
       final fd = await req.toFormData();
       await _repository.createAdmission(fd);
-      emit(const AdmissionFormSuccess('Admission created successfully.'));
+      emit(const DoctorAdmissionFormSuccess('Admission created successfully.'));
     } on NetworkException catch (e) {
-      emit(AdmissionFormFailure(e.message));
+      emit(DoctorAdmissionFormFailure(e.message));
     }
   }
 
   Future<void> updateAdmission(int id, AdmissionUpdateRequest req) async {
-    emit(const AdmissionFormSubmitting());
+    emit(const DoctorAdmissionFormSubmitting());
     try {
       final fd = await req.toFormData();
       await _repository.updateAdmission(id, fd);
-      emit(const AdmissionFormSuccess('Admission updated successfully.'));
+      emit(const DoctorAdmissionFormSuccess('Admission updated successfully.'));
     } on NetworkException catch (e) {
-      emit(AdmissionFormFailure(e.message));
+      emit(DoctorAdmissionFormFailure(e.message));
     }
   }
-
 }

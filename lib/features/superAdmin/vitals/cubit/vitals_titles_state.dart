@@ -54,4 +54,3 @@ class VitalsTitlesActionFailure extends VitalsTitlesLoaded {
   @override
   List<Object?> get props => [items, pagination, message];
 }
-
