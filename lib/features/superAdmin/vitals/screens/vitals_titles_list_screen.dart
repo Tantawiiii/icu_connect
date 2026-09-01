@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../../../../core/widgets/list_error_view.dart';
 import '../../../../core/widgets/list_search_field.dart';
 import '../../../../core/widgets/paginated_list_footer.dart';
@@ -101,11 +103,11 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          AppTexts.vitalsTitlesLabel,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        foregroundColor: Colors.white,
+        title: const Text(AppTexts.vitalsTitlesLabel),
+        titleTextStyle: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(color: Colors.white, fontSize: 18),
         centerTitle: true,
         actions: [
           IconButton(
@@ -132,7 +134,12 @@ class _VitalsTitlesListViewState extends State<_VitalsTitlesListView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              12,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
             child: ListSearchField(
               controller: _searchController,
               hintText: AppTexts.searchVitalsTitlesHint,
@@ -242,13 +249,13 @@ class _VitalsList extends StatelessWidget {
               size: 56,
               color: AppColors.secondary,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               emptyFromSearch
                   ? AppTexts.vitalsTitlesSearchEmpty
                   : 'No vitals titles found',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
         ),
@@ -268,14 +275,11 @@ class _VitalsList extends StatelessWidget {
         itemBuilder: (context, index) {
           if (index == 0) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: Text(
                 'Showing ${pagination.from}-${pagination.to} '
                 'of ${pagination.total} vitals titles',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                ),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             );
           }
@@ -334,38 +338,25 @@ class _VitalCard extends StatelessWidget {
                 size: 22,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    vital.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
+                  Text(vital.title, style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: AppSpacing.xs),
                   Row(
                     children: [
                       if (vital.unit.isNotEmpty) ...[
                         Text(
                           vital.unit,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                         const SizedBox(width: 10),
                       ],
                       Text(
                         'Normal: ${vital.normalRangeMin} – ${vital.normalRangeMax}',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
@@ -422,30 +413,15 @@ class _VitalCard extends StatelessWidget {
         });
   }
 
-  void _confirmDelete(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.deleteVitalTitle),
-        content: const Text(AppTexts.deleteVitalTitleConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppTexts.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<VitalsTitlesCubit>().deleteVitalTitle(vital.id);
-            },
-            child: const Text(AppTexts.deleteVitalTitle),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.deleteVitalTitle,
+      message: AppTexts.deleteVitalTitleConfirmation,
+      confirmLabel: AppTexts.deleteVitalTitle,
     );
+    if (confirmed && context.mounted) {
+      context.read<VitalsTitlesCubit>().deleteVitalTitle(vital.id);
+    }
   }
 }

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../../../../core/widgets/list_error_view.dart';
 import '../../../../core/widgets/list_search_field.dart';
 import '../cubit/labs_titles_cubit.dart';
@@ -91,11 +93,11 @@ class _LabsTitlesListViewState extends State<_LabsTitlesListView> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          AppTexts.labsTitlesLabel,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        foregroundColor: Colors.white,
+        title: const Text(AppTexts.labsTitlesLabel),
+        titleTextStyle: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(color: Colors.white, fontSize: 18),
         centerTitle: true,
         actions: [
           IconButton(
@@ -115,7 +117,12 @@ class _LabsTitlesListViewState extends State<_LabsTitlesListView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              12,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
             child: ListSearchField(
               controller: _searchController,
               hintText: AppTexts.searchLabsTitlesHint,
@@ -214,13 +221,13 @@ class _LabsList extends StatelessWidget {
               size: 56,
               color: AppColors.secondary,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               emptyFromSearch
                   ? AppTexts.labsTitlesSearchEmpty
                   : 'No labs titles found',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
         ),
@@ -255,7 +262,7 @@ class _LabCard extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
                 color: Colors.deepPurple.withAlpha(20),
                 borderRadius: BorderRadius.circular(10),
@@ -271,33 +278,20 @@ class _LabCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    lab.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
+                  Text(lab.title, style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: AppSpacing.xs),
                   Row(
                     children: [
                       if (lab.unit.isNotEmpty) ...[
                         Text(
                           lab.unit,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                         const SizedBox(width: 10),
                       ],
                       Text(
                         'Normal: ${lab.normalRangeMin} – ${lab.normalRangeMax}',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
@@ -349,30 +343,15 @@ class _LabCard extends StatelessWidget {
         });
   }
 
-  void _confirmDelete(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.deleteLabTitle),
-        content: const Text(AppTexts.deleteLabTitleConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppTexts.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<LabsTitlesCubit>().deleteLabTitle(lab.id);
-            },
-            child: const Text(AppTexts.deleteLabTitle),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.deleteLabTitle,
+      message: AppTexts.deleteLabTitleConfirmation,
+      confirmLabel: AppTexts.deleteLabTitle,
     );
+    if (confirmed && context.mounted) {
+      context.read<LabsTitlesCubit>().deleteLabTitle(lab.id);
+    }
   }
 }

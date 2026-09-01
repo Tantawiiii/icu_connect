@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:printing/printing.dart' deferred as printing;
@@ -8,6 +6,7 @@ import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 import 'package:icu_connect/core/network/network_exceptions.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
+import 'package:icu_connect/core/widgets/confirm_action_dialog.dart';
 
 import '../../../superAdmin/patients/models/admission_request_model.dart';
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
@@ -22,18 +21,20 @@ import 'admission_activity_history_screen.dart';
 import '../widgets/admission_exit_outcome_sheet.dart';
 import '../widgets/add_patient_measurement_title_sheet.dart';
 import '../widgets/admission_cultures_section.dart';
+import '../widgets/admission_details_app_bar_actions.dart';
 import '../widgets/admission_details_clinical_notes_section.dart';
 import '../widgets/admission_details_consultations_section.dart';
 import '../widgets/admission_details_formatters.dart';
 import '../widgets/admission_details_generic_add_form.dart';
+import '../widgets/admission_details_info_chips_section.dart';
 import '../widgets/admission_details_measurement_section.dart';
-import '../widgets/admission_details_meta_chip.dart';
 import '../widgets/admission_details_patient_header_section.dart';
 import '../widgets/admission_details_radiology_section.dart';
 import '../widgets/admission_details_section_container.dart';
 import '../widgets/admission_details_simple_findings_section.dart';
 import '../widgets/admission_medications_section.dart';
 import '../widgets/admission_plans_section.dart';
+import '../widgets/admission_radiology_media_picker.dart';
 import '../widgets/admission_timeline_notes_section.dart';
 import '../widgets/pending_measurement_column_entry.dart';
 
@@ -382,14 +383,14 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
 
     setState(() => _addingVitalTitle = true);
     try {
-      final created = await _repo.createPatientVitalTitle(
+      final created = (await _repo.createPatientVitalTitle(
         patientId: patientId,
         title: values.title,
         unit: values.unit,
         valueType: values.valueType,
         normalRangeMin: values.normalRangeMin,
         normalRangeMax: values.normalRangeMax,
-      );
+      )).copyWith(valueType: values.valueType);
       if (!mounted) return;
       setState(() {
         _vitalsTitles = [..._vitalsTitles, created];
@@ -416,13 +417,14 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
 
     setState(() => _addingLabTitle = true);
     try {
-      final created = await _repo.createPatientLabTitle(
+      final created = (await _repo.createPatientLabTitle(
         patientId: patientId,
         title: values.title,
         unit: values.unit,
+        valueType: values.valueType,
         normalRangeMin: values.normalRangeMin,
         normalRangeMax: values.normalRangeMax,
-      );
+      )).copyWith(valueType: values.valueType);
       if (!mounted) return;
       setState(() {
         _labsTitles = [..._labsTitles, created];
@@ -689,8 +691,9 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     required int drugId,
     required String title,
     required String dose,
+    required int? doseUnitId,
     required String frequency,
-    String type = 'PO',
+    String type = 'other',
     int? editingId,
   }) async {
     setState(() => _savingGeneric = true);
@@ -698,7 +701,9 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
       final item = <String, dynamic>{
         'drug_id': drugId,
         'dose': dose,
+        if (doseUnitId != null) 'dose_unit_id': doseUnitId,
         'frequency': frequency,
+        'type': type,
       };
       if (editingId != null) item['id'] = editingId;
       await _repo.updateAdmissionRaw(widget.admissionId, {
@@ -868,6 +873,7 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
         'is_discontinued': discontinued,
         if (med.drugId != null) 'drug_id': med.drugId,
         if (med.value.trim().isNotEmpty) 'dose': med.value.trim(),
+        if (med.doseUnitId != null) 'dose_unit_id': med.doseUnitId,
         if (med.duration.trim().isNotEmpty) 'frequency': med.duration.trim(),
         if (med.type.trim().isNotEmpty) 'type': med.type.trim(),
       };
@@ -889,24 +895,13 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
   }
 
   Future<void> _deleteItem(String sectionKey, int itemId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Entry?'),
-        content: const Text('Are you sure you want to delete this record?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: 'Delete Entry?',
+      message: 'Are you sure you want to delete this record?',
+      confirmLabel: 'Delete',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     try {
       await _repo.updateAdmissionRaw(widget.admissionId, {
@@ -1138,19 +1133,23 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
     for (final title in _labsTitles) {
       final text = pending.controllers[title.id]?.text.trim() ?? '';
       if (text.isEmpty) continue;
-      final valueError = AdmissionUpdateValidation.numericValue(
-        text,
+      final valueError = AdmissionUpdateValidation.measurementValue(
+        raw: text,
         field: title.title,
+        isNumeric: title.isNumericValueType,
       );
       if (valueError != null) {
         _showSnack(valueError, isError: true);
         return;
       }
+      final parsedValue = title.isNumericValueType
+          ? (double.tryParse(text) ?? 0)
+          : text;
       items.add({
         if (pending.recordIdsByTitleId[title.id] != null)
           'id': pending.recordIdsByTitleId[title.id],
         'labs_title_id': title.id,
-        'value': double.tryParse(text) ?? 0,
+        'value': parsedValue,
         'date': admissionDetailsSqlDateTime(pending.date),
       });
     }
@@ -1237,27 +1236,14 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirm exit'),
-        content: Text('Mark this patient as ${status.dischargedScreenLabel}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              status.dischargedScreenLabel,
-              style: const TextStyle(color: AppColors.primary),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: 'Confirm exit',
+      message: 'Mark this patient as ${status.dischargedScreenLabel}?',
+      confirmLabel: status.dischargedScreenLabel,
+      isDestructive: false,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _exitingAdmission = true);
     try {
@@ -1315,81 +1301,19 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
         ),
         actions: [
           if (admission != null)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  tooltip: AppTexts.aiClinicalAssistant,
-                  onPressed: _openAiRecommendations,
-                  icon: const Icon(
-                    Icons.auto_awesome,
-                    color: AppColors.primary,
-                  ),
-                ),
-                IconButton(
-                  tooltip: AppTexts.exportAdmissionPdf,
-                  onPressed: _exportingPdf
-                      ? null
-                      : () => _exportAdmissionPdf(admission),
-                  icon: _exportingPdf
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.primary,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.picture_as_pdf_outlined,
-                          color: AppColors.primary,
-                        ),
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(
-                    Icons.more_vert,
-                    color: AppColors.textPrimary,
-                  ),
-                  onSelected: (val) {
-                    if (val == 'activity_history') {
-                      _openActivityHistory();
-                    } else if (val == 'export_pdf') {
-                      _exportAdmissionPdf(admission);
-                    } else if (val == 'edit_patient') {
-                      final p = admission.patient;
-                      if (p != null) _beginPatientEdit(p);
-                    } else if (val == 'exit') {
-                      _exitAdmission(admission);
-                    }
-                  },
-                  itemBuilder: (ctx) => [
-                    PopupMenuItem(
-                      value: 'activity_history',
-                      child: Text(AppTexts.activityHistorySection),
-                    ),
-                    PopupMenuItem(
-                      value: 'export_pdf',
-                      enabled: !_exportingPdf,
-                      child: Text(AppTexts.exportAdmissionPdf),
-                    ),
-                    if (admission.patient != null)
-                      PopupMenuItem(
-                        value: 'edit_patient',
-                        child: Text(AppTexts.editPatientAdmin),
-                      ),
-
-                    if (!AdmissionStatus.isDischargedOutcome(admission.status))
-                      PopupMenuItem(
-                        value: 'exit',
-                        enabled: !_exitingAdmission,
-                        child: Text(
-                          _exitingAdmission ? 'Deleting…' : 'Delete',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
+            AdmissionDetailsAppBarActions(
+              exportingPdf: _exportingPdf,
+              exitingAdmission: _exitingAdmission,
+              canEditPatient: admission.patient != null,
+              canExit: !AdmissionStatus.isDischargedOutcome(admission.status),
+              onOpenAiAssistant: _openAiRecommendations,
+              onExportPdf: () => _exportAdmissionPdf(admission),
+              onActivityHistory: _openActivityHistory,
+              onEditPatient: () {
+                final p = admission.patient;
+                if (p != null) _beginPatientEdit(p);
+              },
+              onExit: () => _exitAdmission(admission),
             ),
         ],
       ),
@@ -1565,60 +1489,14 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
             ),
           ],
           childrenAfterFields: [
-            const Text(
-              'Images or video',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
+            AdmissionRadiologyMediaPicker(
+              localPaths: _radiologyLocalPaths,
+              saving: _savingGeneric,
+              onPickImages: _pickRadiologyImages,
+              onPickVideo: _pickRadiologyVideo,
+              onRemove: (path) =>
+                  setState(() => _radiologyLocalPaths.remove(path)),
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                TextButton.icon(
-                  onPressed: _savingGeneric ? null : _pickRadiologyImages,
-                  icon: const Icon(
-                    Icons.photo_library_outlined,
-                    size: 20,
-                    color: AppColors.primary,
-                  ),
-                  label: const Text('Photos'),
-                ),
-                TextButton.icon(
-                  onPressed: _savingGeneric ? null : _pickRadiologyVideo,
-                  icon: const Icon(
-                    Icons.video_library_outlined,
-                    size: 20,
-                    color: AppColors.primary,
-                  ),
-                  label: const Text('Video'),
-                ),
-              ],
-            ),
-            if (_radiologyLocalPaths.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _radiologyLocalPaths.map((path) {
-                    final name = path.split(Platform.pathSeparator).last;
-                    return InputChip(
-                      label: Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      onDeleted: _savingGeneric
-                          ? null
-                          : () => setState(
-                              () => _radiologyLocalPaths.remove(path),
-                            ),
-                    );
-                  }).toList(),
-                ),
-              ),
           ],
         ),
         editForm: _buildGenericEditForm(
@@ -1723,19 +1601,21 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
         adding: _addingSection == 'med',
         editingItemId: _editingSection == 'med' ? _editingItemId : null,
         saving: _savingGeneric,
-        onStartAdd: () => _startAddGeneric('med', defaultType: 'PO'),
+        onStartAdd: () => _startAddGeneric('med', defaultType: 'other'),
         onCancelAdd: _cancelAddGeneric,
         onSaveAdd:
             ({
               required drugId,
               required title,
               required dose,
+              required doseUnitId,
               required frequency,
-              type = 'PO',
+              type = 'other',
             }) => _saveMedicationEntry(
               drugId: drugId,
               title: title,
               dose: dose,
+              doseUnitId: doseUnitId,
               frequency: frequency,
               type: type,
             ),
@@ -1762,12 +1642,14 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
               required drugId,
               required title,
               required dose,
+              required doseUnitId,
               required frequency,
-              type = 'PO',
+              type = 'other',
             }) => _saveMedicationEntry(
               drugId: drugId,
               title: title,
               dose: dose,
+              doseUnitId: doseUnitId,
               frequency: frequency,
               type: type,
               editingId: _editingItemId,
@@ -1963,56 +1845,48 @@ class _AdmissionDetailsScreenState extends State<AdmissionDetailsScreen> {
       ),
 
       if (admission.doctor != null)
-        AdmissionDetailsSectionContainer(
+        AdmissionDetailsInfoChipsSection(
           title: 'Doctor',
-          child: Wrap(
-            spacing: 16,
-            runSpacing: 6,
-            children: [
-              AdmissionDetailsMetaChip(
-                label: 'Name',
-                value: admission.doctor!.name,
-                icon: Icons.person_outline,
-              ),
-              AdmissionDetailsMetaChip(
-                label: 'Email',
-                value: admission.doctor!.email,
-                icon: Icons.email_outlined,
-              ),
-              AdmissionDetailsMetaChip(
-                label: 'Phone',
-                value: admission.doctor!.phone.isEmpty
-                    ? AppTexts.notAvailable
-                    : admission.doctor!.phone,
-                icon: Icons.phone_outlined,
-              ),
-            ],
-          ),
+          chips: [
+            AdmissionDetailsInfoChip(
+              label: 'Name',
+              value: admission.doctor!.name,
+              icon: Icons.person_outline,
+            ),
+            AdmissionDetailsInfoChip(
+              label: 'Email',
+              value: admission.doctor!.email,
+              icon: Icons.email_outlined,
+            ),
+            AdmissionDetailsInfoChip(
+              label: 'Phone',
+              value: admission.doctor!.phone.isEmpty
+                  ? AppTexts.notAvailable
+                  : admission.doctor!.phone,
+              icon: Icons.phone_outlined,
+            ),
+          ],
         ),
       if (admission.hospitalGroup != null)
-        AdmissionDetailsSectionContainer(
+        AdmissionDetailsInfoChipsSection(
           title: 'Ward / Group',
-          child: Wrap(
-            spacing: 16,
-            runSpacing: 6,
-            children: [
-              AdmissionDetailsMetaChip(
-                label: 'Name',
-                value: admission.hospitalGroup!.name,
-                icon: Icons.business,
-              ),
-              AdmissionDetailsMetaChip(
-                label: 'Total beds',
-                value: '${admission.hospitalGroup!.totalBeds}',
-                icon: Icons.bed_outlined,
-              ),
-              AdmissionDetailsMetaChip(
-                label: 'Available beds',
-                value: '${admission.hospitalGroup!.availableBeds}',
-                icon: Icons.event_available,
-              ),
-            ],
-          ),
+          chips: [
+            AdmissionDetailsInfoChip(
+              label: 'Name',
+              value: admission.hospitalGroup!.name,
+              icon: Icons.business,
+            ),
+            AdmissionDetailsInfoChip(
+              label: 'Total beds',
+              value: '${admission.hospitalGroup!.totalBeds}',
+              icon: Icons.bed_outlined,
+            ),
+            AdmissionDetailsInfoChip(
+              label: 'Available beds',
+              value: '${admission.hospitalGroup!.availableBeds}',
+              icon: Icons.event_available,
+            ),
+          ],
         ),
       AdmissionDetailsSectionContainer(
         title: AppTexts.admissionNotesSection,

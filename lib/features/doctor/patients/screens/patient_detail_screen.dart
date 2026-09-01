@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
+import 'package:icu_connect/core/constants/app_spacing.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 import 'package:icu_connect/core/network/network_exceptions.dart';
 import 'package:icu_connect/core/utils/date_formatters.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
+import 'package:icu_connect/core/widgets/confirm_action_dialog.dart';
 import 'package:icu_connect/features/doctor/hospital_details/repository/hospital_admissions_repository.dart';
 import 'package:icu_connect/features/doctor/hospital_details/screens/admission_details_screen.dart';
 import 'package:icu_connect/features/doctor/patients/screens/patient_form_screen.dart';
@@ -52,27 +54,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 
   Future<void> _confirmDelete() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(AppTexts.deletePatientAdmin),
-        content: Text(AppTexts.deletePatientConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppTexts.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              AppTexts.deletePatientAdmin,
-              style: const TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
+    final ok = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.deletePatientAdmin,
+      message: AppTexts.deletePatientConfirmation,
+      confirmLabel: AppTexts.deletePatientAdmin,
     );
-    if (ok != true || !mounted) return;
+    if (!ok || !mounted) return;
     try {
       await _repository.deletePatient(widget.patientId);
       if (!mounted) return;
@@ -99,18 +87,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
-        title: const Text(
-          AppTexts.patientDetailsTitle,
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text(AppTexts.patientDetailsTitle),
         actions: [
           FutureBuilder<PatientModel>(
             future: _future,
@@ -153,16 +131,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                 : 'Failed to load patient.';
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       msg,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     AppButton(label: AppTexts.retry, onPressed: _reload),
                   ],
                 ),
@@ -171,7 +149,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           }
           final patient = snapshot.data!;
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -182,7 +160,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     side: const BorderSide(color: AppColors.border),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -201,15 +179,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 color: AppColors.primary,
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
                                 patient.name,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
-                                ),
+                                style: Theme.of(context).textTheme.titleLarge,
                               ),
                             ),
                             if (patient.bloodGroup.isNotEmpty)
@@ -233,7 +207,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: AppSpacing.sm),
                         _detailRow(AppTexts.nationalId, patient.nationalId),
                         _detailRow(AppTexts.age, '${patient.age}'),
                         _detailRow(
@@ -251,42 +225,34 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           AppTexts.updatedLabel,
                           _shortDate(patient.updatedAt),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         Text(
                           AppTexts.notes,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textSecondary,
-                          ),
+                          style: Theme.of(context).textTheme.labelLarge,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xs),
                         Text(
                           patient.notes.isEmpty
                               ? AppTexts.notAvailable
                               : patient.notes,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            height: 1.35,
-                          ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyLarge?.copyWith(height: 1.35),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   '${AppTexts.admissionsSection} (${patient.admissions.length})',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 if (patient.admissions.isEmpty)
-                  const Text(
+                  Text(
                     'No admissions on record.',
-                    style: TextStyle(color: AppColors.textSecondary),
+                    style: Theme.of(context).textTheme.bodyMedium,
                   )
                 else
                   ...patient.admissions.map((a) {
@@ -320,9 +286,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                     Expanded(
                                       child: Text(
                                         'Bed ${a.bedNumber} · ${a.status}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                        ),
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleSmall,
                                       ),
                                     ),
                                     const Icon(
@@ -331,21 +297,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  h,
-                                  style: const TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 13,
-                                  ),
-                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(h, style: Theme.of(context).textTheme.bodySmall),
                                 if ((a.dateComes ?? '').isNotEmpty)
                                   Text(
                                     '${AppTexts.admitted}: ${_shortDate(a.dateComes!)}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary,
-                                    ),
+                                    style: Theme.of(context).textTheme.bodySmall,
                                   ),
                               ],
                             ),
@@ -354,7 +311,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                       ),
                     );
                   }),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.lg),
               ],
             ),
           );
@@ -364,32 +321,28 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 
   Widget _detailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 110,
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
+    return Builder(
+      builder: (context) {
+        final labelStyle = Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(color: AppColors.textSecondary);
+        final valueStyle = Theme.of(context).textTheme.labelLarge;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: 110, child: Text(label, style: labelStyle)),
+              Expanded(
+                child: Text(
+                  value.isEmpty ? AppTexts.notAvailable : value,
+                  style: valueStyle,
+                ),
               ),
-            ),
+            ],
           ),
-          Expanded(
-            child: Text(
-              value.isEmpty ? AppTexts.notAvailable : value,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

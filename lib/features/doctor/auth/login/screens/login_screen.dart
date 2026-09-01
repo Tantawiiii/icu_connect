@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_images.dart';
+import 'package:icu_connect/core/constants/app_spacing.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 import 'package:icu_connect/core/network/api_client.dart';
 import 'package:icu_connect/core/network/api_constants.dart';
@@ -142,34 +143,46 @@ class _LoginViewState extends State<_LoginView> {
                       ),
                       child: Column(
                         children: [
-                          const SizedBox(height: 12),
+                          const SizedBox(height: AppSpacing.sm),
                           _LoginHeader(
                             onLongPressLogo: () {
                               showAdminLoginDialog(context);
                             },
                           ),
-                          const SizedBox(height: 28),
-                          _LoginFormCard(
-                            formKey: _formKey,
-                            emailController: _emailController,
-                            passwordController: _passwordController,
-                            isLoading: isLoading,
-                            isValidHospitalBaseUrl: isValidHospitalBaseUrl,
-                            onSubmit: _submit,
-                            onForgotPassword: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => const ForgotPasswordScreen(),
-                                ),
-                              );
-                            },
-                            onRegister: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => const RegisterScreen(),
-                                ),
-                              );
-                            },
+                          const SizedBox(height: AppSpacing.xl),
+                          TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0, end: 1),
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeOut,
+                            builder: (context, value, child) => Opacity(
+                              opacity: value,
+                              child: Transform.translate(
+                                offset: Offset(0, (1 - value) * 16),
+                                child: child,
+                              ),
+                            ),
+                            child: _LoginFormCard(
+                              formKey: _formKey,
+                              emailController: _emailController,
+                              passwordController: _passwordController,
+                              isLoading: isLoading,
+                              isValidHospitalBaseUrl: isValidHospitalBaseUrl,
+                              onSubmit: _submit,
+                              onForgotPassword: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const ForgotPasswordScreen(),
+                                  ),
+                                );
+                              },
+                              onRegister: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const RegisterScreen(),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ],
                       ),
@@ -216,30 +229,30 @@ class _LoginHeader extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 20),
-        const Text(
+        const SizedBox(height: AppSpacing.md),
+        Text(
           'ICU Connect',
-          style: TextStyle(
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: Colors.white,
             fontSize: 28,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.3,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           AppTexts.welcomeBack,
-          style: TextStyle(
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: Colors.white.withValues(alpha: 0.82),
             fontSize: 15,
             fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.xs),
         Text(
           'Sign in to manage admissions and patient care.',
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Colors.white.withValues(alpha: 0.62),
             fontSize: 13,
             height: 1.4,
@@ -292,20 +305,13 @@ class _LoginFormCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              AppTexts.login,
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
+            Text(AppTexts.login, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
               'Enter your credentials to continue.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: AppSpacing.lg),
             AppTextField(
               controller: emailController,
               hintText: AppTexts.emailLabel,

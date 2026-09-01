@@ -2,7 +2,7 @@ name: icu_connect
 description: "ICU Connect — hospital workflows, admissions, and clinical documentation for care teams."
 publish_to: 'none'
 
-version: 1.0.8+9
+version: 1.0.15+15
 
 environment:
   sdk: ^3.8.1
@@ -56,4 +56,16 @@ flutter:
      - assets/fonts/OpenSans-Bold.ttf
      - assets/fonts/NotoNaskhArabic-Regular.ttf
      - assets/fonts/NotoNaskhArabic-Bold.ttf
+
+  fonts:
+    - family: OpenSans
+      fonts:
+        - asset: assets/fonts/OpenSans-Regular.ttf
+        - asset: assets/fonts/OpenSans-Bold.ttf
+          weight: 700
+    - family: NotoNaskhArabic
+      fonts:
+        - asset: assets/fonts/NotoNaskhArabic-Regular.ttf
+        - asset: assets/fonts/NotoNaskhArabic-Bold.ttf
+          weight: 700
 

@@ -670,9 +670,9 @@ class _EditingReadingColumn extends StatelessWidget {
               child: TextField(
                 controller: ctrl,
                 enabled: !saving,
-                keyboardType: (!isLabs && !t.isNumericValueType)
-                    ? TextInputType.text
-                    : const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: t.isNumericValueType
+                    ? const TextInputType.numberWithOptions(decimal: true)
+                    : TextInputType.text,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 11,

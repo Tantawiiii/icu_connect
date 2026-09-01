@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../../../../core/widgets/list_error_view.dart';
 import '../../../../core/widgets/list_search_field.dart';
 import '../../../../core/widgets/paginated_list_footer.dart';
@@ -64,11 +66,11 @@ class _UsersListViewState extends State<_UsersListView> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          AppTexts.usersLabel,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        foregroundColor: Colors.white,
+        title: const Text(AppTexts.usersLabel),
+        titleTextStyle: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(color: Colors.white, fontSize: 18),
         centerTitle: true,
         actions: [
           IconButton(
@@ -93,7 +95,12 @@ class _UsersListViewState extends State<_UsersListView> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
             child: ListSearchField(
               controller: _searchController,
               hintText: 'Search users',
@@ -199,16 +206,17 @@ class _UsersList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (users.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.people_outline, size: 56, color: AppColors.secondary),
-            SizedBox(height: 12),
-            Text(
-              'No users found',
-              style: TextStyle(color: AppColors.textSecondary),
+            const Icon(
+              Icons.people_outline,
+              size: 56,
+              color: AppColors.secondary,
             ),
+            const SizedBox(height: AppSpacing.sm),
+            Text('No users found', style: Theme.of(context).textTheme.bodyMedium),
           ],
         ),
       );
@@ -225,14 +233,11 @@ class _UsersList extends StatelessWidget {
         itemBuilder: (context, index) {
           if (index == 0) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: Text(
                 'Showing ${pagination.from}-${pagination.to} '
                 'of ${pagination.total} users',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                ),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             );
           }
@@ -297,23 +302,19 @@ class _UserCard extends StatelessWidget {
                           : AppColors.primary.withAlpha(20),
                       child: Text(
                         user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: deleted ? AppColors.error : AppColors.primary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             user.name,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               color: deleted
                                   ? AppColors.textSecondary
                                   : AppColors.textPrimary,
@@ -325,19 +326,13 @@ class _UserCard extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             user.email,
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                           if (user.phone.isNotEmpty) ...[
                             const SizedBox(height: 1),
                             Text(
                               user.phone,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 11,
-                              ),
+                              style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
                         ],
@@ -448,58 +443,29 @@ class _UserCard extends StatelessWidget {
         });
   }
 
-  void _confirmDelete(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.deleteUser),
-        content: const Text(AppTexts.deleteUserConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppTexts.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<UsersCubit>().deleteUser(user.id);
-            },
-            child: const Text(AppTexts.deleteUser),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.deleteUser,
+      message: AppTexts.deleteUserConfirmation,
+      confirmLabel: AppTexts.deleteUser,
     );
+    if (confirmed && context.mounted) {
+      context.read<UsersCubit>().deleteUser(user.id);
+    }
   }
 
-  void _confirmRestore(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.restoreUser),
-        content: const Text(AppTexts.restoreUserConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppTexts.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<UsersCubit>().restoreUser(user.id);
-            },
-            child: const Text(AppTexts.restoreUser),
-          ),
-        ],
-      ),
+  Future<void> _confirmRestore(BuildContext context) async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.restoreUser,
+      message: AppTexts.restoreUserConfirmation,
+      confirmLabel: AppTexts.restoreUser,
+      isDestructive: false,
     );
+    if (confirmed && context.mounted) {
+      context.read<UsersCubit>().restoreUser(user.id);
+    }
   }
 }
 

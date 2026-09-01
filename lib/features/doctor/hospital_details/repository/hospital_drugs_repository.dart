@@ -42,7 +42,10 @@ class HospitalDrugsRepository extends BaseApiService {
 
   /// POST /ai/drugs/lookup — AI-assisted prefill for the add-drug form.
   /// At least one of [genericName] / [tradeNames] must be provided.
-  Future<DrugRequest> lookupDrugWithAi({
+  ///
+  /// Response shape: `{ data: { drug: {...fields, found, confidence,
+  /// missing_fields}, raw: {...model usage metadata, ignored} } }`.
+  Future<AiDrugLookupResult> lookupDrugWithAi({
     String? genericName,
     List<String> tradeNames = const [],
     String language = 'en',
@@ -58,8 +61,13 @@ class HospitalDrugsRepository extends BaseApiService {
       data: body,
       cancelTag: 'hospital_drugs_ai_lookup',
     );
-    final raw = data['data'] is Map<String, dynamic> ? data['data'] : data;
-    return DrugRequest.fromJson(raw as Map<String, dynamic>);
+    final payload = data['data'] is Map<String, dynamic>
+        ? data['data'] as Map<String, dynamic>
+        : data;
+    final drugJson = payload['drug'] is Map<String, dynamic>
+        ? payload['drug'] as Map<String, dynamic>
+        : payload;
+    return AiDrugLookupResult.fromJson(drugJson);
   }
 }
 

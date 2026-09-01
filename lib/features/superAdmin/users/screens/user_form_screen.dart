@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
@@ -308,13 +309,11 @@ class _UserFormViewState extends State<_UserFormView> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          _isEdit ? AppTexts.editUser : AppTexts.addUser,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+        foregroundColor: Colors.white,
+        title: Text(_isEdit ? AppTexts.editUser : AppTexts.addUser),
+        titleTextStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+          color: Colors.white,
+          fontSize: 18,
         ),
         centerTitle: true,
       ),
@@ -359,7 +358,7 @@ class _UserFormViewState extends State<_UserFormView> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(AppSpacing.md),
                       child: Column(
                         children: [
                           AppTextField(
@@ -422,7 +421,12 @@ class _UserFormViewState extends State<_UserFormView> {
                       children: [
                         // Role dropdown
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.md,
+                            14,
+                            AppSpacing.md,
+                            AppSpacing.xs,
+                          ),
                           child: DropdownButtonFormField<String>(
                             value: _selectedRole,
                             isExpanded: true,
@@ -463,19 +467,16 @@ class _UserFormViewState extends State<_UserFormView> {
                           ),
                           title: Text(
                             _isActive ? AppTexts.active : AppTexts.inactive,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: _isActive
-                                  ? AppColors.success
-                                  : AppColors.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  color: _isActive
+                                      ? AppColors.success
+                                      : AppColors.textSecondary,
+                                ),
                           ),
-                          subtitle: const Text(
+                          subtitle: Text(
                             AppTexts.enableOrDisableThisAccount,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                           value: _isActive,
                           activeColor: AppColors.success,
@@ -500,7 +501,7 @@ class _UserFormViewState extends State<_UserFormView> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(AppSpacing.md),
                       child: Column(
                         children: [
                           AppTextField(
@@ -567,7 +568,7 @@ class _UserFormViewState extends State<_UserFormView> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
@@ -588,15 +589,12 @@ class _UserFormViewState extends State<_UserFormView> {
                             ),
                           )
                         : _assignments.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(20),
+                        ? Padding(
+                            padding: const EdgeInsets.all(20),
                             child: Center(
                               child: Text(
                                 AppTexts.noHospitalsAssigned,
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13,
-                                ),
+                                style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ),
                           )

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../../../../core/widgets/list_error_view.dart';
 import '../../../../core/widgets/list_search_field.dart';
 import '../../../../core/widgets/paginated_list_footer.dart';
@@ -78,11 +80,11 @@ class _HospitalsListViewState extends State<_HospitalsListView>
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          AppTexts.hospitalsLabel,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        foregroundColor: Colors.white,
+        title: const Text(AppTexts.hospitalsLabel),
+        titleTextStyle: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(color: Colors.white, fontSize: 18),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
@@ -124,7 +126,12 @@ class _HospitalsListViewState extends State<_HospitalsListView>
           Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  12,
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                ),
                 child: ListSearchField(
                   controller: _searchController,
                   hintText: 'Search hospitals',
@@ -243,19 +250,19 @@ class _HospitalsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (hospitals.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.local_hospital_outlined,
               size: 56,
               color: AppColors.secondary,
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
               'No hospitals found',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
         ),
@@ -278,10 +285,7 @@ class _HospitalsList extends StatelessWidget {
               child: Text(
                 'Showing ${pagination.from}-${pagination.to} '
                 'of ${pagination.total} hospitals',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                ),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             );
           }
@@ -350,23 +354,22 @@ class _HospitalCard extends StatelessWidget {
                         size: 22,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             hospital.name,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: deleted
-                                  ? AppColors.textSecondary
-                                  : AppColors.textPrimary,
-                              decoration: deleted
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  color: deleted
+                                      ? AppColors.textSecondary
+                                      : AppColors.textPrimary,
+                                  decoration: deleted
+                                      ? TextDecoration.lineThrough
+                                      : TextDecoration.none,
+                                ),
                           ),
                           const SizedBox(height: 2),
                           Row(
@@ -380,10 +383,7 @@ class _HospitalCard extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   hospital.location,
-                                  style: const TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 12,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodySmall,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -413,14 +413,14 @@ class _HospitalCard extends StatelessWidget {
                       value: hospital.totalBeds,
                       color: AppColors.accent,
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: AppSpacing.md),
                     _BedStat(
                       icon: Icons.check_circle_outline,
                       label: AppTexts.availableBeds,
                       value: hospital.availableBeds,
                       color: AppColors.success,
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: AppSpacing.md),
                     _BedStat(
                       icon: Icons.person_outlined,
                       label: AppTexts.occupiedBeds,
@@ -456,7 +456,7 @@ class _HospitalCard extends StatelessWidget {
                             color: AppColors.accent,
                             onTap: () => _openEdit(context),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.sm),
                           _ActionButton(
                             icon: Icons.delete_outline,
                             label: AppTexts.deleteHospital,
@@ -498,58 +498,29 @@ class _HospitalCard extends StatelessWidget {
         });
   }
 
-  void _confirmDelete(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.deleteHospital),
-        content: const Text(AppTexts.deleteHospitalConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppTexts.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<HospitalsCubit>().deleteHospital(hospital.id);
-            },
-            child: const Text(AppTexts.deleteHospital),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.deleteHospital,
+      message: AppTexts.deleteHospitalConfirmation,
+      confirmLabel: AppTexts.deleteHospital,
     );
+    if (confirmed && context.mounted) {
+      context.read<HospitalsCubit>().deleteHospital(hospital.id);
+    }
   }
 
-  void _confirmRestore(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.restoreHospital),
-        content: const Text(AppTexts.restoreHospitalConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppTexts.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<HospitalsCubit>().restoreHospital(hospital.id);
-            },
-            child: const Text(AppTexts.restoreHospital),
-          ),
-        ],
-      ),
+  Future<void> _confirmRestore(BuildContext context) async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.restoreHospital,
+      message: AppTexts.restoreHospitalConfirmation,
+      confirmLabel: AppTexts.restoreHospital,
+      isDestructive: false,
     );
+    if (confirmed && context.mounted) {
+      context.read<HospitalsCubit>().restoreHospital(hospital.id);
+    }
   }
 }
 

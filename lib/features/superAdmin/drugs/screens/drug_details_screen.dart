@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
 import '../../../../core/network/network_exceptions.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../cubit/drugs_cubit.dart';
 import '../models/drug_model.dart';
 import '../repository/drugs_repository.dart';
@@ -76,24 +78,13 @@ class _DrugDetailsScreenState extends State<DrugDetailsScreen> {
   Future<void> _archive() async {
     final drug = _drug;
     if (drug == null) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.archiveDrug),
-        content: const Text(AppTexts.archiveDrugConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(AppTexts.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(AppTexts.archiveDrug),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.archiveDrug,
+      message: AppTexts.archiveDrugConfirmation,
+      confirmLabel: AppTexts.archiveDrug,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     await context.read<DrugsCubit>().archiveDrug(drug.id);
     if (mounted) Navigator.of(context).pop();
   }
@@ -101,24 +92,14 @@ class _DrugDetailsScreenState extends State<DrugDetailsScreen> {
   Future<void> _restore() async {
     final drug = _drug;
     if (drug == null) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.restoreDrug),
-        content: const Text(AppTexts.restoreDrugConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(AppTexts.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(AppTexts.restoreDrug),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.restoreDrug,
+      message: AppTexts.restoreDrugConfirmation,
+      confirmLabel: AppTexts.restoreDrug,
+      isDestructive: false,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     await context.read<DrugsCubit>().restoreDrug(drug.id);
     if (mounted) Navigator.of(context).pop();
   }
@@ -131,16 +112,15 @@ class _DrugDetailsScreenState extends State<DrugDetailsScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
+        foregroundColor: Colors.white,
         title: Text(
           drug?.genericName.isNotEmpty == true
               ? drug!.genericName
               : AppTexts.drugDetails,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
         ),
+        titleTextStyle: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(color: Colors.white, fontSize: 18),
         centerTitle: true,
         actions: [
           IconButton(
@@ -191,6 +171,11 @@ class _DrugDetailsScreenState extends State<DrugDetailsScreen> {
                     title: AppTexts.tradeNames,
                     items: drug.tradeNames,
                   ),
+                  if (drug.doseLabel.isNotEmpty)
+                    _TextCard(
+                      title: AppTexts.doseAmount,
+                      value: drug.doseLabel,
+                    ),
                   _StringListCard(
                     title: AppTexts.dosingGuidelines,
                     items: drug.dosingGuidelines,
@@ -220,7 +205,7 @@ class _DrugDetailsScreenState extends State<DrugDetailsScreen> {
                     value: drug.hepaticDoseAdjustment,
                   ),
                   _TextCard(title: AppTexts.notes, value: drug.notes),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   if (drug.isArchived)
                     FilledButton.icon(
                       onPressed: _restore,
@@ -288,10 +273,10 @@ class _HeaderCard extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: [
               _Chip(
                 label: drug.isArchived
@@ -370,14 +355,8 @@ class _StringListCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
+          Text(title, style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: AppSpacing.sm),
           ...items.map(
             (item) => Padding(
               padding: const EdgeInsets.only(bottom: 6),
@@ -425,14 +404,8 @@ class _TextCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
+          Text(title, style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             value,
             style: const TextStyle(color: AppColors.textPrimary, height: 1.45),

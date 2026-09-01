@@ -745,13 +745,14 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
 
     setState(() => _addingLabTitle = true);
     try {
-      final created = await _repo.createPatientLabTitle(
+      final created = (await _repo.createPatientLabTitle(
         patientId: patient.id,
         title: values.title,
         unit: values.unit,
+        valueType: values.valueType,
         normalRangeMin: values.normalRangeMin,
         normalRangeMax: values.normalRangeMax,
-      );
+      )).copyWith(valueType: values.valueType);
       if (!mounted) return;
       setState(() {
         _extraLabTitles.add(created);
@@ -917,9 +918,10 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
     for (final title in titles) {
       final text = pending.controllers[title.id]?.text.trim() ?? '';
       if (text.isEmpty) continue;
-      final valueError = AdmissionUpdateValidation.numericValue(
-        text,
+      final valueError = AdmissionUpdateValidation.measurementValue(
+        raw: text,
         field: title.title,
+        isNumeric: title.isNumericValueType,
       );
       if (valueError != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1063,7 +1065,9 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           (e) => AdmissionMedicationDraft(
             drugId: e.drugId!,
             dose: e.value,
+            doseUnitId: e.doseUnitId,
             frequency: e.duration,
+            type: e.type,
             isDiscontinued: e.isDiscontinued,
           ),
         )
@@ -1419,7 +1423,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
         adding: _addingSection == 'med',
         editingItemId: _editingSection == 'med' ? _editingItemId : null,
         saving: false,
-        onStartAdd: () => _startAddGeneric('med', defaultType: 'PO'),
+        onStartAdd: () => _startAddGeneric('med', defaultType: 'other'),
         onCancelAdd: () {
           _cancelAddGeneric();
           _disposeGenericCtrls();
@@ -1430,8 +1434,9 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
               required drugId,
               required title,
               required dose,
+              required doseUnitId,
               required frequency,
-              type = 'PO',
+              type = 'other',
             }) {
               final now = _nowIso();
               setState(() {
@@ -1442,6 +1447,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                     type: type,
                     title: title,
                     value: dose,
+                    doseUnitId: doseUnitId,
                     duration: frequency,
                     drugId: drugId,
                     createdAt: now,
@@ -1472,8 +1478,9 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
               required drugId,
               required title,
               required dose,
+              required doseUnitId,
               required frequency,
-              type = 'PO',
+              type = 'other',
             }) {
               final id = _editingItemId;
               if (id == null) return;
@@ -1487,6 +1494,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                     type: type,
                     title: title,
                     value: dose,
+                    doseUnitId: doseUnitId,
                     duration: frequency,
                     drugId: drugId,
                     isDiscontinued: _medicationDrafts[i].isDiscontinued,

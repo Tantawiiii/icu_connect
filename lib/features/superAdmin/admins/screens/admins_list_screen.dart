@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../../../../core/widgets/list_error_view.dart';
 import '../../../../core/widgets/list_search_field.dart';
 import '../../../../core/widgets/paginated_list_footer.dart';
@@ -65,11 +67,11 @@ class _AdminsListViewState extends State<_AdminsListView> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          AppTexts.superAdmins,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        foregroundColor: Colors.white,
+        title: const Text(AppTexts.superAdmins),
+        titleTextStyle: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(color: Colors.white, fontSize: 18),
         centerTitle: true,
         actions: [
           IconButton(
@@ -94,7 +96,12 @@ class _AdminsListViewState extends State<_AdminsListView> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.xs,
+            ),
             child: ListSearchField(
               controller: _searchController,
               hintText: 'Search admins',
@@ -180,16 +187,17 @@ class _AdminsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (admins.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.people_outline, size: 56, color: AppColors.secondary),
-            SizedBox(height: 12),
-            Text(
-              'No admins found',
-              style: TextStyle(color: AppColors.textSecondary),
+            const Icon(
+              Icons.people_outline,
+              size: 56,
+              color: AppColors.secondary,
             ),
+            const SizedBox(height: AppSpacing.sm),
+            Text('No admins found', style: Theme.of(context).textTheme.bodyMedium),
           ],
         ),
       );
@@ -206,14 +214,11 @@ class _AdminsList extends StatelessWidget {
         itemBuilder: (context, index) {
           if (index == 0) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: Text(
                 'Showing ${pagination.from}-${pagination.to} '
                 'of ${pagination.total} admins',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                ),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             );
           }
@@ -268,37 +273,22 @@ class _AdminCard extends StatelessWidget {
               backgroundColor: AppColors.primary.withAlpha(20),
               child: Text(
                 admin.name.isNotEmpty ? admin.name[0].toUpperCase() : 'A',
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(color: AppColors.primary),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.sm),
 
             // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    admin.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
+                  Text(admin.name, style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 2),
-                  Text(
-                    admin.email,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
+                  Text(admin.email, style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: AppSpacing.xs),
                   Row(
                     children: [
                       StatusBadge(
@@ -361,30 +351,15 @@ class _AdminCard extends StatelessWidget {
         });
   }
 
-  void _confirmDelete(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.deleteAdmin),
-        content: const Text(AppTexts.deleteAdminConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppTexts.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<AdminsCubit>().deleteAdmin(admin.id);
-            },
-            child: const Text(AppTexts.deleteAdmin),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.deleteAdmin,
+      message: AppTexts.deleteAdminConfirmation,
+      confirmLabel: AppTexts.deleteAdmin,
     );
+    if (confirmed && context.mounted) {
+      context.read<AdminsCubit>().deleteAdmin(admin.id);
+    }
   }
 }

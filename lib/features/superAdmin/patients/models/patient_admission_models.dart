@@ -84,6 +84,17 @@ class MeasurementTitleModel extends Equatable {
 
   bool get isNumericValueType => valueType.toLowerCase() != 'string';
 
+  MeasurementTitleModel copyWith({String? valueType}) => MeasurementTitleModel(
+    id: id,
+    title: title,
+    unit: unit,
+    normalRangeMin: normalRangeMin,
+    normalRangeMax: normalRangeMax,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    valueType: valueType ?? this.valueType,
+  );
+
   factory MeasurementTitleModel.fromJson(Map<String, dynamic> json) =>
       MeasurementTitleModel(
         id: (json['id'] as num).toInt(),
@@ -361,6 +372,8 @@ class MedicationModel extends Equatable {
     required this.updatedAt,
     this.drugId,
     this.isDiscontinued = false,
+    this.doseUnitId,
+    this.doseUnitLabel = '',
   });
 
   final int id;
@@ -373,6 +386,8 @@ class MedicationModel extends Equatable {
   final String updatedAt;
   final int? drugId;
   final bool isDiscontinued;
+  final int? doseUnitId;
+  final String doseUnitLabel;
 
   MedicationModel copyWith({
     int? id,
@@ -385,6 +400,8 @@ class MedicationModel extends Equatable {
     String? updatedAt,
     int? drugId,
     bool? isDiscontinued,
+    int? doseUnitId,
+    String? doseUnitLabel,
   }) {
     return MedicationModel(
       id: id ?? this.id,
@@ -397,6 +414,8 @@ class MedicationModel extends Equatable {
       updatedAt: updatedAt ?? this.updatedAt,
       drugId: drugId ?? this.drugId,
       isDiscontinued: isDiscontinued ?? this.isDiscontinued,
+      doseUnitId: doseUnitId ?? this.doseUnitId,
+      doseUnitLabel: doseUnitLabel ?? this.doseUnitLabel,
     );
   }
 
@@ -438,6 +457,16 @@ class MedicationModel extends Equatable {
       updatedAt: json['updated_at'] as String? ?? '',
       drugId: (json['drug_id'] as num?)?.toInt() ?? nestedDrugId,
       isDiscontinued: _parseDiscontinued(json),
+      doseUnitId:
+          (json['dose_unit_id'] as num?)?.toInt() ??
+          (json['dose_unit'] is Map<String, dynamic>
+              ? (json['dose_unit']['id'] as num?)?.toInt()
+              : null),
+      doseUnitLabel: json['dose_unit'] is Map<String, dynamic>
+          ? (json['dose_unit']['label']?.toString() ??
+                json['dose_unit']['code']?.toString() ??
+                '')
+          : '',
     );
   }
 
@@ -453,6 +482,8 @@ class MedicationModel extends Equatable {
     updatedAt,
     drugId,
     isDiscontinued,
+    doseUnitId,
+    doseUnitLabel,
   ];
 }
 

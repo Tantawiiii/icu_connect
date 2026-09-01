@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../../../../core/widgets/list_error_view.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../cubit/patients_cubit.dart';
@@ -32,11 +34,11 @@ class _PatientsListView extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          AppTexts.patientsLabel,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        foregroundColor: Colors.white,
+        title: const Text(AppTexts.patientsLabel),
+        titleTextStyle: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(color: Colors.white, fontSize: 18),
         centerTitle: true,
         actions: [
           IconButton(
@@ -130,20 +132,17 @@ class _PatientsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (patients.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.personal_injury_outlined,
               size: 56,
               color: AppColors.secondary,
             ),
-            SizedBox(height: 12),
-            Text(
-              'No patients found',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
+            const SizedBox(height: 12),
+            Text('No patients found', style: Theme.of(context).textTheme.bodyMedium),
           ],
         ),
       );
@@ -153,7 +152,7 @@ class _PatientsList extends StatelessWidget {
       color: AppColors.primary,
       onRefresh: () => context.read<PatientsCubit>().fetchPatients(),
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 100),
         itemCount: patients.length + 1,
         itemBuilder: (context, index) {
           if (index == 0) {
@@ -162,10 +161,7 @@ class _PatientsList extends StatelessWidget {
               child: Text(
                 '${patients.length} '
                 '${patients.length == 1 ? 'patient' : 'patients'}',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                ),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             );
           }
@@ -225,33 +221,26 @@ class _PatientCard extends StatelessWidget {
                           children: [
                             Text(
                               patient.name,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: deleted
-                                    ? AppColors.textSecondary
-                                    : AppColors.textPrimary,
-                                decoration: deleted
-                                    ? TextDecoration.lineThrough
-                                    : TextDecoration.none,
-                              ),
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(
+                                    color: deleted
+                                        ? AppColors.textSecondary
+                                        : AppColors.textPrimary,
+                                    decoration: deleted
+                                        ? TextDecoration.lineThrough
+                                        : TextDecoration.none,
+                                  ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               '${AppTexts.age}: ${patient.age}',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 11,
-                              ),
+                              style: Theme.of(context).textTheme.bodySmall,
                             ),
                             if (patient.nationalId.isNotEmpty) ...[
                               const SizedBox(height: 1),
                               Text(
                                 '${AppTexts.nationalId}: ${patient.nationalId}',
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 11,
-                                ),
+                                style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
                           ],
@@ -272,12 +261,9 @@ class _PatientCard extends StatelessWidget {
                       patient.notes,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                   ],
 
                   Row(
@@ -338,30 +324,15 @@ class _PatientCard extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.deletePatientAdmin),
-        content: const Text(AppTexts.deletePatientConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppTexts.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<PatientsCubit>().deletePatient(patient.id);
-            },
-            child: const Text(AppTexts.deletePatientAdmin),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.deletePatientAdmin,
+      message: AppTexts.deletePatientConfirmation,
+      confirmLabel: AppTexts.deletePatientAdmin,
     );
+    if (confirmed && context.mounted) {
+      context.read<PatientsCubit>().deletePatient(patient.id);
+    }
   }
 }

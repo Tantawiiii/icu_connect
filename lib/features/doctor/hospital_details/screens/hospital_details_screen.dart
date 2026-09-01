@@ -318,19 +318,7 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
-        title: Text(
-          widget.hospital.name,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      appBar: AppBar(title: Text(widget.hospital.name)),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14),
         child: RefreshIndicator(
@@ -392,12 +380,15 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                       .whereType<int>()
                       .fold(0, (max, bed) => bed > max ? bed : max);
                   final totalBeds = math.max(baseTotalBeds, maxOccupiedBed);
-                  final availableBeds =
-                      selectedGroup?.availableBeds ??
-                      math.max(
-                        0,
-                        totalBeds - occupancy.occupiedBedLabels.length,
-                      );
+                  // Always derive from the freshly-fetched admissions list —
+                  // `selectedGroup.availableBeds` is a static snapshot from
+                  // when this screen was opened and goes stale as soon as an
+                  // admission is discharged/exited without navigating back
+                  // to the hospitals list.
+                  final availableBeds = math.max(
+                    0,
+                    totalBeds - occupancy.occupiedBedLabels.length,
+                  );
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -544,7 +535,7 @@ class _HospitalAdmissionsErrorState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
           AppButton(

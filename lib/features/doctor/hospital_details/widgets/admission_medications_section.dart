@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
+import 'package:icu_connect/core/network/api_client.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
 import 'package:icu_connect/core/widgets/app_text_field.dart';
 import 'package:icu_connect/features/superAdmin/drugs/models/drug_model.dart';
+import 'package:icu_connect/features/superAdmin/drugs/widgets/dose_input_row.dart';
 import 'package:icu_connect/features/superAdmin/patients/models/patient_admission_models.dart';
 
 import '../repository/hospital_drugs_repository.dart';
@@ -17,6 +19,7 @@ typedef MedicationSaveCallback =
       required int drugId,
       required String title,
       required String dose,
+      required int? doseUnitId,
       required String frequency,
       String type,
     });
@@ -28,15 +31,18 @@ class _RouteMeta {
 }
 
 const Map<String, _RouteMeta> _routeMetaMap = {
-  'PO': _RouteMeta(Icons.medication_liquid_outlined, Color(0xFF3B5998)),
+  'infusion': _RouteMeta(Icons.opacity_outlined, Color(0xFF5C6BC0)),
   'IV': _RouteMeta(Icons.water_drop_outlined, Color(0xFF1E88E5)),
+  'PO': _RouteMeta(Icons.medication_liquid_outlined, Color(0xFF3B5998)),
   'IM': _RouteMeta(Icons.vaccines_outlined, Color(0xFF00897B)),
   'SC': _RouteMeta(Icons.colorize_outlined, Color(0xFF8E24AA)),
-  'infusion': _RouteMeta(Icons.opacity_outlined, Color(0xFF5C6BC0)),
   'syring_pump': _RouteMeta(Icons.speed_outlined, Color(0xFFEF6C00)),
   'bolus': _RouteMeta(Icons.bolt_outlined, Color(0xFFF9A825)),
   'other': _RouteMeta(Icons.medication_outlined, Color(0xFF6C6F80)),
 };
+
+const String _infusionRateUnitCode = 'ml/h';
+const String _infusionFrequencyValue = 'Continuous';
 
 _RouteMeta _routeMeta(String type) =>
     _routeMetaMap[type] ?? _routeMetaMap['other']!;
@@ -74,11 +80,11 @@ class AdmissionMedicationsSection extends StatelessWidget {
   final MedicationModel? initialEdit;
 
   static const routeTypes = <String>[
-    'PO',
+    'infusion',
     'IV',
+    'PO',
     'IM',
     'SC',
-    'infusion',
     'syring_pump',
     'bolus',
     'other',
@@ -372,7 +378,10 @@ class _MedicationCard extends StatelessWidget {
     final routeLabel = med.type.trim().isEmpty
         ? ''
         : med.type.replaceAll('_', ' ').toUpperCase();
-    final dose = med.value.trim();
+    final dose = [
+      med.value.trim(),
+      med.doseUnitLabel.trim(),
+    ].where((s) => s.isNotEmpty).join(' ');
     final freq = med.duration.trim();
     final discontinued = med.isDiscontinued;
     final name = med.title.isEmpty
@@ -673,6 +682,9 @@ class _MedicationFormState extends State<_MedicationForm> {
   String? _frequencyPreset;
   DrugModel? _selectedDrug;
   int? _drugId;
+  int? _doseUnitId;
+
+  bool get _isInfusion => _route == 'infusion';
 
   @override
   void initState() {
@@ -682,10 +694,11 @@ class _MedicationFormState extends State<_MedicationForm> {
     _doseCtrl = TextEditingController(text: initial?.value ?? '');
     _freqCtrl = TextEditingController(text: initial?.duration ?? '');
     _drugId = initial?.drugId;
-    final type = (initial?.type ?? 'PO').trim();
+    _doseUnitId = initial?.doseUnitId;
+    final type = (initial?.type ?? 'other').trim();
     _route = AdmissionMedicationsSection.routeTypes.contains(type)
         ? type
-        : (type.isEmpty ? 'PO' : 'other');
+        : 'other';
 
     final initialFreq = initial?.duration.trim() ?? '';
     if (initialFreq.isEmpty) {
@@ -711,7 +724,9 @@ class _MedicationFormState extends State<_MedicationForm> {
   void _submit() {
     final drugId = _selectedDrug?.id ?? _drugId;
     final dose = _doseCtrl.text.trim();
-    final frequency = _freqCtrl.text.trim();
+    final frequency = _isInfusion
+        ? _infusionFrequencyValue
+        : _freqCtrl.text.trim();
     if (drugId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -730,7 +745,16 @@ class _MedicationFormState extends State<_MedicationForm> {
       );
       return;
     }
-    if (_frequencyPreset == null || frequency.isEmpty) {
+    if (_doseUnitId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Dose unit is required'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+    if (!_isInfusion && (_frequencyPreset == null || frequency.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Frequency is required'),
@@ -746,6 +770,7 @@ class _MedicationFormState extends State<_MedicationForm> {
       drugId: drugId,
       title: title.isEmpty ? 'Drug #$drugId' : title,
       dose: dose,
+      doseUnitId: _doseUnitId,
       frequency: frequency,
       type: _route,
     );
@@ -891,7 +916,13 @@ class _MedicationFormState extends State<_MedicationForm> {
                         ),
                         onSelected: widget.saving
                             ? null
-                            : (_) => setState(() => _route = t),
+                            : (_) => setState(() {
+                                final wasInfusion = _isInfusion;
+                                _route = t;
+                                if (wasInfusion != _isInfusion) {
+                                  _doseUnitId = null;
+                                }
+                              }),
                       );
                     },
                   ),
@@ -901,72 +932,80 @@ class _MedicationFormState extends State<_MedicationForm> {
             ),
           ),
           const SizedBox(height: 14),
-          AppTextField(
-            controller: _doseCtrl,
-            labelText: 'Dose *',
-            hintText: 'e.g. 150 mg',
+          DoseInputRow(
+            role: UserRole.hospital,
+            amountController: _doseCtrl,
+            unitId: _doseUnitId,
             enabled: !widget.saving,
+            amountLabel: _isInfusion ? 'Rate *' : 'Dose *',
+            unitCodeFilter: _isInfusion ? const [_infusionRateUnitCode] : null,
+            lockedDisplayLabel: _isInfusion ? _infusionRateUnitCode : null,
+            onUnitChanged: (v) => setState(() => _doseUnitId = v),
           ),
-          const SizedBox(height: 14),
-          const Text(
-            'Frequency',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
+          if (!_isInfusion) ...[
+            const SizedBox(height: 14),
+            const Text(
+              'Frequency',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final f
-                    in AdmissionMedicationsSection.frequencyPresets) ...[
-                  ChoiceChip(
-                    label: Text(
-                      f,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: _frequencyPreset == f
-                            ? Colors.white
-                            : AppColors.textPrimary,
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final f
+                      in AdmissionMedicationsSection.frequencyPresets) ...[
+                    ChoiceChip(
+                      label: Text(
+                        f,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: _frequencyPreset == f
+                              ? Colors.white
+                              : AppColors.textPrimary,
+                        ),
                       ),
-                    ),
-                    selected: _frequencyPreset == f,
-                    showCheckmark: false,
-                    selectedColor: AppColors.primary,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-                    shape: StadiumBorder(
-                      side: BorderSide(
-                        color: AppColors.primary.withValues(alpha: 0.3),
+                      selected: _frequencyPreset == f,
+                      showCheckmark: false,
+                      selectedColor: AppColors.primary,
+                      backgroundColor: AppColors.primary.withValues(
+                        alpha: 0.08,
                       ),
+                      shape: StadiumBorder(
+                        side: BorderSide(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      onSelected: widget.saving
+                          ? null
+                          : (_) => setState(() {
+                              _frequencyPreset = f;
+                              if (f == 'Other') {
+                                _freqCtrl.clear();
+                              } else {
+                                _freqCtrl.text = f;
+                              }
+                            }),
                     ),
-                    onSelected: widget.saving
-                        ? null
-                        : (_) => setState(() {
-                            _frequencyPreset = f;
-                            if (f == 'Other') {
-                              _freqCtrl.clear();
-                            } else {
-                              _freqCtrl.text = f;
-                            }
-                          }),
-                  ),
-                  const SizedBox(width: 8),
+                    const SizedBox(width: 8),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          if (_frequencyPreset == 'Other') ...[
-            const SizedBox(height: 10),
-            AppTextField(
-              controller: _freqCtrl,
-              labelText: 'Custom frequency *',
-              hintText: 'e.g. BID, continuous',
-              enabled: !widget.saving,
-            ),
+            if (_frequencyPreset == 'Other') ...[
+              const SizedBox(height: 10),
+              AppTextField(
+                controller: _freqCtrl,
+                labelText: 'Custom frequency *',
+                hintText: 'e.g. BID, continuous',
+                enabled: !widget.saving,
+              ),
+            ],
           ],
           const SizedBox(height: 14),
           Row(

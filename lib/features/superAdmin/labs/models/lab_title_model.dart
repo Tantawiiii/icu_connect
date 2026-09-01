@@ -5,6 +5,7 @@ class LabTitleModel extends Equatable {
     required this.id,
     required this.title,
     required this.unit,
+    required this.valueType,
     required this.normalRangeMin,
     required this.normalRangeMax,
     required this.createdAt,
@@ -14,6 +15,7 @@ class LabTitleModel extends Equatable {
   final int id;
   final String title;
   final String unit;
+  final String valueType;
   final String normalRangeMin;
   final String normalRangeMax;
   final String createdAt;
@@ -23,6 +25,7 @@ class LabTitleModel extends Equatable {
     id: (json['id'] as num).toInt(),
     title: json['title'] as String,
     unit: json['unit'] as String? ?? '',
+    valueType: json['value_type'] as String? ?? 'numeric',
     normalRangeMin: json['normal_range_min']?.toString() ?? '',
     normalRangeMax: json['normal_range_max']?.toString() ?? '',
     createdAt: json['created_at'] as String,
@@ -34,6 +37,7 @@ class LabTitleModel extends Equatable {
     id,
     title,
     unit,
+    valueType,
     normalRangeMin,
     normalRangeMax,
     createdAt,

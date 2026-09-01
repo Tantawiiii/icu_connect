@@ -9,6 +9,7 @@ class AppTexts {
   static const String emailLabel = 'Email';
   static const String passwordLabel = 'Password';
   static const String cancel = 'Cancel';
+  static const String confirm = 'Confirm';
 
   // Onboarding
   static const String skip = 'Skip';
@@ -243,6 +244,7 @@ class AppTexts {
   static const String aiSafetyFlags = 'Safety flags';
   static const String aiConfidence = 'Confidence';
   static const String aiFullReport = 'Full clinical report';
+  static const String aiNoReport = 'No clinical report available yet.';
   static const String aiViewFullReport = 'View full report';
   static const String aiHideFullReport = 'Hide full report';
   static const String aiLanguage = 'Language';
@@ -341,8 +343,13 @@ class AppTexts {
       'Enter a generic or trade name, then let AI suggest the details.';
   static const String aiDrugLookupNameRequired =
       'Enter a generic or trade name first.';
-  static const String aiDrugLookupSuccess = 'Filled from AI. Review before saving.';
   static const String aiDrugLookupError = 'Could not fetch AI suggestions.';
+  static const String aiDrugLookupNotFound =
+      "AI couldn't find this drug. Try a different name or fill the form manually.";
+  static const String aiDrugLookupRegenerate = 'Regenerate suggestion';
+  static const String aiDrugLookupMissingFieldsLabel =
+      "AI wasn't confident about:";
+  static const String aiDrugLookupSourcesLabel = 'Sources';
   static const String drugCreatedSuccess = 'Drug added successfully.';
   static const String saveAndAddAnother = 'Save & Add Another';
   static const String drugDetails = 'Drug Details';
@@ -358,6 +365,8 @@ class AppTexts {
   static const String drugRestored = 'Drug restored successfully';
   static const String genericName = 'Generic name';
   static const String tradeNames = 'Trade names';
+  static const String doseAmount = 'Dose amount';
+  static const String doseUnit = 'Unit';
   static const String dosingGuidelines = 'Dosing guidelines';
   static const String indications = 'Indications';
   static const String contraindications = 'Contraindications';

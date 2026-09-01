@@ -85,18 +85,24 @@ class AdmissionMedicationDraft {
     required this.drugId,
     required this.dose,
     required this.frequency,
+    this.doseUnitId,
+    this.type,
     this.isDiscontinued = false,
   });
 
   final int drugId;
   final String dose;
   final String frequency;
+  final int? doseUnitId;
+  final String? type;
   final bool isDiscontinued;
 
   Map<String, dynamic> toJson() => {
     'drug_id': drugId,
     'dose': dose,
+    if (doseUnitId != null) 'dose_unit_id': doseUnitId,
     'frequency': frequency,
+    if (type != null && type!.trim().isNotEmpty) 'type': type,
     'is_discontinued': isDiscontinued,
   };
 }

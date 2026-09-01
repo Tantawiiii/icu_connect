@@ -100,6 +100,8 @@ class ApiConstants {
   static String drugById(int id) => '/drugs/$id';
   static String drugArchive(int id) => '/drugs/$id/archive';
   static String drugRestore(int id) => '/drugs/$id/restore';
+  /// GET — role-scoped dose-unit lookup list (mg, g, mcg, ...).
+  static const String doseUnits = '/dose-units';
   static const String statistics = '/statistics';
   static const String dashboard = '/dashboard';
   static const String admins = '/admins';

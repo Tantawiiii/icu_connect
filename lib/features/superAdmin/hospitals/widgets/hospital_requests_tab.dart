@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../../../../core/widgets/list_error_view.dart';
 import '../../../../core/widgets/paginated_list_footer.dart';
 import '../../../../core/widgets/status_badge.dart';
@@ -45,7 +47,12 @@ class _HospitalRequestsTabViewState extends State<_HospitalRequestsTabView> {
       children: [
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            12,
+            AppSpacing.md,
+            AppSpacing.sm,
+          ),
           child: Row(
             children: [
               _FilterChip(
@@ -53,19 +60,19 @@ class _HospitalRequestsTabViewState extends State<_HospitalRequestsTabView> {
                 selected: _statusFilter == null,
                 onTap: () => _setFilter(null),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _FilterChip(
                 label: AppTexts.hospitalRequestsPending,
                 selected: _statusFilter == 'pending',
                 onTap: () => _setFilter('pending'),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _FilterChip(
                 label: AppTexts.hospitalRequestsAccepted,
                 selected: _statusFilter == 'accepted',
                 onTap: () => _setFilter('accepted'),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _FilterChip(
                 label: AppTexts.hospitalRequestsRejected,
                 selected: _statusFilter == 'rejected',
@@ -186,10 +193,10 @@ class _RequestsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (requests.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           AppTexts.noHospitalRequests,
-          style: TextStyle(color: AppColors.textSecondary),
+          style: Theme.of(context).textTheme.bodyMedium,
         ),
       );
     }
@@ -210,10 +217,7 @@ class _RequestsList extends StatelessWidget {
               child: Text(
                 'Showing ${pagination.from}-${pagination.to} '
                 'of ${pagination.total} requests',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                ),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             );
           }
@@ -286,17 +290,14 @@ class _RequestCard extends StatelessWidget {
                     size: 22,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         request.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
+                        style: Theme.of(context).textTheme.titleSmall,
                       ),
                       const SizedBox(height: 2),
                       Row(
@@ -310,10 +311,7 @@ class _RequestCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               request.location,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 12,
-                              ),
+                              style: Theme.of(context).textTheme.bodySmall,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -335,7 +333,7 @@ class _RequestCard extends StatelessWidget {
                   value: request.totalBeds,
                   color: AppColors.accent,
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppSpacing.md),
                 _BedStat(
                   label: AppTexts.availableBeds,
                   value: request.availableBeds,
@@ -369,7 +367,7 @@ class _RequestCard extends StatelessWidget {
                     color: AppColors.success,
                     onTap: () => _confirmAccept(context),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   _ActionButton(
                     icon: Icons.cancel_outlined,
                     label: AppTexts.rejectHospitalRequest,
@@ -385,58 +383,29 @@ class _RequestCard extends StatelessWidget {
     );
   }
 
-  void _confirmAccept(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.acceptHospitalRequest),
-        content: const Text(AppTexts.acceptHospitalRequestConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppTexts.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<HospitalRequestsCubit>().acceptRequest(request.id);
-            },
-            child: const Text(AppTexts.acceptHospitalRequest),
-          ),
-        ],
-      ),
+  Future<void> _confirmAccept(BuildContext context) async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.acceptHospitalRequest,
+      message: AppTexts.acceptHospitalRequestConfirmation,
+      confirmLabel: AppTexts.acceptHospitalRequest,
+      isDestructive: false,
     );
+    if (confirmed && context.mounted) {
+      context.read<HospitalRequestsCubit>().acceptRequest(request.id);
+    }
   }
 
-  void _confirmReject(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.rejectHospitalRequest),
-        content: const Text(AppTexts.rejectHospitalRequestConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppTexts.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<HospitalRequestsCubit>().rejectRequest(request.id);
-            },
-            child: const Text(AppTexts.rejectHospitalRequest),
-          ),
-        ],
-      ),
+  Future<void> _confirmReject(BuildContext context) async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.rejectHospitalRequest,
+      message: AppTexts.rejectHospitalRequestConfirmation,
+      confirmLabel: AppTexts.rejectHospitalRequest,
     );
+    if (confirmed && context.mounted) {
+      context.read<HospitalRequestsCubit>().rejectRequest(request.id);
+    }
   }
 }
 

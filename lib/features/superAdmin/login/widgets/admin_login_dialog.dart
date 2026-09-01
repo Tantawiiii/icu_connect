@@ -140,10 +140,8 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
                         Expanded(
                           child: Text(
                             state.message,
-                            style: const TextStyle(
-                              color: AppColors.error,
-                              fontSize: 12,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppColors.error),
                           ),
                         ),
                       ],
@@ -195,9 +193,9 @@ class _DialogHeader extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 AppTexts.superAdmin,
-                style: TextStyle(
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -205,7 +203,7 @@ class _DialogHeader extends StatelessWidget {
               ),
               Text(
                 AppTexts.restrictedAccess,
-                style: TextStyle(
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.white.withAlpha(179),
                   fontSize: 11,
                 ),

@@ -4,12 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../cubit/drugs_cubit.dart';
 import '../cubit/drugs_state.dart';
 import '../models/drug_model.dart';
 import '../models/drug_request.dart';
+import '../widgets/dose_input_row.dart';
 import '../widgets/string_list_editor.dart';
 
 class DrugFormScreen extends StatelessWidget {
@@ -35,10 +37,12 @@ class _DrugFormView extends StatefulWidget {
 class _DrugFormViewState extends State<_DrugFormView> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _genericNameCtrl;
+  late final TextEditingController _doseAmountCtrl;
   late final TextEditingController _renalCtrl;
   late final TextEditingController _hepaticCtrl;
   late final TextEditingController _notesCtrl;
 
+  int? _doseUnitId;
   late List<String> _tradeNames;
   late List<String> _dosingGuidelines;
   late List<String> _indications;
@@ -54,6 +58,8 @@ class _DrugFormViewState extends State<_DrugFormView> {
     super.initState();
     final d = widget.drug;
     _genericNameCtrl = TextEditingController(text: d?.genericName ?? '');
+    _doseAmountCtrl = TextEditingController(text: d?.doseAmount ?? '');
+    _doseUnitId = d?.doseUnitId;
     _renalCtrl = TextEditingController(text: d?.renalDoseAdjustment ?? '');
     _hepaticCtrl = TextEditingController(text: d?.hepaticDoseAdjustment ?? '');
     _notesCtrl = TextEditingController(text: d?.notes ?? '');
@@ -69,6 +75,7 @@ class _DrugFormViewState extends State<_DrugFormView> {
   @override
   void dispose() {
     _genericNameCtrl.dispose();
+    _doseAmountCtrl.dispose();
     _renalCtrl.dispose();
     _hepaticCtrl.dispose();
     _notesCtrl.dispose();
@@ -90,6 +97,8 @@ class _DrugFormViewState extends State<_DrugFormView> {
       hepaticDoseAdjustment: _hepaticCtrl.text.trim(),
       notes: _notesCtrl.text.trim(),
       isActive: _isActive,
+      doseAmount: _doseAmountCtrl.text.trim(),
+      doseUnitId: _doseUnitId,
     );
 
     final cubit = context.read<DrugsCubit>();
@@ -140,6 +149,14 @@ class _DrugFormViewState extends State<_DrugFormView> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 12),
+                  DoseInputRow(
+                    role: UserRole.admin,
+                    amountController: _doseAmountCtrl,
+                    unitId: _doseUnitId,
+                    enabled: !isLoading,
+                    onUnitChanged: (v) => setState(() => _doseUnitId = v),
                   ),
                   const SizedBox(height: 12),
                   SwitchListTile.adaptive(

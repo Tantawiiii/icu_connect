@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:icu_connect/core/constants/app_colors.dart';
+import 'package:icu_connect/core/constants/app_spacing.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
+import 'package:icu_connect/core/network/api_client.dart';
 import 'package:icu_connect/core/network/network_exceptions.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
 import 'package:icu_connect/core/widgets/app_text_field.dart';
+import 'package:icu_connect/core/widgets/status_badge.dart';
 import 'package:icu_connect/features/superAdmin/drugs/models/drug_model.dart';
 import 'package:icu_connect/features/superAdmin/drugs/models/drug_request.dart';
+import 'package:icu_connect/features/superAdmin/drugs/widgets/dose_input_row.dart';
 import 'package:icu_connect/features/superAdmin/drugs/widgets/string_list_editor.dart';
 
 import '../repository/hospital_drugs_repository.dart';
@@ -27,11 +31,13 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
 
   late final TextEditingController _genericNameCtrl;
   final _tradeNameAiCtrl = TextEditingController();
+  late final TextEditingController _doseAmountCtrl;
   late final TextEditingController _renalCtrl;
   late final TextEditingController _hepaticCtrl;
   late final TextEditingController _notesCtrl;
 
   List<String> _tradeNames = [];
+  int? _doseUnitId;
   List<String> _dosingGuidelines = [];
   List<String> _indications = [];
   List<String> _contraindications = [];
@@ -41,6 +47,8 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
 
   bool _aiLoading = false;
   bool _saving = false;
+  AiDrugLookupResult? _aiResult;
+  bool _genericNameEditedManually = false;
 
   @override
   void initState() {
@@ -48,19 +56,43 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
     _genericNameCtrl = TextEditingController(
       text: widget.initialGenericName ?? '',
     );
+    _genericNameEditedManually = _genericNameCtrl.text.trim().isNotEmpty;
+    _genericNameCtrl.addListener(_onGenericNameChanged);
+    _doseAmountCtrl = TextEditingController();
     _renalCtrl = TextEditingController();
     _hepaticCtrl = TextEditingController();
     _notesCtrl = TextEditingController();
+    _tradeNameAiCtrl.addListener(_mirrorTradeNameIntoGeneric);
   }
 
   @override
   void dispose() {
+    _genericNameCtrl.removeListener(_onGenericNameChanged);
+    _tradeNameAiCtrl.removeListener(_mirrorTradeNameIntoGeneric);
     _genericNameCtrl.dispose();
     _tradeNameAiCtrl.dispose();
+    _doseAmountCtrl.dispose();
     _renalCtrl.dispose();
     _hepaticCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
+  }
+
+  void _onGenericNameChanged() {
+    if (_genericNameCtrl.text != _tradeNameAiCtrl.text) {
+      _genericNameEditedManually = _genericNameCtrl.text.trim().isNotEmpty;
+    }
+  }
+
+  // Mirrors the trade-name lookup field into the generic-name field as the
+  // user types, so they don't have to enter the same drug name twice before
+  // tapping "Fill with AI" — stops once the user edits generic name directly.
+  void _mirrorTradeNameIntoGeneric() {
+    if (_genericNameEditedManually) return;
+    _genericNameCtrl.value = TextEditingValue(
+      text: _tradeNameAiCtrl.text,
+      selection: TextSelection.collapsed(offset: _tradeNameAiCtrl.text.length),
+    );
   }
 
   bool get _hasAiData =>
@@ -71,9 +103,11 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
       _sideEffects.isNotEmpty ||
       _pregnancy.isNotEmpty ||
       _renalCtrl.text.trim().isNotEmpty ||
-      _hepaticCtrl.text.trim().isNotEmpty;
+      _hepaticCtrl.text.trim().isNotEmpty ||
+      _doseAmountCtrl.text.trim().isNotEmpty ||
+      _doseUnitId != null;
 
-  Future<void> _fillWithAi({bool silent = false}) async {
+  Future<void> _fillWithAi({bool silent = false, bool refresh = false}) async {
     final generic = _genericNameCtrl.text.trim();
     final tradeNames = [
       ..._tradeNames,
@@ -88,13 +122,27 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
       return;
     }
 
-    setState(() => _aiLoading = true);
+    setState(() {
+      _aiLoading = true;
+      _aiResult = null;
+    });
     try {
-      final result = await _repo.lookupDrugWithAi(
+      final lookup = await _repo.lookupDrugWithAi(
         genericName: generic.isEmpty ? null : generic,
         tradeNames: tradeNames,
+        refresh: refresh,
       );
       if (!mounted) return;
+
+      if (!lookup.found) {
+        setState(() {
+          _aiLoading = false;
+          _aiResult = lookup;
+        });
+        return;
+      }
+
+      final result = lookup.drug;
       setState(() {
         if (_genericNameCtrl.text.trim().isEmpty &&
             result.genericName.trim().isNotEmpty) {
@@ -112,15 +160,12 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
         _renalCtrl.text = result.renalDoseAdjustment ?? _renalCtrl.text;
         _hepaticCtrl.text = result.hepaticDoseAdjustment ?? _hepaticCtrl.text;
         _notesCtrl.text = result.notes ?? _notesCtrl.text;
+        _doseAmountCtrl.text = result.doseAmount ?? _doseAmountCtrl.text;
+        _doseUnitId = result.doseUnitId ?? _doseUnitId;
         _isActive = result.isActive;
         _aiLoading = false;
+        _aiResult = lookup;
       });
-      if (!mounted) return;
-      if (!silent) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(AppTexts.aiDrugLookupSuccess)),
-        );
-      }
     } on NetworkException catch (e) {
       if (!mounted) return;
       setState(() => _aiLoading = false);
@@ -147,17 +192,20 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
     _formKey.currentState?.reset();
     _genericNameCtrl.clear();
     _tradeNameAiCtrl.clear();
+    _doseAmountCtrl.clear();
     _renalCtrl.clear();
     _hepaticCtrl.clear();
     _notesCtrl.clear();
     setState(() {
       _tradeNames = [];
+      _doseUnitId = null;
       _dosingGuidelines = [];
       _indications = [];
       _contraindications = [];
       _sideEffects = [];
       _pregnancy = [];
       _isActive = true;
+      _aiResult = null;
     });
   }
 
@@ -185,6 +233,8 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
       hepaticDoseAdjustment: _hepaticCtrl.text.trim(),
       notes: _notesCtrl.text.trim(),
       isActive: _isActive,
+      doseAmount: _doseAmountCtrl.text.trim(),
+      doseUnitId: _doseUnitId,
     );
 
     try {
@@ -240,10 +290,10 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.sm + 4),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   border: Border.all(
                     color: AppColors.primary.withValues(alpha: 0.2),
                   ),
@@ -258,42 +308,60 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
                           size: 18,
                           color: AppColors.primary,
                         ),
-                        const SizedBox(width: 8),
-                        const Expanded(
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
                           child: Text(
                             AppTexts.aiDrugLookupHint,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: AppColors.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.sm + 2),
                     AppTextField(
                       controller: _tradeNameAiCtrl,
                       labelText: 'Trade name (optional, for AI lookup)',
                       enabled: !isLoading,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.sm + 2),
                     SizedBox(
                       height: 42,
                       child: AppButton(
-                        label: _aiLoading ? 'Asking AI…' : AppTexts.fillWithAi,
+                        label: _aiLoading
+                            ? 'Asking AI…'
+                            : _aiResult == null
+                            ? AppTexts.fillWithAi
+                            : AppTexts.aiDrugLookupRegenerate,
                         isLoading: _aiLoading,
-                        onPressed: isLoading ? null : _fillWithAi,
-                        leadingIcon: const Icon(
-                          Icons.auto_awesome,
+                        onPressed: isLoading
+                            ? null
+                            : () => _fillWithAi(refresh: _aiResult != null),
+                        leadingIcon: Icon(
+                          _aiResult == null
+                              ? Icons.auto_awesome
+                              : Icons.refresh_rounded,
                           color: Colors.white,
                           size: 16,
                         ),
                       ),
                     ),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOut,
+                      alignment: Alignment.topCenter,
+                      child: _aiResult == null
+                          ? const SizedBox(width: double.infinity)
+                          : Padding(
+                              padding: const EdgeInsets.only(
+                                top: AppSpacing.sm + 2,
+                              ),
+                              child: _AiLookupResultBanner(result: _aiResult!),
+                            ),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.lg - 4),
               AppTextField(
                 controller: _genericNameCtrl,
                 labelText: '${AppTexts.genericName} *',
@@ -305,6 +373,14 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: AppSpacing.md - 4),
+              DoseInputRow(
+                role: UserRole.hospital,
+                amountController: _doseAmountCtrl,
+                unitId: _doseUnitId,
+                enabled: !isLoading,
+                onUnitChanged: (v) => setState(() => _doseUnitId = v),
               ),
               const SizedBox(height: 12),
               SwitchListTile.adaptive(
@@ -416,6 +492,128 @@ class _AddDrugScreenState extends State<AddDrugScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Inline summary of an AI drug lookup result: confidence, gaps the model
+/// flagged itself, and the sources it drew from — so the user knows exactly
+/// how much to double-check before saving, without needing a transient
+/// snackbar they might miss.
+class _AiLookupResultBanner extends StatelessWidget {
+  const _AiLookupResultBanner({required this.result});
+
+  final AiDrugLookupResult result;
+
+  static String _prettyFieldName(String field) {
+    final words = field.split('_').where((w) => w.isNotEmpty);
+    return words
+        .map((w) => w[0].toUpperCase() + w.substring(1))
+        .join(' ');
+  }
+
+  Color _confidenceColor(String? confidence) {
+    switch (confidence?.toLowerCase()) {
+      case 'high':
+        return AppColors.success;
+      case 'medium':
+        return AppColors.warning;
+      case 'low':
+        return AppColors.error;
+      default:
+        return AppColors.secondary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!result.found) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.search_off_rounded,
+              size: 18,
+              color: AppColors.error,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                AppTexts.aiDrugLookupNotFound,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.error),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final color = _confidenceColor(result.confidence);
+    final confidenceLabel = (result.confidence ?? '').trim();
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.fact_check_outlined, size: 16, color: AppColors.textSecondary),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                'AI confidence',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+              const Spacer(),
+              if (confidenceLabel.isNotEmpty)
+                StatusBadge(label: confidenceLabel.toUpperCase(), color: color),
+            ],
+          ),
+          if (result.missingFields.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              AppTexts.aiDrugLookupMissingFieldsLabel,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: result.missingFields
+                  .map(
+                    (f) => StatusBadge(
+                      label: _prettyFieldName(f),
+                      color: AppColors.warning,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if (result.sources.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              '${AppTexts.aiDrugLookupSourcesLabel}: ${result.sources.join('; ')}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ],
       ),
     );
   }

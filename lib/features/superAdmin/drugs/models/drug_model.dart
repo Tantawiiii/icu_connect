@@ -48,6 +48,9 @@ class DrugModel extends Equatable {
     this.deletedAt,
     this.createdBy,
     this.updatedBy,
+    this.doseAmount = '',
+    this.doseUnitId,
+    this.doseUnitLabel = '',
   });
 
   final int id;
@@ -62,6 +65,9 @@ class DrugModel extends Equatable {
   final String hepaticDoseAdjustment;
   final String notes;
   final bool isActive;
+  final String doseAmount;
+  final int? doseUnitId;
+  final String doseUnitLabel;
   final String createdAt;
   final String updatedAt;
   final String? deletedAt;
@@ -69,6 +75,17 @@ class DrugModel extends Equatable {
   final DrugActorRef? updatedBy;
 
   bool get isArchived => deletedAt != null && deletedAt!.trim().isNotEmpty;
+
+  /// "500 mg"-style combined display of [doseAmount] + [doseUnitLabel], or
+  /// empty if neither is set.
+  String get doseLabel {
+    final amount = doseAmount.trim();
+    final unit = doseUnitLabel.trim();
+    if (amount.isEmpty && unit.isEmpty) return '';
+    if (amount.isEmpty) return unit;
+    if (unit.isEmpty) return amount;
+    return '$amount $unit';
+  }
 
   factory DrugModel.fromJson(Map<String, dynamic> json) => DrugModel(
     id: (json['id'] as num?)?.toInt() ?? 0,
@@ -92,6 +109,17 @@ class DrugModel extends Equatable {
     updatedBy: json['updated_by'] == null
         ? null
         : DrugActorRef.fromJson(json['updated_by']),
+    doseAmount: json['dose_amount']?.toString() ?? '',
+    doseUnitId:
+        (json['dose_unit_id'] as num?)?.toInt() ??
+        (json['dose_unit'] is Map<String, dynamic>
+            ? (json['dose_unit']['id'] as num?)?.toInt()
+            : null),
+    doseUnitLabel: json['dose_unit'] is Map<String, dynamic>
+        ? (json['dose_unit']['label']?.toString() ??
+              json['dose_unit']['code']?.toString() ??
+              '')
+        : '',
   );
 
   static List<String> _stringList(dynamic raw) {
@@ -121,5 +149,8 @@ class DrugModel extends Equatable {
     deletedAt,
     createdBy,
     updatedBy,
+    doseAmount,
+    doseUnitId,
+    doseUnitLabel,
   ];
 }

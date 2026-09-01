@@ -137,10 +137,8 @@ class _OnboardingPage extends StatelessWidget {
                 // Title
                 Text(
                   page.title,
-                  style: const TextStyle(
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1F36),
                     height: 1.2,
                   ),
                 ),
@@ -149,11 +147,9 @@ class _OnboardingPage extends StatelessWidget {
                 // Description
                 Text(
                   page.description,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF6C6F80),
-                    height: 1.6,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(height: 1.6),
                 ),
               ],
             ),
@@ -391,10 +387,7 @@ class _BottomNav extends StatelessWidget {
                     children: [
                       Text(
                         '${currentPage + 1} of $totalPages',
-                        style: const TextStyle(
-                          color: Color(0xFF8A8D9F),
-                          fontSize: 13,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
 
                       GestureDetector(
