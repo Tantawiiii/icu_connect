@@ -24,12 +24,14 @@ class DrugsCubit extends Cubit<DrugsState> {
         isActive: _isActiveParam(_filter),
         archivedOnly: _filter == DrugsListFilter.archived,
       );
-      emit(DrugsLoaded(
-        result.items,
-        result.pagination,
-        filter: _filter,
-        search: _search,
-      ));
+      emit(
+        DrugsLoaded(
+          result.items,
+          result.pagination,
+          filter: _filter,
+          search: _search,
+        ),
+      );
     } on NetworkException catch (e) {
       emit(DrugsFailure(e.message));
     } catch (_) {
@@ -63,13 +65,15 @@ class DrugsCubit extends Cubit<DrugsState> {
         isActive: _isActiveParam(_filter),
         archivedOnly: _filter == DrugsListFilter.archived,
       );
-      emit(DrugsActionSuccess(
-        result.items,
-        result.pagination,
-        AppTexts.drugCreated,
-        filter: _filter,
-        search: _search,
-      ));
+      emit(
+        DrugsActionSuccess(
+          result.items,
+          result.pagination,
+          AppTexts.drugCreated,
+          filter: _filter,
+          search: _search,
+        ),
+      );
     } on NetworkException catch (e) {
       emit(DrugsFailure(e.message));
     } catch (_) {
@@ -81,39 +85,46 @@ class DrugsCubit extends Cubit<DrugsState> {
     final current = state;
     if (current is! DrugsLoaded) return;
 
-    emit(DrugsActionLoading(
-      current.items,
-      current.pagination,
-      filter: current.filter,
-      search: current.search,
-    ));
+    emit(
+      DrugsActionLoading(
+        current.items,
+        current.pagination,
+        filter: current.filter,
+        search: current.search,
+      ),
+    );
     try {
       final updated = await _repo.updateDrug(id, request);
-      final items =
-          current.items.map((e) => e.id == id ? updated : e).toList();
-      emit(DrugsActionSuccess(
-        items,
-        current.pagination,
-        AppTexts.drugUpdated,
-        filter: current.filter,
-        search: current.search,
-      ));
+      final items = current.items.map((e) => e.id == id ? updated : e).toList();
+      emit(
+        DrugsActionSuccess(
+          items,
+          current.pagination,
+          AppTexts.drugUpdated,
+          filter: current.filter,
+          search: current.search,
+        ),
+      );
     } on NetworkException catch (e) {
-      emit(DrugsActionFailure(
-        current.items,
-        current.pagination,
-        e.message,
-        filter: current.filter,
-        search: current.search,
-      ));
+      emit(
+        DrugsActionFailure(
+          current.items,
+          current.pagination,
+          e.message,
+          filter: current.filter,
+          search: current.search,
+        ),
+      );
     } catch (_) {
-      emit(DrugsActionFailure(
-        current.items,
-        current.pagination,
-        'An unexpected error occurred',
-        filter: current.filter,
-        search: current.search,
-      ));
+      emit(
+        DrugsActionFailure(
+          current.items,
+          current.pagination,
+          'An unexpected error occurred',
+          filter: current.filter,
+          search: current.search,
+        ),
+      );
     }
   }
 
@@ -121,38 +132,46 @@ class DrugsCubit extends Cubit<DrugsState> {
     final current = state;
     if (current is! DrugsLoaded) return;
 
-    emit(DrugsActionLoading(
-      current.items,
-      current.pagination,
-      filter: current.filter,
-      search: current.search,
-    ));
+    emit(
+      DrugsActionLoading(
+        current.items,
+        current.pagination,
+        filter: current.filter,
+        search: current.search,
+      ),
+    );
     try {
       await _repo.archiveDrug(id);
       final items = current.items.where((e) => e.id != id).toList();
-      emit(DrugsActionSuccess(
-        items,
-        current.pagination,
-        AppTexts.drugArchived,
-        filter: current.filter,
-        search: current.search,
-      ));
+      emit(
+        DrugsActionSuccess(
+          items,
+          current.pagination,
+          AppTexts.drugArchived,
+          filter: current.filter,
+          search: current.search,
+        ),
+      );
     } on NetworkException catch (e) {
-      emit(DrugsActionFailure(
-        current.items,
-        current.pagination,
-        e.message,
-        filter: current.filter,
-        search: current.search,
-      ));
+      emit(
+        DrugsActionFailure(
+          current.items,
+          current.pagination,
+          e.message,
+          filter: current.filter,
+          search: current.search,
+        ),
+      );
     } catch (_) {
-      emit(DrugsActionFailure(
-        current.items,
-        current.pagination,
-        'An unexpected error occurred',
-        filter: current.filter,
-        search: current.search,
-      ));
+      emit(
+        DrugsActionFailure(
+          current.items,
+          current.pagination,
+          'An unexpected error occurred',
+          filter: current.filter,
+          search: current.search,
+        ),
+      );
     }
   }
 
@@ -160,38 +179,46 @@ class DrugsCubit extends Cubit<DrugsState> {
     final current = state;
     if (current is! DrugsLoaded) return;
 
-    emit(DrugsActionLoading(
-      current.items,
-      current.pagination,
-      filter: current.filter,
-      search: current.search,
-    ));
+    emit(
+      DrugsActionLoading(
+        current.items,
+        current.pagination,
+        filter: current.filter,
+        search: current.search,
+      ),
+    );
     try {
       await _repo.restoreDrug(id);
       final items = current.items.where((e) => e.id != id).toList();
-      emit(DrugsActionSuccess(
-        items,
-        current.pagination,
-        AppTexts.drugRestored,
-        filter: current.filter,
-        search: current.search,
-      ));
+      emit(
+        DrugsActionSuccess(
+          items,
+          current.pagination,
+          AppTexts.drugRestored,
+          filter: current.filter,
+          search: current.search,
+        ),
+      );
     } on NetworkException catch (e) {
-      emit(DrugsActionFailure(
-        current.items,
-        current.pagination,
-        e.message,
-        filter: current.filter,
-        search: current.search,
-      ));
+      emit(
+        DrugsActionFailure(
+          current.items,
+          current.pagination,
+          e.message,
+          filter: current.filter,
+          search: current.search,
+        ),
+      );
     } catch (_) {
-      emit(DrugsActionFailure(
-        current.items,
-        current.pagination,
-        'An unexpected error occurred',
-        filter: current.filter,
-        search: current.search,
-      ));
+      emit(
+        DrugsActionFailure(
+          current.items,
+          current.pagination,
+          'An unexpected error occurred',
+          filter: current.filter,
+          search: current.search,
+        ),
+      );
     }
   }
 

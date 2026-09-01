@@ -9,10 +9,7 @@ class AdminLoginCubit extends Cubit<AdminLoginState> {
 
   final AdminAuthRepository _repository;
 
-  Future<void> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> login({required String email, required String password}) async {
     if (state is AdminLoginLoading) return;
 
     emit(const AdminLoginLoading());

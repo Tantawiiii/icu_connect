@@ -36,28 +36,28 @@ enum AdmissionStatus {
 
   /// Statuses doctors can pick when editing an admission.
   static List<AdmissionStatus> get editable => const [
-        AdmissionStatus.admitted,
-        AdmissionStatus.discharged,
-        AdmissionStatus.leavesAma,
-        AdmissionStatus.deceased,
-        AdmissionStatus.referred,
-      ];
+    AdmissionStatus.admitted,
+    AdmissionStatus.discharged,
+    AdmissionStatus.leavesAma,
+    AdmissionStatus.deceased,
+    AdmissionStatus.referred,
+  ];
 
   /// Chips on the hospital admissions list (API filters by exact status).
   static List<AdmissionStatus> get listFilters => const [
-        AdmissionStatus.admitted,
-        AdmissionStatus.discharged,
-        AdmissionStatus.leavesAma,
-        AdmissionStatus.deceased,
-        AdmissionStatus.referred,
-      ];
+    AdmissionStatus.admitted,
+    AdmissionStatus.discharged,
+    AdmissionStatus.leavesAma,
+    AdmissionStatus.deceased,
+    AdmissionStatus.referred,
+  ];
 
   /// Outcomes shown on the discharged patients dashboard.
   static List<AdmissionStatus> get dischargedOutcomes => const [
-        AdmissionStatus.discharged,
-        AdmissionStatus.deceased,
-        AdmissionStatus.leavesAma,
-      ];
+    AdmissionStatus.discharged,
+    AdmissionStatus.deceased,
+    AdmissionStatus.leavesAma,
+  ];
 
   static bool isDischargedOutcome(String? raw) {
     final status = fromApiValue(raw);
@@ -105,10 +105,7 @@ class AdmissionClinicalNoteType {
   static const historyComplaint = 'history_complaint';
   static const progressNote = 'progress_note';
 
-  static const values = <String>[
-    historyComplaint,
-    progressNote,
-  ];
+  static const values = <String>[historyComplaint, progressNote];
 
   static const labels = <String, String>{
     historyComplaint: 'History & complaint',

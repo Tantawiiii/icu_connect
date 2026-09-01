@@ -44,10 +44,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => const LoginScreen(),
-        transitionsBuilder: (_, animation, __, child) => FadeTransition(
-          opacity: animation,
-          child: child,
-        ),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
         transitionDuration: const Duration(milliseconds: 500),
       ),
     );
@@ -92,7 +90,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-
 class _OnboardingPage extends StatelessWidget {
   const _OnboardingPage({required this.page});
 
@@ -103,10 +100,7 @@ class _OnboardingPage extends StatelessWidget {
     return Column(
       children: [
         // ── Illustration ───────────────────────────────────────────────────
-        Expanded(
-          flex: 5,
-          child: _Illustration(page: page),
-        ),
+        Expanded(flex: 5, child: _Illustration(page: page)),
 
         // ── Text content ───────────────────────────────────────────────────
         Expanded(
@@ -119,8 +113,10 @@ class _OnboardingPage extends StatelessWidget {
               children: [
                 // Step badge
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: page.lightColor,
                     borderRadius: BorderRadius.circular(20),
@@ -141,10 +137,8 @@ class _OnboardingPage extends StatelessWidget {
                 // Title
                 Text(
                   page.title,
-                  style: const TextStyle(
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1F36),
                     height: 1.2,
                   ),
                 ),
@@ -153,11 +147,9 @@ class _OnboardingPage extends StatelessWidget {
                 // Description
                 Text(
                   page.description,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF6C6F80),
-                    height: 1.6,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(height: 1.6),
                 ),
               ],
             ),
@@ -167,7 +159,6 @@ class _OnboardingPage extends StatelessWidget {
     );
   }
 }
-
 
 class _Illustration extends StatelessWidget {
   const _Illustration({required this.page});
@@ -228,11 +219,7 @@ class _Illustration extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(
-              page.icon,
-              color: Colors.white,
-              size: 52,
-            ),
+            child: Icon(page.icon, color: Colors.white, size: 52),
           ),
           Positioned(
             top: 30,
@@ -321,10 +308,7 @@ class _SkipRow extends StatelessWidget {
               onPressed: isLast ? null : onSkip,
               child: Text(
                 AppTexts.skip,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: color, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -403,10 +387,7 @@ class _BottomNav extends StatelessWidget {
                     children: [
                       Text(
                         '${currentPage + 1} of $totalPages',
-                        style: const TextStyle(
-                          color: Color(0xFF8A8D9F),
-                          fontSize: 13,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
 
                       GestureDetector(

@@ -48,15 +48,18 @@ class HospitalSwapGroupQuickPicker extends StatelessWidget {
             child: InkWell(
               onTap: () => onGroupSelected(group.id),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
                     color: isSelected
                         ? AppColors.primary
                         : isFirstGroup
-                            ? AppColors.primary.withValues(alpha: 0.45)
-                            : AppColors.border,
+                        ? AppColors.primary.withValues(alpha: 0.45)
+                        : AppColors.border,
                     width: isSelected ? 1.6 : 1.2,
                   ),
                 ),

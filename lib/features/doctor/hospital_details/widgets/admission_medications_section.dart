@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
+import 'package:icu_connect/core/network/api_client.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
 import 'package:icu_connect/core/widgets/app_text_field.dart';
 import 'package:icu_connect/features/superAdmin/drugs/models/drug_model.dart';
+import 'package:icu_connect/features/superAdmin/drugs/widgets/dose_input_row.dart';
 import 'package:icu_connect/features/superAdmin/patients/models/patient_admission_models.dart';
 
 import '../repository/hospital_drugs_repository.dart';
@@ -12,13 +14,38 @@ import 'admission_details_empty_hint.dart';
 import 'admission_details_section_container.dart';
 import 'drug_picker_field.dart';
 
-typedef MedicationSaveCallback = void Function({
-  required int drugId,
-  required String title,
-  required String dose,
-  required String frequency,
-  String type,
-});
+typedef MedicationSaveCallback =
+    void Function({
+      required int drugId,
+      required String title,
+      required String dose,
+      required int? doseUnitId,
+      required String frequency,
+      String type,
+    });
+
+class _RouteMeta {
+  const _RouteMeta(this.icon, this.color);
+  final IconData icon;
+  final Color color;
+}
+
+const Map<String, _RouteMeta> _routeMetaMap = {
+  'infusion': _RouteMeta(Icons.opacity_outlined, Color(0xFF5C6BC0)),
+  'IV': _RouteMeta(Icons.water_drop_outlined, Color(0xFF1E88E5)),
+  'PO': _RouteMeta(Icons.medication_liquid_outlined, Color(0xFF3B5998)),
+  'IM': _RouteMeta(Icons.vaccines_outlined, Color(0xFF00897B)),
+  'SC': _RouteMeta(Icons.colorize_outlined, Color(0xFF8E24AA)),
+  'syring_pump': _RouteMeta(Icons.speed_outlined, Color(0xFFEF6C00)),
+  'bolus': _RouteMeta(Icons.bolt_outlined, Color(0xFFF9A825)),
+  'other': _RouteMeta(Icons.medication_outlined, Color(0xFF6C6F80)),
+};
+
+const String _infusionRateUnitCode = 'ml/h';
+const String _infusionFrequencyValue = 'Continuous';
+
+_RouteMeta _routeMeta(String type) =>
+    _routeMetaMap[type] ?? _routeMetaMap['other']!;
 
 class AdmissionMedicationsSection extends StatelessWidget {
   const AdmissionMedicationsSection({
@@ -53,38 +80,69 @@ class AdmissionMedicationsSection extends StatelessWidget {
   final MedicationModel? initialEdit;
 
   static const routeTypes = <String>[
-    'PO',
+    'infusion',
     'IV',
+    'PO',
     'IM',
     'SC',
-    'infusion',
     'syring_pump',
     'bolus',
     'other',
   ];
 
+  static const frequencyPresets = <String>[
+    '4h',
+    '6h',
+    '8h',
+    '12h',
+    '24h',
+    '48h',
+    '72h',
+    'STAT',
+    'PRN',
+    'Other',
+  ];
+
   @override
   Widget build(BuildContext context) {
     final canAdd = !adding && editingItemId == null;
+    final activeCount = medications.where((m) => !m.isDiscontinued).length;
 
     return AdmissionDetailsSectionContainer(
       title: 'Active Medications',
-      headerAction: canAdd
-          ? IconButton(
-              tooltip: 'Add medication',
-              icon: const Icon(
-                Icons.add_circle_outline,
-                color: AppColors.primary,
-                size: 20,
+      headerAction: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (medications.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
               ),
-              onPressed: onStartAdd,
-            )
-          : null,
+              child: Text(
+                '$activeCount active',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          if (canAdd) _AddMedicationButton(onPressed: onStartAdd),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _SafetyQuickBar(medications: medications),
-          const SizedBox(height: 12),
+          _SafetyQuickBar(
+            medications: medications
+                .where((m) => !m.isDiscontinued)
+                .toList(growable: false),
+          ),
+          const SizedBox(height: 14),
           if (adding)
             _MedicationForm(
               saving: saving,
@@ -119,6 +177,42 @@ class AdmissionMedicationsSection extends StatelessWidget {
   }
 }
 
+class _AddMedicationButton extends StatelessWidget {
+  const _AddMedicationButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primary.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(20),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add, size: 16, color: AppColors.primary),
+              SizedBox(width: 4),
+              Text(
+                'Add',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SafetyQuickBar extends StatelessWidget {
   const _SafetyQuickBar({required this.medications});
 
@@ -129,18 +223,20 @@ class _SafetyQuickBar extends StatelessWidget {
     return Row(
       children: [
         _SafetyTile(
-          icon: Icons.verified_user_outlined,
-          label: 'Interactions',
+          icon: Icons.water_drop_outlined,
+          label: 'Renal',
+          color: const Color(0xFF3B5998),
           onTap: () => _showInfo(
             context,
-            'Interactions',
-            'Review drug–drug interactions for active medications with pharmacy / formulary guidance.',
+            'Renal',
+            'Check renal dose adjustments for each active medication when renal impairment is present.',
           ),
         ),
         const SizedBox(width: 8),
         _SafetyTile(
           icon: Icons.bloodtype_outlined,
           label: 'Hepatic',
+          color: const Color(0xFFEF6C00),
           onTap: () => _showInfo(
             context,
             'Hepatic',
@@ -151,6 +247,7 @@ class _SafetyQuickBar extends StatelessWidget {
         _SafetyTile(
           icon: Icons.pregnant_woman_outlined,
           label: 'Pregnancy',
+          color: const Color(0xFFD81B60),
           onTap: () => _showInfo(
             context,
             'Pregnancy',
@@ -161,6 +258,7 @@ class _SafetyQuickBar extends StatelessWidget {
         _SafetyTile(
           icon: Icons.child_care_outlined,
           label: 'Lactation',
+          color: const Color(0xFF00897B),
           onTap: () => _showInfo(
             context,
             'Lactation',
@@ -183,10 +281,7 @@ class _SafetyQuickBar extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
@@ -200,7 +295,10 @@ class _SafetyQuickBar extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 'Active: ${medications.map((m) => m.title).join(', ')}',
-                style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ],
           ],
@@ -214,36 +312,42 @@ class _SafetyTile extends StatelessWidget {
   const _SafetyTile({
     required this.icon,
     required this.label,
+    required this.color,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
+  final Color color;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Material(
-        color: const Color(0xFFF2F3F5),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          child: Padding(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withValues(alpha: 0.18)),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Column(
               children: [
-                Icon(icon, size: 20, color: AppColors.textSecondary),
+                Icon(icon, size: 19, color: color),
                 const SizedBox(height: 4),
                 Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w700,
+                    color: color,
                   ),
                 ),
               ],
@@ -270,126 +374,280 @@ class _MedicationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final route = med.type.trim().isEmpty
+    final meta = _routeMeta(med.type.trim());
+    final routeLabel = med.type.trim().isEmpty
         ? ''
         : med.type.replaceAll('_', ' ').toUpperCase();
-    final dose = med.value.trim();
+    final dose = [
+      med.value.trim(),
+      med.doseUnitLabel.trim(),
+    ].where((s) => s.isNotEmpty).join(' ');
     final freq = med.duration.trim();
+    final discontinued = med.isDiscontinued;
+    final name = med.title.isEmpty
+        ? (med.drugId != null ? 'Drug #${med.drugId}' : 'Medication')
+        : med.title;
 
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: discontinued ? const Color(0xFFFAFAFA) : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+        border: Border.all(
+          color: discontinued
+              ? AppColors.border
+              : meta.color.withValues(alpha: 0.16),
+        ),
+        boxShadow: discontinued
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: discontinued
+                      ? AppColors.border.withValues(alpha: 0.5)
+                      : meta.color.withValues(alpha: 0.12),
+                ),
+                child: Icon(
+                  meta.icon,
+                  size: 19,
+                  color: discontinued ? AppColors.textSecondary : meta.color,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: discontinued
+                                  ? AppColors.textSecondary
+                                  : AppColors.textPrimary,
+                              decoration: discontinued
+                                  ? TextDecoration.lineThrough
+                                  : TextDecoration.none,
+                              decorationColor: AppColors.textSecondary,
+                              decorationThickness: 2,
+                            ),
+                          ),
+                        ),
+                        if (discontinued) ...[
+                          const SizedBox(width: 6),
+                          const _Pill(
+                            label: 'DC',
+                            bg: Color(0xFFFFEBEE),
+                            fg: Color(0xFFD32F2F),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        if (routeLabel.isNotEmpty)
+                          _Pill(
+                            label: routeLabel,
+                            bg: meta.color.withValues(alpha: 0.1),
+                            fg: meta.color,
+                          ),
+                        if (dose.isNotEmpty)
+                          _InfoChip(
+                            icon: Icons.medication,
+                            text: dose,
+                            muted: discontinued,
+                          ),
+                        if (freq.isNotEmpty)
+                          _InfoChip(
+                            icon: Icons.schedule,
+                            text: freq,
+                            muted: discontinued,
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Divider(height: 1, color: AppColors.border.withValues(alpha: 0.6)),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: _CardAction(
+                  icon: Icons.edit_outlined,
+                  label: 'Edit',
+                  onTap: onEdit,
+                ),
+              ),
+              Expanded(
+                child: _CardAction(
+                  icon: discontinued
+                      ? Icons.play_circle_outline
+                      : Icons.pause_circle_outline,
+                  label: discontinued ? 'Resume' : 'Stop',
+                  color: discontinued
+                      ? const Color(0xFF2E7D32)
+                      : const Color(0xFFD32F2F),
+                  onTap: onDiscontinue,
+                ),
+              ),
+              Expanded(
+                child: _CardAction(
+                  icon: Icons.delete_outline,
+                  label: 'Delete',
+                  onTap: onDelete,
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label, required this.bg, required this.fg});
+
+  final String label;
+  final Color bg;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+          color: fg,
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.text,
+    required this.muted,
+  });
+
+  final IconData icon;
+  final String text;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = muted ? AppColors.textSecondary : AppColors.textPrimary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEEF0F3),
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  med.title.isEmpty
-                      ? (med.drugId != null
-                          ? 'Drug #${med.drugId}'
-                          : 'Medication')
-                      : med.title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    if (dose.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEEF0F3),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          dose,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ),
-                    if (route.isNotEmpty)
-                      Text(
-                        route,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    if (freq.isNotEmpty)
-                      Text(
-                        '· $freq',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: color,
+              decoration: muted
+                  ? TextDecoration.lineThrough
+                  : TextDecoration.none,
             ),
-          ),
-          IconButton(
-            tooltip: AppTexts.editEntry,
-            onPressed: onEdit,
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            color: AppColors.textSecondary,
-            visualDensity: VisualDensity.compact,
-          ),
-          TextButton(
-            onPressed: onDiscontinue,
-            style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFFFFEBEE),
-              foregroundColor: const Color(0xFFD32F2F),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-              minimumSize: const Size(0, 32),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text(
-              'DC',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
-            ),
-          ),
-          IconButton(
-            tooltip: AppTexts.deleteEntry,
-            onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline, size: 18),
-            color: AppColors.textSecondary,
-            visualDensity: VisualDensity.compact,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CardAction extends StatelessWidget {
+  const _CardAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color = AppColors.textSecondary,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -421,8 +679,12 @@ class _MedicationFormState extends State<_MedicationForm> {
   late final TextEditingController _doseCtrl;
   late final TextEditingController _freqCtrl;
   late String _route;
+  String? _frequencyPreset;
   DrugModel? _selectedDrug;
   int? _drugId;
+  int? _doseUnitId;
+
+  bool get _isInfusion => _route == 'infusion';
 
   @override
   void initState() {
@@ -432,10 +694,23 @@ class _MedicationFormState extends State<_MedicationForm> {
     _doseCtrl = TextEditingController(text: initial?.value ?? '');
     _freqCtrl = TextEditingController(text: initial?.duration ?? '');
     _drugId = initial?.drugId;
-    final type = (initial?.type ?? 'PO').trim();
+    _doseUnitId = initial?.doseUnitId;
+    final type = (initial?.type ?? 'other').trim();
     _route = AdmissionMedicationsSection.routeTypes.contains(type)
         ? type
-        : (type.isEmpty ? 'PO' : 'other');
+        : 'other';
+
+    final initialFreq = initial?.duration.trim() ?? '';
+    if (initialFreq.isEmpty) {
+      _frequencyPreset = null;
+    } else if (AdmissionMedicationsSection.frequencyPresets.contains(
+          initialFreq,
+        ) &&
+        initialFreq != 'Other') {
+      _frequencyPreset = initialFreq;
+    } else {
+      _frequencyPreset = 'Other';
+    }
   }
 
   @override
@@ -449,7 +724,9 @@ class _MedicationFormState extends State<_MedicationForm> {
   void _submit() {
     final drugId = _selectedDrug?.id ?? _drugId;
     final dose = _doseCtrl.text.trim();
-    final frequency = _freqCtrl.text.trim();
+    final frequency = _isInfusion
+        ? _infusionFrequencyValue
+        : _freqCtrl.text.trim();
     if (drugId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -468,7 +745,16 @@ class _MedicationFormState extends State<_MedicationForm> {
       );
       return;
     }
-    if (frequency.isEmpty) {
+    if (_doseUnitId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Dose unit is required'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+    if (!_isInfusion && (_frequencyPreset == null || frequency.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Frequency is required'),
@@ -484,6 +770,7 @@ class _MedicationFormState extends State<_MedicationForm> {
       drugId: drugId,
       title: title.isEmpty ? 'Drug #$drugId' : title,
       dose: dose,
+      doseUnitId: _doseUnitId,
       frequency: frequency,
       type: _route,
     );
@@ -494,10 +781,10 @@ class _MedicationFormState extends State<_MedicationForm> {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.primary.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
       ),
       child: Column(
@@ -505,12 +792,27 @@ class _MedicationFormState extends State<_MedicationForm> {
         children: [
           Row(
             children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                ),
+                child: const Icon(
+                  Icons.medication_outlined,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   widget.title,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
-                    fontSize: 13,
+                    fontSize: 14,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -521,6 +823,7 @@ class _MedicationFormState extends State<_MedicationForm> {
               ),
             ],
           ),
+          const SizedBox(height: 10),
           DrugPickerField(
             enabled: !widget.saving,
             initialLabel: _titleCtrl.text,
@@ -567,52 +870,182 @@ class _MedicationFormState extends State<_MedicationForm> {
               ],
             ),
           ],
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(
-            value: _route,
-            decoration: const InputDecoration(
-              labelText: 'Route (optional)',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(12)),
+          const SizedBox(height: 14),
+          const Text(
+            'Route',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final t in AdmissionMedicationsSection.routeTypes) ...[
+                  Builder(
+                    builder: (context) {
+                      final meta = _routeMeta(t);
+                      final selected = _route == t;
+                      return ChoiceChip(
+                        label: Text(
+                          t.replaceAll('_', ' ').toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: selected
+                                ? Colors.white
+                                : AppColors.textPrimary,
+                          ),
+                        ),
+                        avatar: Icon(
+                          meta.icon,
+                          size: 14,
+                          color: selected ? Colors.white : meta.color,
+                        ),
+                        selected: selected,
+                        showCheckmark: false,
+                        selectedColor: meta.color,
+                        backgroundColor: meta.color.withValues(alpha: 0.08),
+                        shape: StadiumBorder(
+                          side: BorderSide(
+                            color: meta.color.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        onSelected: widget.saving
+                            ? null
+                            : (_) => setState(() {
+                                final wasInfusion = _isInfusion;
+                                _route = t;
+                                if (wasInfusion != _isInfusion) {
+                                  _doseUnitId = null;
+                                }
+                              }),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          DoseInputRow(
+            role: UserRole.hospital,
+            amountController: _doseCtrl,
+            unitId: _doseUnitId,
+            enabled: !widget.saving,
+            amountLabel: _isInfusion ? 'Rate *' : 'Dose *',
+            unitCodeFilter: _isInfusion ? const [_infusionRateUnitCode] : null,
+            lockedDisplayLabel: _isInfusion ? _infusionRateUnitCode : null,
+            onUnitChanged: (v) => setState(() => _doseUnitId = v),
+          ),
+          if (!_isInfusion) ...[
+            const SizedBox(height: 14),
+            const Text(
+              'Frequency',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
               ),
             ),
-            items: AdmissionMedicationsSection.routeTypes
-                .map(
-                  (t) => DropdownMenuItem(
-                    value: t,
-                    child: Text(t.replaceAll('_', ' ')),
-                  ),
-                )
-                .toList(),
-            onChanged: widget.saving
-                ? null
-                : (v) => setState(() => _route = v ?? 'PO'),
-          ),
-          const SizedBox(height: 10),
-          AppTextField(
-            controller: _doseCtrl,
-            labelText: 'Dose *',
-            hintText: 'e.g. 150 mg',
-            enabled: !widget.saving,
-          ),
-          const SizedBox(height: 10),
-          AppTextField(
-            controller: _freqCtrl,
-            labelText: 'Frequency *',
-            hintText: 'e.g. q8h',
-            enabled: !widget.saving,
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 44,
-            child: AppButton(
-              label: widget.saving
-                  ? 'Saving...'
-                  : widget.isEditing
-                      ? AppTexts.saveChanges
-                      : 'Save Entry',
-              onPressed: widget.saving ? null : _submit,
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final f
+                      in AdmissionMedicationsSection.frequencyPresets) ...[
+                    ChoiceChip(
+                      label: Text(
+                        f,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: _frequencyPreset == f
+                              ? Colors.white
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                      selected: _frequencyPreset == f,
+                      showCheckmark: false,
+                      selectedColor: AppColors.primary,
+                      backgroundColor: AppColors.primary.withValues(
+                        alpha: 0.08,
+                      ),
+                      shape: StadiumBorder(
+                        side: BorderSide(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      onSelected: widget.saving
+                          ? null
+                          : (_) => setState(() {
+                              _frequencyPreset = f;
+                              if (f == 'Other') {
+                                _freqCtrl.clear();
+                              } else {
+                                _freqCtrl.text = f;
+                              }
+                            }),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ],
+              ),
             ),
+            if (_frequencyPreset == 'Other') ...[
+              const SizedBox(height: 10),
+              AppTextField(
+                controller: _freqCtrl,
+                labelText: 'Custom frequency *',
+                hintText: 'e.g. BID, continuous',
+                enabled: !widget.saving,
+              ),
+            ],
+          ],
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 46,
+                  child: OutlinedButton(
+                    onPressed: widget.saving ? null : widget.onCancel,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      foregroundColor: AppColors.textSecondary,
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  height: 46,
+                  child: AppButton(
+                    label: widget.saving
+                        ? 'Saving...'
+                        : widget.isEditing
+                        ? AppTexts.saveChanges
+                        : 'Save Entry',
+                    isLoading: widget.saving,
+                    onPressed: widget.saving ? null : _submit,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -21,9 +21,7 @@ class HospitalGroupStatsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        HospitalStatChip(
-          label: '${AppTexts.totalBedsShort} : $totalBeds',
-        ),
+        HospitalStatChip(label: '${AppTexts.totalBedsShort} : $totalBeds'),
         const SizedBox(width: 8),
         HospitalStatChip(
           label: '${AppTexts.availableBedsShort} : $availableBeds',

@@ -26,8 +26,8 @@ class HospitalAssignmentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusOptions = entry.status != null &&
-            !statuses.contains(entry.status)
+    final statusOptions =
+        entry.status != null && !statuses.contains(entry.status)
         ? [...statuses, entry.status!]
         : statuses;
 
@@ -81,7 +81,9 @@ class HospitalAssignmentRow extends StatelessWidget {
                           ),
                         ),
                         child: DropdownButton<String>(
-                          value: roles.contains(entry.role) ? entry.role : roles.first,
+                          value: roles.contains(entry.role)
+                              ? entry.role
+                              : roles.first,
                           isDense: true,
                           style: const TextStyle(
                             color: AppColors.accent,
@@ -170,4 +172,3 @@ class HospitalAssignmentRow extends StatelessWidget {
     );
   }
 }
-

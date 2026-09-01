@@ -122,7 +122,9 @@ class DoctorHospital extends Equatable {
       location: json['location'] as String?,
       totalBeds: json['total_beds'] as int? ?? 0,
       availableBeds: json['available_beds'] as int? ?? 0,
-      groupsCount: groupsList.isNotEmpty ? groupsList.length : (groupsRaw?.length ?? 0),
+      groupsCount: groupsList.isNotEmpty
+          ? groupsList.length
+          : (groupsRaw?.length ?? 0),
       groups: groupsList,
       userStatus: HospitalUserStatus.fromJson(
         json['user_status'] as Map<String, dynamic>?,

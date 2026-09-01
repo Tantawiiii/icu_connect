@@ -22,10 +22,7 @@ Future<bool> showSwapBedsConfirmSheet({
 }
 
 class _SwapBedsConfirmSheet extends StatefulWidget {
-  const _SwapBedsConfirmSheet({
-    required this.first,
-    required this.second,
-  });
+  const _SwapBedsConfirmSheet({required this.first, required this.second});
 
   final SwapBedSelection first;
   final SwapBedSelection second;
@@ -47,9 +44,10 @@ class _SwapBedsConfirmSheetState extends State<_SwapBedsConfirmSheet>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.92, end: 1.08).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulse = Tween<double>(
+      begin: 0.92,
+      end: 1.08,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -69,15 +67,15 @@ class _SwapBedsConfirmSheetState extends State<_SwapBedsConfirmSheet>
       Navigator.of(context).pop(true);
     } on NetworkException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
       setState(() => _isLoading = false);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppTexts.swapBedsFailed)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(AppTexts.swapBedsFailed)));
       setState(() => _isLoading = false);
     }
   }
@@ -151,9 +149,7 @@ class _SwapBedsConfirmSheetState extends State<_SwapBedsConfirmSheet>
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: _SwapBedPreviewCard(selection: widget.first),
-                  ),
+                  Expanded(child: _SwapBedPreviewCard(selection: widget.first)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: ScaleTransition(
@@ -186,7 +182,9 @@ class _SwapBedsConfirmSheetState extends State<_SwapBedsConfirmSheet>
               ),
               const SizedBox(height: 10),
               TextButton(
-                onPressed: _isLoading ? null : () => Navigator.of(context).pop(false),
+                onPressed: _isLoading
+                    ? null
+                    : () => Navigator.of(context).pop(false),
                 child: Text(
                   AppTexts.cancel,
                   style: TextStyle(

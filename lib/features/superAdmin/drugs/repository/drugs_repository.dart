@@ -1,6 +1,5 @@
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_constants.dart';
-import '../../../../core/network/network_exceptions.dart';
 import '../../../../core/network/services/base_api_service.dart';
 import '../../admins/models/pagination_model.dart';
 import '../models/drug_model.dart';
@@ -19,118 +18,87 @@ class DrugsRepository extends BaseApiService {
     bool archivedOnly = false,
     bool includeArchived = false,
   }) async {
-    try {
-      final query = <String, dynamic>{
-        'page': page,
-        'per_page': perPage,
-      };
-      final q = search?.trim() ?? '';
-      if (q.isNotEmpty) query['search'] = q;
-      if (isActive != null) query['is_active'] = isActive;
-      if (archivedOnly) query['archived'] = true;
-      if (includeArchived) query['include_archived'] = true;
+    final query = <String, dynamic>{'page': page, 'per_page': perPage};
+    final q = search?.trim() ?? '';
+    if (q.isNotEmpty) query['search'] = q;
+    if (isActive != null) query['is_active'] = isActive;
+    if (archivedOnly) query['archived'] = true;
+    if (includeArchived) query['include_archived'] = true;
 
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.drugs,
-        queryParameters: query,
-        cancelTag: 'drugs_list_$page',
-      );
-      return _parsePage(data);
-    } on NetworkException {
-      rethrow;
-    }
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.drugs,
+      queryParameters: query,
+      cancelTag: 'drugs_list_$page',
+    );
+    return _parsePage(data);
   }
 
   /// GET /drugs/{id}
   Future<DrugModel> fetchDrug(int id) async {
-    try {
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.drugById(id),
-        cancelTag: 'drug_details_$id',
-      );
-      return DrugModel.fromJson(data['data'] as Map<String, dynamic>);
-    } on NetworkException {
-      rethrow;
-    }
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.drugById(id),
+      cancelTag: 'drug_details_$id',
+    );
+    return DrugModel.fromJson(data['data'] as Map<String, dynamic>);
   }
 
   /// GET /drugs/formulary — flat active list, no pagination (for dropdowns).
   Future<List<DrugModel>> fetchFormulary({String? search}) async {
-    try {
-      final query = <String, dynamic>{};
-      final q = search?.trim() ?? '';
-      if (q.isNotEmpty) query['search'] = q;
+    final query = <String, dynamic>{};
+    final q = search?.trim() ?? '';
+    if (q.isNotEmpty) query['search'] = q;
 
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.drugsFormulary,
-        queryParameters: query.isEmpty ? null : query,
-        cancelTag: 'drugs_formulary',
-      );
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.drugsFormulary,
+      queryParameters: query.isEmpty ? null : query,
+      cancelTag: 'drugs_formulary',
+    );
 
-      final raw = data['data'];
-      if (raw is List) {
-        return raw
-            .whereType<Map<String, dynamic>>()
-            .map(DrugModel.fromJson)
-            .toList();
-      }
-      return const [];
-    } on NetworkException {
-      rethrow;
+    final raw = data['data'];
+    if (raw is List) {
+      return raw
+          .whereType<Map<String, dynamic>>()
+          .map(DrugModel.fromJson)
+          .toList();
     }
+    return const [];
   }
 
   /// POST /drugs
   Future<DrugModel> createDrug(DrugRequest request) async {
-    try {
-      final data = await post<Map<String, dynamic>>(
-        ApiConstants.drugs,
-        data: request.toJson(),
-        cancelTag: 'drugs_create',
-      );
-      return DrugModel.fromJson(data['data'] as Map<String, dynamic>);
-    } on NetworkException {
-      rethrow;
-    }
+    final data = await post<Map<String, dynamic>>(
+      ApiConstants.drugs,
+      data: request.toJson(),
+      cancelTag: 'drugs_create',
+    );
+    return DrugModel.fromJson(data['data'] as Map<String, dynamic>);
   }
 
   /// PUT /drugs/{id}
   Future<DrugModel> updateDrug(int id, DrugRequest request) async {
-    try {
-      final data = await put<Map<String, dynamic>>(
-        ApiConstants.drugById(id),
-        data: request.toJson(),
-        cancelTag: 'drugs_update_$id',
-      );
-      return DrugModel.fromJson(data['data'] as Map<String, dynamic>);
-    } on NetworkException {
-      rethrow;
-    }
+    final data = await put<Map<String, dynamic>>(
+      ApiConstants.drugById(id),
+      data: request.toJson(),
+      cancelTag: 'drugs_update_$id',
+    );
+    return DrugModel.fromJson(data['data'] as Map<String, dynamic>);
   }
 
   /// DELETE /drugs/{id} (same as archive)
   Future<void> archiveDrug(int id) async {
-    try {
-      await delete<dynamic>(
-        ApiConstants.drugById(id),
-        cancelTag: 'drugs_archive_$id',
-      );
-    } on NetworkException {
-      rethrow;
-    }
+    await delete<dynamic>(
+      ApiConstants.drugById(id),
+      cancelTag: 'drugs_archive_$id',
+    );
   }
 
   /// POST /drugs/{id}/restore
   Future<DrugModel> restoreDrug(int id) async {
-    try {
-      final data = await post<Map<String, dynamic>>(
-        ApiConstants.drugRestore(id),
-        cancelTag: 'drugs_restore_$id',
-      );
-      return DrugModel.fromJson(data['data'] as Map<String, dynamic>);
-    } on NetworkException {
-      rethrow;
-    }
+    final data = await post<Map<String, dynamic>>(
+      ApiConstants.drugRestore(id),
+      cancelTag: 'drugs_restore_$id',
+    );
+    return DrugModel.fromJson(data['data'] as Map<String, dynamic>);
   }
 
   DrugsPageResult _parsePage(Map<String, dynamic> data) {

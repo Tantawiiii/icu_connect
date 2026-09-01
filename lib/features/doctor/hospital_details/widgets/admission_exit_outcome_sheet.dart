@@ -51,10 +51,7 @@ class AdmissionExitOutcomeSheet extends StatelessWidget {
             const SizedBox(height: 6),
             const Text(
               'Select the discharge outcome for this admission.',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 16),
             ..._outcomes.map(
@@ -66,10 +63,7 @@ class AdmissionExitOutcomeSheet extends StatelessWidget {
                     side: const BorderSide(color: AppColors.border),
                   ),
                   tileColor: status.dischargedOutcomeBackground,
-                  leading: Icon(
-                    _iconFor(status),
-                    color: AppColors.textPrimary,
-                  ),
+                  leading: Icon(_iconFor(status), color: AppColors.textPrimary),
                   title: Text(
                     status.dischargedScreenLabel,
                     style: const TextStyle(

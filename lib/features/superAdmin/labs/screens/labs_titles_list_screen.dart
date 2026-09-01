@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
+import '../../../../core/widgets/list_error_view.dart';
+import '../../../../core/widgets/list_search_field.dart';
 import '../cubit/labs_titles_cubit.dart';
 import '../cubit/labs_titles_state.dart';
 import '../models/lab_title_model.dart';
@@ -40,8 +46,15 @@ class _LabsTitlesListView extends StatefulWidget {
 
 class _LabsTitlesListViewState extends State<_LabsTitlesListView> {
   final _searchController = TextEditingController();
+  Timer? _debounce;
+  String _query = '';
 
-  void _onSearchChanged() => setState(() {});
+  void _onSearchChanged() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _query = _searchController.text);
+    });
+  }
 
   @override
   void initState() {
@@ -51,6 +64,7 @@ class _LabsTitlesListViewState extends State<_LabsTitlesListView> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController
       ..removeListener(_onSearchChanged)
       ..dispose();
@@ -61,16 +75,16 @@ class _LabsTitlesListViewState extends State<_LabsTitlesListView> {
     final cubit = context.read<LabsTitlesCubit>();
     Navigator.of(context)
         .push(
-      MaterialPageRoute<void>(
-        builder: (_) => BlocProvider.value(
-          value: cubit,
-          child: LabsTitleFormScreen(lab: lab),
-        ),
-      ),
-    )
+          MaterialPageRoute<void>(
+            builder: (_) => BlocProvider.value(
+              value: cubit,
+              child: LabsTitleFormScreen(lab: lab),
+            ),
+          ),
+        )
         .then((_) {
-      if (context.mounted) cubit.fetchLabsTitles();
-    });
+          if (context.mounted) cubit.fetchLabsTitles();
+        });
   }
 
   @override
@@ -79,17 +93,16 @@ class _LabsTitlesListViewState extends State<_LabsTitlesListView> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          AppTexts.labsTitlesLabel,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        foregroundColor: Colors.white,
+        title: const Text(AppTexts.labsTitlesLabel),
+        titleTextStyle: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(color: Colors.white, fontSize: 18),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_outlined, color: Colors.white),
-            onPressed: () =>
-                context.read<LabsTitlesCubit>().fetchLabsTitles(),
+            onPressed: () => context.read<LabsTitlesCubit>().fetchLabsTitles(),
           ),
         ],
       ),
@@ -104,44 +117,19 @@ class _LabsTitlesListViewState extends State<_LabsTitlesListView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              12,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
+            child: ListSearchField(
               controller: _searchController,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: AppTexts.searchLabsTitlesHint,
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: AppColors.textSecondary,
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => _searchController.clear(),
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: AppColors.primary,
-                    width: 1.5,
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-              ),
+              hintText: AppTexts.searchLabsTitlesHint,
+              onClear: () {
+                _debounce?.cancel();
+                setState(() => _query = '');
+              },
             ),
           ),
           Expanded(
@@ -173,18 +161,15 @@ class _LabsTitlesListViewState extends State<_LabsTitlesListView> {
                   );
                 }
                 if (state is LabsTitlesFailure) {
-                  return _ErrorView(
+                  return ListErrorView(
                     message: state.message,
                     onRetry: () =>
                         context.read<LabsTitlesCubit>().fetchLabsTitles(),
                   );
                 }
                 if (state is LabsTitlesLoaded) {
-                  final filtered = _filterLabsTitles(
-                    state.items,
-                    _searchController.text,
-                  );
-                  final searchActive = _searchController.text.trim().isNotEmpty;
+                  final filtered = _filterLabsTitles(state.items, _query);
+                  final searchActive = _query.trim().isNotEmpty;
                   final list = _LabsList(
                     items: filtered,
                     emptyFromSearch: searchActive && state.items.isNotEmpty,
@@ -217,10 +202,7 @@ class _LabsTitlesListViewState extends State<_LabsTitlesListView> {
 }
 
 class _LabsList extends StatelessWidget {
-  const _LabsList({
-    required this.items,
-    this.emptyFromSearch = false,
-  });
+  const _LabsList({required this.items, this.emptyFromSearch = false});
 
   final List<LabTitleModel> items;
   final bool emptyFromSearch;
@@ -233,17 +215,19 @@ class _LabsList extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              emptyFromSearch ? Icons.search_off_outlined : Icons.science_outlined,
+              emptyFromSearch
+                  ? Icons.search_off_outlined
+                  : Icons.science_outlined,
               size: 56,
               color: AppColors.secondary,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               emptyFromSearch
                   ? AppTexts.labsTitlesSearchEmpty
                   : 'No labs titles found',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
         ),
@@ -256,8 +240,7 @@ class _LabsList extends StatelessWidget {
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         itemCount: items.length,
-        itemBuilder: (context, index) =>
-            _LabCard(lab: items[index]),
+        itemBuilder: (context, index) => _LabCard(lab: items[index]),
       ),
     );
   }
@@ -279,46 +262,36 @@ class _LabCard extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
                 color: Colors.deepPurple.withAlpha(20),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.science_outlined,
-                  color: Colors.deepPurple, size: 22),
+              child: const Icon(
+                Icons.science_outlined,
+                color: Colors.deepPurple,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    lab.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
+                  Text(lab.title, style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: AppSpacing.xs),
                   Row(
                     children: [
                       if (lab.unit.isNotEmpty) ...[
                         Text(
                           lab.unit,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                         const SizedBox(width: 10),
                       ],
                       Text(
                         'Normal: ${lab.normalRangeMin} – ${lab.normalRangeMax}',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
@@ -329,14 +302,20 @@ class _LabCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined,
-                      color: AppColors.accent, size: 20),
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.accent,
+                    size: 20,
+                  ),
                   tooltip: AppTexts.editLabTitle,
                   onPressed: () => _openEdit(context),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline,
-                      color: AppColors.error, size: 20),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: AppColors.error,
+                    size: 20,
+                  ),
                   tooltip: AppTexts.deleteLabTitle,
                   onPressed: () => _confirmDelete(context),
                 ),
@@ -352,75 +331,27 @@ class _LabCard extends StatelessWidget {
     final cubit = context.read<LabsTitlesCubit>();
     Navigator.of(context)
         .push(
-      MaterialPageRoute<void>(
-        builder: (_) => BlocProvider.value(
-          value: cubit,
-          child: LabsTitleFormScreen(lab: lab),
-        ),
-      ),
-    )
+          MaterialPageRoute<void>(
+            builder: (_) => BlocProvider.value(
+              value: cubit,
+              child: LabsTitleFormScreen(lab: lab),
+            ),
+          ),
+        )
         .then((_) {
-      if (context.mounted) cubit.fetchLabsTitles();
-    });
+          if (context.mounted) cubit.fetchLabsTitles();
+        });
   }
 
-  void _confirmDelete(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.deleteLabTitle),
-        content: const Text(AppTexts.deleteLabTitleConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppTexts.cancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<LabsTitlesCubit>().deleteLabTitle(lab.id);
-            },
-            child: const Text(AppTexts.deleteLabTitle),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.deleteLabTitle,
+      message: AppTexts.deleteLabTitleConfirmation,
+      confirmLabel: AppTexts.deleteLabTitle,
     );
+    if (confirmed && context.mounted) {
+      context.read<LabsTitlesCubit>().deleteLabTitle(lab.id);
+    }
   }
 }
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
-            const SizedBox(height: 16),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary)),
-            const SizedBox(height: 20),
-            TextButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-

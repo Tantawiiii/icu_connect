@@ -37,6 +37,7 @@ class _LabsTitleFormViewState extends State<_LabsTitleFormView> {
   late final TextEditingController _unitCtrl;
   late final TextEditingController _minCtrl;
   late final TextEditingController _maxCtrl;
+  late String _valueType;
 
   bool get _isEdit => widget.lab != null;
 
@@ -47,6 +48,7 @@ class _LabsTitleFormViewState extends State<_LabsTitleFormView> {
     _unitCtrl = TextEditingController(text: widget.lab?.unit ?? '');
     _minCtrl = TextEditingController(text: widget.lab?.normalRangeMin ?? '');
     _maxCtrl = TextEditingController(text: widget.lab?.normalRangeMax ?? '');
+    _valueType = widget.lab?.valueType ?? 'numeric';
   }
 
   @override
@@ -70,12 +72,14 @@ class _LabsTitleFormViewState extends State<_LabsTitleFormView> {
       unit: _unitCtrl.text,
       min: _minCtrl.text,
       max: _maxCtrl.text,
+      valueType: _valueType,
     );
     if (values == null) return;
 
     final request = LabTitleRequest(
       title: values.title,
       unit: values.unit,
+      valueType: values.valueType,
       normalRangeMin: values.normalRangeMin,
       normalRangeMax: values.normalRangeMax,
     );
@@ -130,6 +134,11 @@ class _LabsTitleFormViewState extends State<_LabsTitleFormView> {
                     minController: _minCtrl,
                     maxController: _maxCtrl,
                     enabled: !isLoading,
+                    showValueType: true,
+                    valueType: _valueType,
+                    onValueTypeChanged: (v) {
+                      if (v != null) setState(() => _valueType = v);
+                    },
                     onRangeFieldChanged: _onRangeFieldChanged,
                     onSubmit: _submit,
                   ),

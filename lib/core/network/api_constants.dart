@@ -50,20 +50,16 @@ class ApiConstants {
       '$sharedBaseUrl/ai/recommend/medication';
   static const String aiRecommendLabs = '$sharedBaseUrl/ai/recommend/labs';
   static const String aiRecommendVitals = '$sharedBaseUrl/ai/recommend/vitals';
-  static const String aiRecommendProgressNotes =
-      '$sharedBaseUrl/ai/recommend/progress_notes';
-  static const String aiRecommendConsultations =
-      '$sharedBaseUrl/ai/recommend/consultations';
   static const String aiRecommendTreatmentPlan =
       '$sharedBaseUrl/ai/recommend/treatment_plan';
-  static const String aiRecommendMicrobiology =
-      '$sharedBaseUrl/ai/recommend/microbiology';
   static const String aiRecommendImaging =
       '$sharedBaseUrl/ai/recommend/imaging';
   static const String aiRecommendDiagnosis =
       '$sharedBaseUrl/ai/recommend/diagnosis';
   static const String aiRecommendDischarge =
       '$sharedBaseUrl/ai/recommend/discharge';
+  /// POST — AI-assisted drug lookup to prefill a new drug form.
+  static const String aiDrugsLookup = '$sharedBaseUrl/ai/drugs/lookup';
 
   static const String patientVitalSigns = '/vital-signs';
   static String patientVitalSignsById(String patientId) =>
@@ -104,6 +100,8 @@ class ApiConstants {
   static String drugById(int id) => '/drugs/$id';
   static String drugArchive(int id) => '/drugs/$id/archive';
   static String drugRestore(int id) => '/drugs/$id/restore';
+  /// GET — role-scoped dose-unit lookup list (mg, g, mcg, ...).
+  static const String doseUnits = '/dose-units';
   static const String statistics = '/statistics';
   static const String dashboard = '/dashboard';
   static const String admins = '/admins';

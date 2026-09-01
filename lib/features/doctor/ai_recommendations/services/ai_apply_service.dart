@@ -9,25 +9,25 @@ enum AiApplyTarget {
   treatmentPlan;
 
   String get label => switch (this) {
-        AiApplyTarget.timelineNote => 'Clinical Timeline',
-        AiApplyTarget.progressNote => 'Progress note',
-        AiApplyTarget.treatmentPlan => 'Treatment plan',
-      };
+    AiApplyTarget.timelineNote => 'Clinical Timeline',
+    AiApplyTarget.progressNote => 'Progress note',
+    AiApplyTarget.treatmentPlan => 'Treatment plan',
+  };
 
   String get hint => switch (this) {
-        AiApplyTarget.timelineNote =>
-          'Adds a team timeline note with the selected items.',
-        AiApplyTarget.progressNote =>
-          'Adds a progress clinical note on the admission.',
-        AiApplyTarget.treatmentPlan =>
-          'Creates treatment-plan entries from each selected item.',
-      };
+    AiApplyTarget.timelineNote =>
+      'Adds a team timeline note with the selected items.',
+    AiApplyTarget.progressNote =>
+      'Adds a progress clinical note on the admission.',
+    AiApplyTarget.treatmentPlan =>
+      'Creates treatment-plan entries from each selected item.',
+  };
 }
 
 class AiApplyService {
   AiApplyService({HospitalAdmissionsRepository? admissionsRepository})
-      : _admissions =
-            admissionsRepository ?? const HospitalAdmissionsRepository();
+    : _admissions =
+          admissionsRepository ?? const HospitalAdmissionsRepository();
 
   final HospitalAdmissionsRepository _admissions;
 
@@ -35,10 +35,8 @@ class AiApplyService {
   static AiApplyTarget defaultTargetFor(AiRecommendFeature feature) {
     return switch (feature) {
       AiRecommendFeature.treatmentPlan => AiApplyTarget.treatmentPlan,
-      AiRecommendFeature.progressNotes ||
       AiRecommendFeature.diagnosis ||
-      AiRecommendFeature.discharge =>
-        AiApplyTarget.progressNote,
+      AiRecommendFeature.discharge => AiApplyTarget.progressNote,
       _ => AiApplyTarget.timelineNote,
     };
   }

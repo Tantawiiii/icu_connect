@@ -30,6 +30,5 @@ class PaginationModel extends Equatable {
       );
 
   @override
-  List<Object?> get props =>
-      [currentPage, from, to, total, perPage, lastPage];
+  List<Object?> get props => [currentPage, from, to, total, perPage, lastPage];
 }

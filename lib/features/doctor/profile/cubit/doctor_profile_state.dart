@@ -37,6 +37,7 @@ final class DoctorProfileReady extends DoctorProfileState {
 
   final DoctorProfile profile;
   final List<SignupHospitalItem> catalogHospitals;
+
   /// Hospital IDs sent on save (profile links + new join requests).
   final List<int> hospitalIds;
   final bool isSaving;
@@ -56,8 +57,7 @@ final class DoctorProfileReady extends DoctorProfileState {
   }
 
   @override
-  List<Object?> get props =>
-      [profile, catalogHospitals, hospitalIds, isSaving];
+  List<Object?> get props => [profile, catalogHospitals, hospitalIds, isSaving];
 }
 
 final class DoctorProfileSaveFailure extends DoctorProfileState {

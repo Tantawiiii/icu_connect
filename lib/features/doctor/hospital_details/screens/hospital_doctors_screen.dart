@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
 import 'package:icu_connect/core/widgets/app_button.dart';
+import 'package:icu_connect/core/widgets/confirm_action_dialog.dart';
 
 import '../../home/models/doctor_hospital.dart';
 import '../cubit/hospital_doctors_cubit.dart';
@@ -140,10 +141,7 @@ class _HospitalDoctorsView extends StatelessWidget {
     );
   }
 
-  Future<void> _showAddDoctorSheet(
-    BuildContext context,
-    int hospitalId,
-  ) async {
+  Future<void> _showAddDoctorSheet(BuildContext context, int hospitalId) async {
     final cubit = context.read<HospitalDoctorsCubit>();
     await showModalBottomSheet<void>(
       context: context,
@@ -163,27 +161,13 @@ class _HospitalDoctorsView extends StatelessWidget {
     BuildContext context,
     HospitalDoctor doctor,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(AppTexts.removeDoctorFromHospital),
-        content: Text(
-          '${AppTexts.removeDoctorConfirmation}\n\n${doctor.name}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(AppTexts.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: Text(AppTexts.remove),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.removeDoctorFromHospital,
+      message: '${AppTexts.removeDoctorConfirmation}\n\n${doctor.name}',
+      confirmLabel: AppTexts.remove,
     );
-    if (confirmed != true || !context.mounted) return;
+    if (!confirmed || !context.mounted) return;
 
     await context.read<HospitalDoctorsCubit>().removeDoctor(
       hospitalId: hospital.id,

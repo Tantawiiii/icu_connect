@@ -43,21 +43,26 @@ class VitalsTitlesCubit extends Cubit<VitalsTitlesState> {
     emit(VitalsTitlesActionLoading(current.items, current.pagination));
     try {
       final updated = await _repo.updateVitalTitle(id, request);
-      final items =
-          current.items.map((e) => e.id == id ? updated : e).toList();
-      emit(VitalsTitlesActionSuccess(
-        items,
-        current.pagination,
-        AppTexts.vitalTitleUpdated,
-      ));
+      final items = current.items.map((e) => e.id == id ? updated : e).toList();
+      emit(
+        VitalsTitlesActionSuccess(
+          items,
+          current.pagination,
+          AppTexts.vitalTitleUpdated,
+        ),
+      );
     } on NetworkException catch (e) {
-      emit(VitalsTitlesActionFailure(current.items, current.pagination, e.message));
+      emit(
+        VitalsTitlesActionFailure(current.items, current.pagination, e.message),
+      );
     } catch (_) {
-      emit(VitalsTitlesActionFailure(
-        current.items,
-        current.pagination,
-        'An unexpected error occurred',
-      ));
+      emit(
+        VitalsTitlesActionFailure(
+          current.items,
+          current.pagination,
+          'An unexpected error occurred',
+        ),
+      );
     }
   }
 
@@ -69,20 +74,25 @@ class VitalsTitlesCubit extends Cubit<VitalsTitlesState> {
     try {
       await _repo.deleteVitalTitle(id);
       final items = current.items.where((e) => e.id != id).toList();
-      emit(VitalsTitlesActionSuccess(
-        items,
-        current.pagination,
-        AppTexts.vitalTitleDeleted,
-      ));
+      emit(
+        VitalsTitlesActionSuccess(
+          items,
+          current.pagination,
+          AppTexts.vitalTitleDeleted,
+        ),
+      );
     } on NetworkException catch (e) {
-      emit(VitalsTitlesActionFailure(current.items, current.pagination, e.message));
+      emit(
+        VitalsTitlesActionFailure(current.items, current.pagination, e.message),
+      );
     } catch (_) {
-      emit(VitalsTitlesActionFailure(
-        current.items,
-        current.pagination,
-        'An unexpected error occurred',
-      ));
+      emit(
+        VitalsTitlesActionFailure(
+          current.items,
+          current.pagination,
+          'An unexpected error occurred',
+        ),
+      );
     }
   }
 }
-

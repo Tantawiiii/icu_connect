@@ -28,7 +28,7 @@ class AdmissionFormScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => AdmissionFormCubit()..loadReferenceData(),
+      create: (_) => AdminAdmissionFormCubit()..loadReferenceData(),
       child: _AdmissionFormBody(
         patientId: patientId,
         patientName: patientName,
@@ -47,8 +47,8 @@ class _ClinicalEntry {
 
 class _RadiologyEntry {
   _RadiologyEntry()
-      : title = TextEditingController(),
-        report = TextEditingController();
+    : title = TextEditingController(),
+      report = TextEditingController();
 
   final TextEditingController title;
   final TextEditingController report;
@@ -61,9 +61,7 @@ class _TreatmentEntry {
 }
 
 class _VitalEntry {
-  _VitalEntry()
-      : value = TextEditingController(),
-        date = DateTime.now();
+  _VitalEntry() : value = TextEditingController(), date = DateTime.now();
 
   int? titleId;
   final TextEditingController value;
@@ -71,9 +69,7 @@ class _VitalEntry {
 }
 
 class _LabEntry {
-  _LabEntry()
-      : value = TextEditingController(),
-        date = DateTime.now();
+  _LabEntry() : value = TextEditingController(), date = DateTime.now();
 
   int? titleId;
   final TextEditingController value;
@@ -106,10 +102,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
     'referred',
   ];
 
-  static const _clinicalTypes = [
-    'history_complaint',
-    'progress_note',
-  ];
+  static const _clinicalTypes = ['history_complaint', 'progress_note'];
 
   final _formKey = GlobalKey<FormState>();
   final _bedCtrl = TextEditingController();
@@ -197,11 +190,13 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
     final x = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 85,
+      maxWidth: 1920,
+      maxHeight: 1920,
     );
     if (x != null) setState(() => row.localImagePath = x.path);
   }
 
-  void _submit(AdmissionFormRefsReady refs) {
+  void _submit(AdminAdmissionFormRefsReady refs) {
     if (!_formKey.currentState!.validate()) return;
 
     if (!_isEdit) {
@@ -230,7 +225,9 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           .map(
             (e) => AdmissionRadiologyDraft(
               title: e.title.text.trim(),
-              report: e.report.text.trim().isEmpty ? null : e.report.text.trim(),
+              report: e.report.text.trim().isEmpty
+                  ? null
+                  : e.report.text.trim(),
               localImagePath: e.localImagePath,
             ),
           )
@@ -238,9 +235,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
 
       final plans = _treatments
           .where((e) => e.plan.text.trim().isNotEmpty)
-          .map(
-            (e) => AdmissionTreatmentDraft(planContent: e.plan.text.trim()),
-          )
+          .map((e) => AdmissionTreatmentDraft(planContent: e.plan.text.trim()))
           .toList();
 
       final vitals = <AdmissionVitalDraft>[];
@@ -248,11 +243,13 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
         if (v.titleId == null) continue;
         final val = double.tryParse(v.value.text.trim());
         if (val == null) continue;
-        vitals.add(AdmissionVitalDraft(
-          vitalsTitleId: v.titleId!,
-          value: val,
-          date: _ymd(v.date),
-        ));
+        vitals.add(
+          AdmissionVitalDraft(
+            vitalsTitleId: v.titleId!,
+            value: val,
+            date: _ymd(v.date),
+          ),
+        );
       }
 
       final labs = <AdmissionLabDraft>[];
@@ -260,11 +257,13 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
         if (l.titleId == null) continue;
         final val = double.tryParse(l.value.text.trim());
         if (val == null) continue;
-        labs.add(AdmissionLabDraft(
-          labsTitleId: l.titleId!,
-          value: val,
-          date: _ymd(l.date),
-        ));
+        labs.add(
+          AdmissionLabDraft(
+            labsTitleId: l.titleId!,
+            value: val,
+            date: _ymd(l.date),
+          ),
+        );
       }
 
       final req = AdmissionCreateRequest(
@@ -284,7 +283,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
         labs: labs,
       );
 
-      context.read<AdmissionFormCubit>().createAdmission(req);
+      context.read<AdminAdmissionFormCubit>().createAdmission(req);
       return;
     }
 
@@ -313,9 +312,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
 
     final plans = _treatments
         .where((e) => e.plan.text.trim().isNotEmpty)
-        .map(
-          (e) => AdmissionTreatmentDraft(planContent: e.plan.text.trim()),
-        )
+        .map((e) => AdmissionTreatmentDraft(planContent: e.plan.text.trim()))
         .toList();
 
     final vitals = <AdmissionVitalDraft>[];
@@ -323,11 +320,13 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
       if (v.titleId == null) continue;
       final val = double.tryParse(v.value.text.trim());
       if (val == null) continue;
-      vitals.add(AdmissionVitalDraft(
-        vitalsTitleId: v.titleId!,
-        value: val,
-        date: _ymd(v.date),
-      ));
+      vitals.add(
+        AdmissionVitalDraft(
+          vitalsTitleId: v.titleId!,
+          value: val,
+          date: _ymd(v.date),
+        ),
+      );
     }
 
     final labs = <AdmissionLabDraft>[];
@@ -335,11 +334,13 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
       if (l.titleId == null) continue;
       final val = double.tryParse(l.value.text.trim());
       if (val == null) continue;
-      labs.add(AdmissionLabDraft(
-        labsTitleId: l.titleId!,
-        value: val,
-        date: _ymd(l.date),
-      ));
+      labs.add(
+        AdmissionLabDraft(
+          labsTitleId: l.titleId!,
+          value: val,
+          date: _ymd(l.date),
+        ),
+      );
     }
 
     final update = AdmissionUpdateRequest(
@@ -355,7 +356,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
       labs: labs,
     );
 
-    context.read<AdmissionFormCubit>().updateAdmission(a.id, update);
+    context.read<AdminAdmissionFormCubit>().updateAdmission(a.id, update);
   }
 
   @override
@@ -374,9 +375,9 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
         ),
         centerTitle: true,
       ),
-      body: BlocConsumer<AdmissionFormCubit, AdmissionFormState>(
+      body: BlocConsumer<AdminAdmissionFormCubit, AdminAdmissionFormState>(
         listener: (context, state) {
-          if (state is AdmissionFormSuccess) {
+          if (state is AdminAdmissionFormSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -386,8 +387,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
             );
             Navigator.of(context).pop(true);
           }
-          if (state is AdmissionFormFailure) {
-            final cubit = context.read<AdmissionFormCubit>();
+          if (state is AdminAdmissionFormFailure) {
+            final cubit = context.read<AdminAdmissionFormCubit>();
             if (cubit.refs != null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -400,16 +401,16 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
           }
         },
         builder: (context, state) {
-          final cubit = context.read<AdmissionFormCubit>();
+          final cubit = context.read<AdminAdmissionFormCubit>();
 
-          if (state is AdmissionFormLoadingRefs ||
-              state is AdmissionFormInitial) {
+          if (state is AdminAdmissionFormLoadingRefs ||
+              state is AdminAdmissionFormInitial) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             );
           }
 
-          if (state is AdmissionFormFailure && cubit.refs == null) {
+          if (state is AdminAdmissionFormFailure && cubit.refs == null) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -424,8 +425,9 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                     const SizedBox(height: 16),
                     AppButton(
                       label: AppTexts.retry,
-                      onPressed: () =>
-                          context.read<AdmissionFormCubit>().loadReferenceData(),
+                      onPressed: () => context
+                          .read<AdminAdmissionFormCubit>()
+                          .loadReferenceData(),
                     ),
                   ],
                 ),
@@ -438,7 +440,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
             return const SizedBox.shrink();
           }
 
-          final submitting = state is AdmissionFormSubmitting;
+          final submitting = state is AdminAdmissionFormSubmitting;
 
           return Stack(
             children: [
@@ -546,9 +548,9 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                         onTap: submitting
                             ? null
                             : () => _pickDate(
-                                  initial: _dateComes,
-                                  onPick: (d) => setState(() => _dateComes = d),
-                                ),
+                                initial: _dateComes,
+                                onPick: (d) => setState(() => _dateComes = d),
+                              ),
                       ),
                       const Divider(),
                       const SizedBox(height: 8),
@@ -603,9 +605,9 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                       onTap: submitting
                           ? null
                           : () => _pickDate(
-                                initial: _dateLeave,
-                                onPick: (d) => setState(() => _dateLeave = d),
-                              ),
+                              initial: _dateLeave,
+                              onPick: (d) => setState(() => _dateLeave = d),
+                            ),
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
@@ -631,9 +633,9 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                       onTap: submitting
                           ? null
                           : () => _pickDate(
-                                initial: _dateOfDeath,
-                                onPick: (d) => setState(() => _dateOfDeath = d),
-                              ),
+                              initial: _dateOfDeath,
+                              onPick: (d) => setState(() => _dateOfDeath = d),
+                            ),
                     ),
                     const SizedBox(height: 8),
                     AppTextField(
@@ -647,13 +649,13 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                       onAdd: submitting
                           ? null
                           : () => setState(
-                                () => _clinical.add(
-                                  _ClinicalEntry(
-                                    type: _clinicalTypes.first,
-                                    content: TextEditingController(),
-                                  ),
+                              () => _clinical.add(
+                                _ClinicalEntry(
+                                  type: _clinicalTypes.first,
+                                  content: TextEditingController(),
                                 ),
                               ),
+                            ),
                       children: _clinical.asMap().entries.map((e) {
                         final i = e.key;
                         final row = e.value;
@@ -684,8 +686,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                                       onChanged: submitting
                                           ? null
                                           : (v) => setState(
-                                                () => row.type = v ?? row.type,
-                                              ),
+                                              () => row.type = v ?? row.type,
+                                            ),
                                     ),
                                   ),
                                   IconButton(
@@ -717,8 +719,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                       onAdd: submitting
                           ? null
                           : () => setState(() {
-                                _radiology.add(_RadiologyEntry());
-                              }),
+                              _radiology.add(_RadiologyEntry());
+                            }),
                       children: _radiology.asMap().entries.map((e) {
                         final i = e.key;
                         final row = e.value;
@@ -775,9 +777,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                                     child: Text(
                                       row.localImagePath == null
                                           ? 'No file'
-                                          : row.localImagePath!
-                                              .split('/')
-                                              .last,
+                                          : row.localImagePath!.split('/').last,
                                       style: const TextStyle(fontSize: 12),
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -794,8 +794,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                       onAdd: submitting
                           ? null
                           : () => setState(() {
-                                _treatments.add(_TreatmentEntry());
-                              }),
+                              _treatments.add(_TreatmentEntry());
+                            }),
                       children: _treatments.asMap().entries.map((e) {
                         final i = e.key;
                         final row = e.value;
@@ -816,9 +816,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                                     ? null
                                     : () {
                                         row.plan.dispose();
-                                        setState(
-                                          () => _treatments.removeAt(i),
-                                        );
+                                        setState(() => _treatments.removeAt(i));
                                       },
                               ),
                             ],
@@ -831,8 +829,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                       onAdd: submitting
                           ? null
                           : () => setState(() {
-                                _vitals.add(_VitalEntry());
-                              }),
+                              _vitals.add(_VitalEntry());
+                            }),
                       children: _vitals.asMap().entries.map((e) {
                         final i = e.key;
                         final row = e.value;
@@ -861,9 +859,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                                           .toList(),
                                       onChanged: submitting
                                           ? null
-                                          : (v) => setState(
-                                                () => row.titleId = v,
-                                              ),
+                                          : (v) =>
+                                                setState(() => row.titleId = v),
                                     ),
                                   ),
                                   IconButton(
@@ -872,9 +869,7 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                                         ? null
                                         : () {
                                             row.value.dispose();
-                                            setState(
-                                              () => _vitals.removeAt(i),
-                                            );
+                                            setState(() => _vitals.removeAt(i));
                                           },
                                   ),
                                 ],
@@ -882,9 +877,10 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                               AppTextField(
                                 controller: row.value,
                                 hintText: 'Value',
-                                keyboardType: const TextInputType.numberWithOptions(
-                                  decimal: true,
-                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
                               ),
                               ListTile(
                                 contentPadding: EdgeInsets.zero,
@@ -894,10 +890,10 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                                 onTap: submitting
                                     ? null
                                     : () => _pickDate(
-                                          initial: row.date,
-                                          onPick: (d) =>
-                                              setState(() => row.date = d),
-                                        ),
+                                        initial: row.date,
+                                        onPick: (d) =>
+                                            setState(() => row.date = d),
+                                      ),
                               ),
                             ],
                           ),
@@ -909,8 +905,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                       onAdd: submitting
                           ? null
                           : () => setState(() {
-                                _labs.add(_LabEntry());
-                              }),
+                              _labs.add(_LabEntry());
+                            }),
                       children: _labs.asMap().entries.map((e) {
                         final i = e.key;
                         final row = e.value;
@@ -939,9 +935,8 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                                           .toList(),
                                       onChanged: submitting
                                           ? null
-                                          : (v) => setState(
-                                                () => row.titleId = v,
-                                              ),
+                                          : (v) =>
+                                                setState(() => row.titleId = v),
                                     ),
                                   ),
                                   IconButton(
@@ -958,9 +953,10 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                               AppTextField(
                                 controller: row.value,
                                 hintText: 'Value',
-                                keyboardType: const TextInputType.numberWithOptions(
-                                  decimal: true,
-                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
                               ),
                               ListTile(
                                 contentPadding: EdgeInsets.zero,
@@ -970,10 +966,10 @@ class _AdmissionFormBodyState extends State<_AdmissionFormBody> {
                                 onTap: submitting
                                     ? null
                                     : () => _pickDate(
-                                          initial: row.date,
-                                          onPick: (d) =>
-                                              setState(() => row.date = d),
-                                        ),
+                                        initial: row.date,
+                                        onPick: (d) =>
+                                            setState(() => row.date = d),
+                                      ),
                               ),
                             ],
                           ),
@@ -1052,10 +1048,7 @@ class _SectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.grey.shade300),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: child,
-      ),
+      child: Padding(padding: const EdgeInsets.all(12), child: child),
     );
   }
 }

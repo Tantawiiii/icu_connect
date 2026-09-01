@@ -77,8 +77,8 @@ List<AdmissionActivityChange> parseAdmissionActivityChanges(
     newMap ??= properties['attributes'] is Map<String, dynamic>
         ? properties['attributes'] as Map<String, dynamic>
         : properties['new'] is Map<String, dynamic>
-            ? properties['new'] as Map<String, dynamic>
-            : null;
+        ? properties['new'] as Map<String, dynamic>
+        : null;
   }
 
   if (oldMap != null || newMap != null) {

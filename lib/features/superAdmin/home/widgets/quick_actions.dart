@@ -28,9 +28,9 @@ class QuickActions extends StatelessWidget {
           icon: Icons.people_outline,
           label: AppTexts.superAdmins,
           color: AppColors.primary,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const AdminsListScreen()),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const AdminsListScreen())),
         ),
         _ActionTile(
           icon: Icons.local_hospital_outlined,
@@ -44,17 +44,17 @@ class QuickActions extends StatelessWidget {
           icon: Icons.medical_services_outlined,
           label: AppTexts.usersLabel,
           color: Colors.indigo,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const UsersListScreen()),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const UsersListScreen())),
         ),
         _ActionTile(
           icon: Icons.personal_injury_outlined,
           label: AppTexts.patientsLabel,
           color: Colors.pink,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const PatientsListScreen()),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const PatientsListScreen())),
         ),
         _ActionTile(
           icon: Icons.science_outlined,
@@ -76,9 +76,9 @@ class QuickActions extends StatelessWidget {
           icon: Icons.medication_outlined,
           label: AppTexts.drugsLabel,
           color: Colors.teal,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const DrugsListScreen()),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const DrugsListScreen())),
         ),
 
         // _ActionTile(

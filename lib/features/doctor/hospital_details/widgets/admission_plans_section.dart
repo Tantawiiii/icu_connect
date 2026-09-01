@@ -139,7 +139,7 @@ class _PlanChecklistTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
             width: 24,
@@ -158,21 +158,19 @@ class _PlanChecklistTile extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                plan.planContent,
-                style: TextStyle(
-                  color: completed
-                      ? AppColors.textSecondary
-                      : AppColors.textPrimary,
-                  fontSize: 14,
-                  height: 1.45,
-                  decoration: completed
-                      ? TextDecoration.lineThrough
-                      : TextDecoration.none,
-                  decorationColor: AppColors.textSecondary,
-                ),
+            child: Text(
+              plan.planContent,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: completed
+                    ? AppColors.textSecondary
+                    : AppColors.textPrimary,
+                fontSize: 14,
+                decoration: completed
+                    ? TextDecoration.lineThrough
+                    : TextDecoration.none,
+                decorationColor: AppColors.textSecondary,
               ),
             ),
           ),
@@ -251,8 +249,8 @@ class _PlanForm extends StatelessWidget {
               label: saving
                   ? 'Saving...'
                   : isEditing
-                      ? AppTexts.saveChanges
-                      : 'Save Entry',
+                  ? AppTexts.saveChanges
+                  : 'Save Entry',
               onPressed: saving ? null : onSave,
             ),
           ),

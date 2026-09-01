@@ -47,18 +47,18 @@ class AdmissionPatientModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        nationalId,
-        age,
-        gender,
-        phone,
-        bloodGroup,
-        notes,
-        createdAt,
-        updatedAt,
-        deletedAt,
-      ];
+    id,
+    name,
+    nationalId,
+    age,
+    gender,
+    phone,
+    bloodGroup,
+    notes,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
 }
 
 class MeasurementTitleModel extends Equatable {
@@ -84,6 +84,17 @@ class MeasurementTitleModel extends Equatable {
 
   bool get isNumericValueType => valueType.toLowerCase() != 'string';
 
+  MeasurementTitleModel copyWith({String? valueType}) => MeasurementTitleModel(
+    id: id,
+    title: title,
+    unit: unit,
+    normalRangeMin: normalRangeMin,
+    normalRangeMax: normalRangeMax,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    valueType: valueType ?? this.valueType,
+  );
+
   factory MeasurementTitleModel.fromJson(Map<String, dynamic> json) =>
       MeasurementTitleModel(
         id: (json['id'] as num).toInt(),
@@ -98,15 +109,15 @@ class MeasurementTitleModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        title,
-        unit,
-        normalRangeMin,
-        normalRangeMax,
-        createdAt,
-        updatedAt,
-        valueType,
-      ];
+    id,
+    title,
+    unit,
+    normalRangeMin,
+    normalRangeMax,
+    createdAt,
+    updatedAt,
+    valueType,
+  ];
 }
 
 class ClinicalNoteModel extends Equatable {
@@ -143,8 +154,16 @@ class ClinicalNoteModel extends Equatable {
       );
 
   @override
-  List<Object?> get props =>
-      [id, admissionId, addedBy, type, content, createdAt, updatedAt, deletedAt];
+  List<Object?> get props => [
+    id,
+    admissionId,
+    addedBy,
+    type,
+    content,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
 }
 
 class RadiologyImageModel extends Equatable {
@@ -182,15 +201,15 @@ class RadiologyImageModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        admissionId,
-        title,
-        imagePath,
-        report,
-        createdAt,
-        updatedAt,
-        deletedAt,
-      ];
+    id,
+    admissionId,
+    title,
+    imagePath,
+    report,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
 }
 
 class TreatmentPlanModel extends Equatable {
@@ -221,8 +240,14 @@ class TreatmentPlanModel extends Equatable {
       );
 
   @override
-  List<Object?> get props =>
-      [id, admissionId, planContent, createdAt, updatedAt, deletedAt];
+  List<Object?> get props => [
+    id,
+    admissionId,
+    planContent,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
 }
 
 class VitalRecordModel extends Equatable {
@@ -267,16 +292,16 @@ class VitalRecordModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        admissionId,
-        vitalsTitleId,
-        value,
-        date,
-        createdAt,
-        updatedAt,
-        deletedAt,
-        vitalsTitle,
-      ];
+    id,
+    admissionId,
+    vitalsTitleId,
+    value,
+    date,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    vitalsTitle,
+  ];
 }
 
 class LabRecordModel extends Equatable {
@@ -303,33 +328,33 @@ class LabRecordModel extends Equatable {
   final MeasurementTitleModel? labsTitle;
 
   factory LabRecordModel.fromJson(Map<String, dynamic> json) => LabRecordModel(
-        id: json['id'] as int,
-        admissionId: json['admission_id'] as int,
-        labsTitleId: json['labs_title_id'] as int,
-        value: json['value']?.toString() ?? '',
-        date: json['date'] as String? ?? '',
-        createdAt: json['created_at'] as String? ?? '',
-        updatedAt: json['updated_at'] as String? ?? '',
-        deletedAt: json['deleted_at'] as String?,
-        labsTitle: json['labs_title'] != null
-            ? MeasurementTitleModel.fromJson(
-                json['labs_title'] as Map<String, dynamic>,
-              )
-            : null,
-      );
+    id: json['id'] as int,
+    admissionId: json['admission_id'] as int,
+    labsTitleId: json['labs_title_id'] as int,
+    value: json['value']?.toString() ?? '',
+    date: json['date'] as String? ?? '',
+    createdAt: json['created_at'] as String? ?? '',
+    updatedAt: json['updated_at'] as String? ?? '',
+    deletedAt: json['deleted_at'] as String?,
+    labsTitle: json['labs_title'] != null
+        ? MeasurementTitleModel.fromJson(
+            json['labs_title'] as Map<String, dynamic>,
+          )
+        : null,
+  );
 
   @override
   List<Object?> get props => [
-        id,
-        admissionId,
-        labsTitleId,
-        value,
-        date,
-        createdAt,
-        updatedAt,
-        deletedAt,
-        labsTitle,
-      ];
+    id,
+    admissionId,
+    labsTitleId,
+    value,
+    date,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    labsTitle,
+  ];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -346,6 +371,9 @@ class MedicationModel extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     this.drugId,
+    this.isDiscontinued = false,
+    this.doseUnitId,
+    this.doseUnitLabel = '',
   });
 
   final int id;
@@ -357,6 +385,51 @@ class MedicationModel extends Equatable {
   final String createdAt;
   final String updatedAt;
   final int? drugId;
+  final bool isDiscontinued;
+  final int? doseUnitId;
+  final String doseUnitLabel;
+
+  MedicationModel copyWith({
+    int? id,
+    int? admissionId,
+    String? type,
+    String? title,
+    String? value,
+    String? duration,
+    String? createdAt,
+    String? updatedAt,
+    int? drugId,
+    bool? isDiscontinued,
+    int? doseUnitId,
+    String? doseUnitLabel,
+  }) {
+    return MedicationModel(
+      id: id ?? this.id,
+      admissionId: admissionId ?? this.admissionId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      value: value ?? this.value,
+      duration: duration ?? this.duration,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      drugId: drugId ?? this.drugId,
+      isDiscontinued: isDiscontinued ?? this.isDiscontinued,
+      doseUnitId: doseUnitId ?? this.doseUnitId,
+      doseUnitLabel: doseUnitLabel ?? this.doseUnitLabel,
+    );
+  }
+
+  static bool _parseDiscontinued(Map<String, dynamic> json) {
+    final raw = json['is_discontinued'] ?? json['discontinued'];
+    if (raw is bool) return raw;
+    if (raw is num) return raw != 0;
+    if (raw is String) {
+      final v = raw.trim().toLowerCase();
+      return v == '1' || v == 'true' || v == 'yes';
+    }
+    final status = json['status']?.toString().trim().toLowerCase() ?? '';
+    return status == 'discontinued' || status == 'stopped' || status == 'dc';
+  }
 
   factory MedicationModel.fromJson(Map<String, dynamic> json) {
     final nestedDrug = json['drug'];
@@ -364,16 +437,14 @@ class MedicationModel extends Equatable {
     int? nestedDrugId;
     if (nestedDrug is Map<String, dynamic>) {
       nestedDrugId = (nestedDrug['id'] as num?)?.toInt();
-      nestedTitle = nestedDrug['generic_name']?.toString() ??
+      nestedTitle =
+          nestedDrug['generic_name']?.toString() ??
           nestedDrug['name']?.toString() ??
           '';
     }
-    final dose = json['dose']?.toString() ??
-        json['value']?.toString() ??
-        '';
-    final frequency = json['frequency']?.toString() ??
-        json['duration']?.toString() ??
-        '';
+    final dose = json['dose']?.toString() ?? json['value']?.toString() ?? '';
+    final frequency =
+        json['frequency']?.toString() ?? json['duration']?.toString() ?? '';
     final title = json['title']?.toString() ?? '';
     return MedicationModel(
       id: json['id'] as int,
@@ -385,12 +456,35 @@ class MedicationModel extends Equatable {
       createdAt: json['created_at'] as String? ?? '',
       updatedAt: json['updated_at'] as String? ?? '',
       drugId: (json['drug_id'] as num?)?.toInt() ?? nestedDrugId,
+      isDiscontinued: _parseDiscontinued(json),
+      doseUnitId:
+          (json['dose_unit_id'] as num?)?.toInt() ??
+          (json['dose_unit'] is Map<String, dynamic>
+              ? (json['dose_unit']['id'] as num?)?.toInt()
+              : null),
+      doseUnitLabel: json['dose_unit'] is Map<String, dynamic>
+          ? (json['dose_unit']['label']?.toString() ??
+                json['dose_unit']['code']?.toString() ??
+                '')
+          : '',
     );
   }
 
   @override
-  List<Object?> get props =>
-      [id, admissionId, type, title, value, duration, createdAt, updatedAt, drugId];
+  List<Object?> get props => [
+    id,
+    admissionId,
+    type,
+    title,
+    value,
+    duration,
+    createdAt,
+    updatedAt,
+    drugId,
+    isDiscontinued,
+    doseUnitId,
+    doseUnitLabel,
+  ];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -412,12 +506,12 @@ class EchoModel extends Equatable {
   final String updatedAt;
 
   factory EchoModel.fromJson(Map<String, dynamic> json) => EchoModel(
-        id: json['id'] as int,
-        admissionId: json['admission_id'] as int,
-        text: json['text'] as String? ?? '',
-        createdAt: json['created_at'] as String? ?? '',
-        updatedAt: json['updated_at'] as String? ?? '',
-      );
+    id: json['id'] as int,
+    admissionId: json['admission_id'] as int,
+    text: json['text'] as String? ?? '',
+    createdAt: json['created_at'] as String? ?? '',
+    updatedAt: json['updated_at'] as String? ?? '',
+  );
 
   @override
   List<Object?> get props => [id, admissionId, text, createdAt, updatedAt];
@@ -441,7 +535,8 @@ class UltrasoundModel extends Equatable {
   final String createdAt;
   final String updatedAt;
 
-  factory UltrasoundModel.fromJson(Map<String, dynamic> json) => UltrasoundModel(
+  factory UltrasoundModel.fromJson(Map<String, dynamic> json) =>
+      UltrasoundModel(
         id: json['id'] as int,
         admissionId: json['admission_id'] as int,
         text: json['text'] as String? ?? '',
@@ -488,7 +583,8 @@ class CultureAntibioticModel extends Equatable {
     }
     return CultureAntibioticModel(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      drugId: (json['drug_id'] as num?)?.toInt() ??
+      drugId:
+          (json['drug_id'] as num?)?.toInt() ??
           (nestedDrug is Map<String, dynamic>
               ? (nestedDrug['id'] as num?)?.toInt()
               : null),
@@ -521,21 +617,28 @@ class CultureModel extends Equatable {
   final List<CultureAntibioticModel> antibiotics;
 
   factory CultureModel.fromJson(Map<String, dynamic> json) => CultureModel(
-        id: json['id'] as int,
-        admissionId: json['admission_id'] as int,
-        title: json['title'] as String? ?? '',
-        note: json['note'] as String? ?? '',
-        createdAt: json['created_at'] as String? ?? '',
-        updatedAt: json['updated_at'] as String? ?? '',
-        antibiotics: (json['antibiotics'] as List<dynamic>? ?? [])
-            .whereType<Map<String, dynamic>>()
-            .map(CultureAntibioticModel.fromJson)
-            .toList(),
-      );
+    id: json['id'] as int,
+    admissionId: json['admission_id'] as int,
+    title: json['title'] as String? ?? '',
+    note: json['note'] as String? ?? '',
+    createdAt: json['created_at'] as String? ?? '',
+    updatedAt: json['updated_at'] as String? ?? '',
+    antibiotics: (json['antibiotics'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(CultureAntibioticModel.fromJson)
+        .toList(),
+  );
 
   @override
-  List<Object?> get props =>
-      [id, admissionId, title, note, createdAt, updatedAt, antibiotics];
+  List<Object?> get props => [
+    id,
+    admissionId,
+    title,
+    note,
+    createdAt,
+    updatedAt,
+    antibiotics,
+  ];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -569,8 +672,14 @@ class ConsultationModel extends Equatable {
       );
 
   @override
-  List<Object?> get props =>
-      [id, admissionId, speciality, reply, createdAt, updatedAt];
+  List<Object?> get props => [
+    id,
+    admissionId,
+    speciality,
+    reply,
+    createdAt,
+    updatedAt,
+  ];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -595,7 +704,8 @@ class HospitalGroupModel extends Equatable {
   final String createdAt;
   final String updatedAt;
 
-  factory HospitalGroupModel.fromJson(Map<String, dynamic> json) => HospitalGroupModel(
+  factory HospitalGroupModel.fromJson(Map<String, dynamic> json) =>
+      HospitalGroupModel(
         id: json['id'] as int,
         hospitalId: json['hospital_id'] as int,
         name: json['name'] as String? ?? '',
@@ -606,7 +716,15 @@ class HospitalGroupModel extends Equatable {
       );
 
   @override
-  List<Object?> get props => [id, hospitalId, name, totalBeds, availableBeds, createdAt, updatedAt];
+  List<Object?> get props => [
+    id,
+    hospitalId,
+    name,
+    totalBeds,
+    availableBeds,
+    createdAt,
+    updatedAt,
+  ];
 }
 
 String _parseBedNumber(dynamic raw) {
@@ -713,7 +831,9 @@ class PatientAdmissionModel extends Equatable {
             ? HospitalModel.fromJson(json['hospital'] as Map<String, dynamic>)
             : null,
         hospitalGroup: json['hospital_group'] != null
-            ? HospitalGroupModel.fromJson(json['hospital_group'] as Map<String, dynamic>)
+            ? HospitalGroupModel.fromJson(
+                json['hospital_group'] as Map<String, dynamic>,
+              )
             : null,
         clinicalNotes: (json['clinical_notes'] as List<dynamic>? ?? [])
             .map((e) => ClinicalNoteModel.fromJson(e as Map<String, dynamic>))
@@ -749,33 +869,33 @@ class PatientAdmissionModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        patientId,
-        hospitalId,
-        doctorId,
-        hospitalGroupId,
-        bedNumber,
-        status,
-        dateComes,
-        dateLeave,
-        dateOfDeath,
-        notes,
-        createdAt,
-        updatedAt,
-        deletedAt,
-        patient,
-        doctor,
-        hospital,
-        clinicalNotes,
-        radiologyImages,
-        treatmentPlans,
-        vitals,
-        labs,
-        medications,
-        echoes,
-        ultrasounds,
-        cultures,
-        consultations,
-        hospitalGroup,
-      ];
+    id,
+    patientId,
+    hospitalId,
+    doctorId,
+    hospitalGroupId,
+    bedNumber,
+    status,
+    dateComes,
+    dateLeave,
+    dateOfDeath,
+    notes,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    patient,
+    doctor,
+    hospital,
+    clinicalNotes,
+    radiologyImages,
+    treatmentPlans,
+    vitals,
+    labs,
+    medications,
+    echoes,
+    ultrasounds,
+    cultures,
+    consultations,
+    hospitalGroup,
+  ];
 }

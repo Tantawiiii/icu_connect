@@ -37,10 +37,14 @@ class HospitalRegistrationRequest extends Equatable {
         .toList();
     final totalBedsRaw = (json['total_beds'] as num?)?.toInt();
     final availableBedsRaw = (json['available_beds'] as num?)?.toInt();
-    final totalBedsFromGroups =
-        groups.fold<int>(0, (sum, g) => sum + g.totalBeds);
-    final availableBedsFromGroups =
-        groups.fold<int>(0, (sum, g) => sum + g.availableBeds);
+    final totalBedsFromGroups = groups.fold<int>(
+      0,
+      (sum, g) => sum + g.totalBeds,
+    );
+    final availableBedsFromGroups = groups.fold<int>(
+      0,
+      (sum, g) => sum + g.availableBeds,
+    );
 
     return HospitalRegistrationRequest(
       id: json['id'] as int,
@@ -57,14 +61,14 @@ class HospitalRegistrationRequest extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        location,
-        approvalStatus,
-        totalBeds,
-        availableBeds,
-        createdAt,
-        updatedAt,
-        groups,
-      ];
+    id,
+    name,
+    location,
+    approvalStatus,
+    totalBeds,
+    availableBeds,
+    createdAt,
+    updatedAt,
+    groups,
+  ];
 }

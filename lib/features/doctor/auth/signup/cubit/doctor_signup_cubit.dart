@@ -15,12 +15,7 @@ class DoctorSignupCubit extends Cubit<DoctorSignupState> {
     emit(const DoctorSignupHospitalsLoading());
     try {
       final hospitals = await _repository.fetchHospitals();
-      emit(
-        DoctorSignupReady(
-          hospitals: hospitals,
-          selectedHospitalId: null,
-        ),
-      );
+      emit(DoctorSignupReady(hospitals: hospitals, selectedHospitalId: null));
     } on NetworkException catch (e) {
       emit(DoctorSignupHospitalsFailure(e.message));
     } catch (_) {
