@@ -64,8 +64,9 @@ class AdmissionFormRadiologyDraftCard extends StatelessWidget {
         children: [
           if (path != null)
             ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
               child: SizedBox(
                 width: mediaWidth,
                 height: mediaHeight,
@@ -103,8 +104,9 @@ class AdmissionFormRadiologyDraftCard extends StatelessWidget {
                           child: Center(
                             child: Icon(
                               Icons.broken_image_outlined,
-                              color: AppColors.textSecondary
-                                  .withValues(alpha: 0.6),
+                              color: AppColors.textSecondary.withValues(
+                                alpha: 0.6,
+                              ),
                             ),
                           ),
                         ),

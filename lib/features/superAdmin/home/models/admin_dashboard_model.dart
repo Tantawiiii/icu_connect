@@ -35,14 +35,14 @@ class DashboardOverview extends Equatable {
 
   @override
   List<Object?> get props => [
-        totalHospitals,
-        totalPatients,
-        totalDoctors,
-        totalAdmissions,
-        activeAdmissions,
-        totalBeds,
-        availableBeds,
-      ];
+    totalHospitals,
+    totalPatients,
+    totalDoctors,
+    totalAdmissions,
+    activeAdmissions,
+    totalBeds,
+    availableBeds,
+  ];
 }
 
 class DashboardRecentAdmission extends Equatable {
@@ -81,14 +81,14 @@ class DashboardRecentAdmission extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        patientId,
-        patientName,
-        hospitalName,
-        bedNumber,
-        status,
-        dateComes,
-      ];
+    id,
+    patientId,
+    patientName,
+    hospitalName,
+    bedNumber,
+    status,
+    dateComes,
+  ];
 }
 
 class AdminDashboardData extends Equatable {

@@ -36,6 +36,7 @@ class _RegisterViewState extends State<_RegisterView> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
+
   /// Full name passed to signup (`first` + space + `last`); kept in sync in [_submit].
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -151,7 +152,7 @@ class _RegisterViewState extends State<_RegisterView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      SizedBox(height: 38,),
+                      SizedBox(height: 38),
                       if (!isValidHospitalBaseUrl) ...[
                         Container(
                           padding: const EdgeInsets.all(10),
@@ -251,8 +252,8 @@ class _RegisterViewState extends State<_RegisterView> {
                               ...ready.hospitals.map((h) {
                                 final label =
                                     h.location != null && h.location!.isNotEmpty
-                                        ? '${h.name} — ${h.location}'
-                                        : h.name;
+                                    ? '${h.name} — ${h.location}'
+                                    : h.name;
                                 return Align(
                                   alignment: AlignmentDirectional.centerStart,
                                   child: Text(
@@ -326,8 +327,9 @@ class _RegisterViewState extends State<_RegisterView> {
                         const SizedBox(height: 28),
                         AppButton(
                           label: AppTexts.register,
-                          onPressed:
-                              !isValidHospitalBaseUrl || isBusy ? null : _submit,
+                          onPressed: !isValidHospitalBaseUrl || isBusy
+                              ? null
+                              : _submit,
                           isLoading: isSubmitting,
                         ),
                       ],

@@ -43,9 +43,7 @@ class MeasurementTitleOrder {
   };
 
   static String canonicalKey(String title) {
-    final normalized = title
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final normalized = title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     return _aliases[normalized] ?? normalized;
   }
 

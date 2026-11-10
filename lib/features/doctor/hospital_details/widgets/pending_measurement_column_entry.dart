@@ -10,14 +10,14 @@ class PendingMeasurementColumnEntry {
     Map<int, int>? recordIdsByTitleId,
     Map<int, String>? initialValuesByTitleId,
     this.editingColumnKey,
-  })  : date = date ?? DateTime.now(),
-        recordIdsByTitleId = Map<int, int>.from(recordIdsByTitleId ?? {}),
-        controllers = {
-          for (final t in titles)
-            t.id: TextEditingController(
-              text: initialValuesByTitleId?[t.id] ?? '',
-            ),
-        };
+  }) : date = date ?? DateTime.now(),
+       recordIdsByTitleId = Map<int, int>.from(recordIdsByTitleId ?? {}),
+       controllers = {
+         for (final t in titles)
+           t.id: TextEditingController(
+             text: initialValuesByTitleId?[t.id] ?? '',
+           ),
+       };
 
   DateTime date;
   final Map<int, int> recordIdsByTitleId;

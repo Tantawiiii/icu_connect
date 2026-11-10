@@ -203,11 +203,7 @@ class _ActivityTile extends StatelessWidget {
               color: AppColors.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              _iconForType(type),
-              size: 18,
-              color: AppColors.primary,
-            ),
+            child: Icon(_iconForType(type), size: 18, color: AppColors.primary),
           ),
           const SizedBox(width: 12),
           Expanded(

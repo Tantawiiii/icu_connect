@@ -82,9 +82,7 @@ class _AdminFormViewState extends State<_AdminFormView> {
     );
 
     if (_isEdit) {
-      context
-          .read<AdminFormCubit>()
-          .updateAdmin(widget.admin!.id, request);
+      context.read<AdminFormCubit>().updateAdmin(widget.admin!.id, request);
     } else {
       context.read<AdminFormCubit>().createAdmin(request);
     }
@@ -100,7 +98,9 @@ class _AdminFormViewState extends State<_AdminFormView> {
         title: Text(
           _isEdit ? AppTexts.editAdmin : AppTexts.addAdmin,
           style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -142,7 +142,8 @@ class _AdminFormViewState extends State<_AdminFormView> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -154,8 +155,9 @@ class _AdminFormViewState extends State<_AdminFormView> {
                             textInputAction: TextInputAction.next,
                             enabled: !isLoading,
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Name is required';
+                              }
                               return null;
                             },
                           ),
@@ -169,10 +171,12 @@ class _AdminFormViewState extends State<_AdminFormView> {
                             enabled: !isLoading,
                             autofillHints: const [AutofillHints.email],
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return AppTexts.emailRequired;
-                              if (!v.contains('@'))
+                              }
+                              if (!v.contains('@')) {
                                 return AppTexts.emailInvalid;
+                              }
                               return null;
                             },
                           ),
@@ -198,10 +202,13 @@ class _AdminFormViewState extends State<_AdminFormView> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: SwitchListTile(
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 4),
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
                       title: Text(
                         _isActive ? AppTexts.active : AppTexts.inactive,
                         style: TextStyle(
@@ -214,7 +221,9 @@ class _AdminFormViewState extends State<_AdminFormView> {
                       subtitle: const Text(
                         'Enable or disable this admin account',
                         style: TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary),
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       value: _isActive,
                       activeColor: AppColors.success,
@@ -232,7 +241,8 @@ class _AdminFormViewState extends State<_AdminFormView> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -248,13 +258,10 @@ class _AdminFormViewState extends State<_AdminFormView> {
                             enabled: !isLoading,
                             autofillHints: const [AutofillHints.newPassword],
                             validator: (v) {
-                              if (!_isEdit &&
-                                  (v == null || v.isEmpty)) {
+                              if (!_isEdit && (v == null || v.isEmpty)) {
                                 return AppTexts.passwordRequired;
                               }
-                              if (v != null &&
-                                  v.isNotEmpty &&
-                                  v.length < 8) {
+                              if (v != null && v.isNotEmpty && v.length < 8) {
                                 return 'Password must be at least 8 characters';
                               }
                               return null;

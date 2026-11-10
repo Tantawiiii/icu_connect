@@ -46,10 +46,25 @@ class _AddDoctorBottomSheetState extends State<AddDoctorBottomSheet> {
       _loading = true;
       _error = null;
     });
+
+    // Fetch each list independently so a single slow/broken endpoint can't
+    // hang the whole sheet in a loading state forever.
+    Future<List<HospitalDoctor>> safeList(
+      Future<List<HospitalDoctor>> Function() fetch,
+    ) async {
+      try {
+        return await fetch().timeout(const Duration(seconds: 25));
+      } catch (_) {
+        return const <HospitalDoctor>[];
+      }
+    }
+
     try {
       final results = await Future.wait([
-        _repo.fetchPendingDoctorsPool(widget.hospitalId),
-        _repo.fetchInactivePendingDoctorRequests(widget.hospitalId),
+        safeList(() => _repo.fetchPendingDoctorsPool(widget.hospitalId)),
+        safeList(
+          () => _repo.fetchInactivePendingDoctorRequests(widget.hospitalId),
+        ),
       ]);
       if (!mounted) return;
       setState(() {
@@ -113,15 +128,12 @@ class _AddDoctorBottomSheetState extends State<AddDoctorBottomSheet> {
   Future<void> _addDoctor(int doctorId) async {
     if (_addingIds.contains(doctorId)) return;
     setState(() => _addingIds.add(doctorId));
-    await _afterMutation(
-      () async {
-        await _repo.addDoctorToHospital(
-          hospitalId: widget.hospitalId,
-          doctorId: doctorId,
-        );
-      },
-      successMessage: AppTexts.doctorAddedSuccessfully,
-    );
+    await _afterMutation(() async {
+      await _repo.addDoctorToHospital(
+        hospitalId: widget.hospitalId,
+        doctorId: doctorId,
+      );
+    }, successMessage: AppTexts.doctorAddedSuccessfully);
     if (mounted) setState(() => _addingIds.remove(doctorId));
   }
 
@@ -149,15 +161,12 @@ class _AddDoctorBottomSheetState extends State<AddDoctorBottomSheet> {
   Future<void> _remove(int doctorId) async {
     if (_removingIds.contains(doctorId)) return;
     setState(() => _removingIds.add(doctorId));
-    await _afterMutation(
-      () async {
-        await _repo.removeDoctor(
-          hospitalId: widget.hospitalId,
-          doctorId: doctorId,
-        );
-      },
-      successMessage: AppTexts.doctorRemovedFromHospital,
-    );
+    await _afterMutation(() async {
+      await _repo.removeDoctor(
+        hospitalId: widget.hospitalId,
+        doctorId: doctorId,
+      );
+    }, successMessage: AppTexts.doctorRemovedFromHospital);
     if (mounted) setState(() => _removingIds.remove(doctorId));
   }
 

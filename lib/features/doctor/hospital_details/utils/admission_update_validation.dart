@@ -29,7 +29,9 @@ class AdmissionUpdateValidation {
     if (status.requiresDeathDate && dateOfDeath == null) {
       return 'Set date of death for ${status.displayLabel} status';
     }
-    if (dateComes != null && dateLeave != null && dateLeave.isBefore(dateComes)) {
+    if (dateComes != null &&
+        dateLeave != null &&
+        dateLeave.isBefore(dateComes)) {
       return AppTexts.admissionLeaveNotBeforeComes;
     }
     if (dateComes != null &&

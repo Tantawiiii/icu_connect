@@ -29,4 +29,3 @@ class PatientRequest {
     return map;
   }
 }
-

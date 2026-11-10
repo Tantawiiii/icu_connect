@@ -29,19 +29,23 @@ class UsersCubit extends Cubit<UsersState> {
     try {
       await _repo.deleteUser(id);
       final updated = current.users.where((u) => u.id != id).toList();
-      emit(UsersActionSuccess(
-        updated,
-        current.pagination,
-        'User deleted successfully',
-      ));
+      emit(
+        UsersActionSuccess(
+          updated,
+          current.pagination,
+          'User deleted successfully',
+        ),
+      );
     } on NetworkException catch (e) {
       emit(UsersActionFailure(current.users, current.pagination, e.message));
     } catch (_) {
-      emit(UsersActionFailure(
-        current.users,
-        current.pagination,
-        'An unexpected error occurred',
-      ));
+      emit(
+        UsersActionFailure(
+          current.users,
+          current.pagination,
+          'An unexpected error occurred',
+        ),
+      );
     }
   }
 
@@ -52,21 +56,26 @@ class UsersCubit extends Cubit<UsersState> {
     emit(UsersActionLoading(current.users, current.pagination));
     try {
       final restored = await _repo.restoreUser(id);
-      final updated =
-          current.users.map((u) => u.id == id ? restored : u).toList();
-      emit(UsersActionSuccess(
-        updated,
-        current.pagination,
-        'User restored successfully',
-      ));
+      final updated = current.users
+          .map((u) => u.id == id ? restored : u)
+          .toList();
+      emit(
+        UsersActionSuccess(
+          updated,
+          current.pagination,
+          'User restored successfully',
+        ),
+      );
     } on NetworkException catch (e) {
       emit(UsersActionFailure(current.users, current.pagination, e.message));
     } catch (_) {
-      emit(UsersActionFailure(
-        current.users,
-        current.pagination,
-        'An unexpected error occurred',
-      ));
+      emit(
+        UsersActionFailure(
+          current.users,
+          current.pagination,
+          'An unexpected error occurred',
+        ),
+      );
     }
   }
 }

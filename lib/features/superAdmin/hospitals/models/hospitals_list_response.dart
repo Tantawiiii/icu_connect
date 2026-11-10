@@ -24,7 +24,8 @@ class HospitalsListResponse extends Equatable {
             .map((e) => HospitalModel.fromJson(e as Map<String, dynamic>))
             .toList(),
         pagination: PaginationModel.fromJson(
-            json['pagination'] as Map<String, dynamic>),
+          json['pagination'] as Map<String, dynamic>,
+        ),
       );
 
   @override

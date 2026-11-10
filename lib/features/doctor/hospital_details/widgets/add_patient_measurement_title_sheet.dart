@@ -7,10 +7,7 @@ import 'package:icu_connect/core/widgets/app_button.dart';
 import 'package:icu_connect/core/widgets/measurement_title_form_fields.dart';
 
 class AddPatientMeasurementTitleSheet extends StatefulWidget {
-  const AddPatientMeasurementTitleSheet({
-    super.key,
-    required this.isLabs,
-  });
+  const AddPatientMeasurementTitleSheet({super.key, required this.isLabs});
 
   final bool isLabs;
 
@@ -64,7 +61,7 @@ class _AddPatientMeasurementTitleSheetState
       unit: _unitCtrl.text,
       min: _minCtrl.text,
       max: _maxCtrl.text,
-      valueType: widget.isLabs ? 'numeric' : _valueType,
+      valueType: _valueType,
     );
     if (values == null) return;
 
@@ -119,7 +116,7 @@ class _AddPatientMeasurementTitleSheetState
               minController: _minCtrl,
               maxController: _maxCtrl,
               enabled: true,
-              showValueType: !widget.isLabs,
+              showValueType: true,
               valueType: _valueType,
               onValueTypeChanged: (v) {
                 if (v != null) setState(() => _valueType = v);

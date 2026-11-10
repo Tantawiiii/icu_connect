@@ -19,13 +19,12 @@ class AdminRequest {
   final String? passwordConfirmation;
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'email': email,
-        'phone': phone,
-        'is_active': isActive ? 'true' : 'false',
-        if (password != null && password!.isNotEmpty) 'password': password,
-        if (passwordConfirmation != null &&
-            passwordConfirmation!.isNotEmpty)
-          'password_confirmation': passwordConfirmation,
-      };
+    'name': name,
+    'email': email,
+    'phone': phone,
+    'is_active': isActive ? 'true' : 'false',
+    if (password != null && password!.isNotEmpty) 'password': password,
+    if (passwordConfirmation != null && passwordConfirmation!.isNotEmpty)
+      'password_confirmation': passwordConfirmation,
+  };
 }

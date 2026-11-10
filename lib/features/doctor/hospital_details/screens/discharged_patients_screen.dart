@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
@@ -15,12 +17,7 @@ import 'admission_details_screen.dart';
 
 enum DischargedPatientsFilter { all, improved, die, dama }
 
-enum DischargedDatePeriod {
-  lastMonth,
-  last3Months,
-  lastYear,
-  allTime,
-}
+enum DischargedDatePeriod { lastMonth, last3Months, lastYear, allTime }
 
 extension DischargedDatePeriodX on DischargedDatePeriod {
   String get label {
@@ -66,6 +63,8 @@ class _DischargedPatientsScreenState extends State<DischargedPatientsScreen> {
 
   late Future<List<PatientAdmissionModel>> _admissionsFuture;
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  String _searchQuery = '';
   DischargedPatientsFilter _filter = DischargedPatientsFilter.all;
   DischargedDatePeriod _period = DischargedDatePeriod.lastMonth;
 
@@ -75,8 +74,16 @@ class _DischargedPatientsScreenState extends State<DischargedPatientsScreen> {
     _admissionsFuture = _loadAdmissions();
   }
 
+  void _onSearchChanged() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _searchQuery = _searchController.text);
+    });
+  }
+
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -130,17 +137,15 @@ class _DischargedPatientsScreenState extends State<DischargedPatientsScreen> {
     final byStatus = status == null
         ? inPeriod
         : inPeriod
-            .where(
-              (a) => AdmissionStatus.fromApiValue(a.status) == status,
-            )
-            .toList();
+              .where((a) => AdmissionStatus.fromApiValue(a.status) == status)
+              .toList();
     return _applySearch(byStatus);
   }
 
   List<PatientAdmissionModel> _applySearch(
     List<PatientAdmissionModel> admissions,
   ) {
-    final q = _searchController.text.trim().toLowerCase();
+    final q = _searchQuery.trim().toLowerCase();
     if (q.isEmpty) return admissions;
 
     return admissions.where((admission) {
@@ -149,8 +154,9 @@ class _DischargedPatientsScreenState extends State<DischargedPatientsScreen> {
       final nationalId = admission.patient?.nationalId.toLowerCase() ?? '';
       if (nationalId.contains(q)) return true;
 
-      final statusLabel =
-          admissionStatusDisplayLabel(admission.status).toLowerCase();
+      final statusLabel = admissionStatusDisplayLabel(
+        admission.status,
+      ).toLowerCase();
       if (statusLabel.contains(q)) return true;
 
       if ('${admission.id}'.contains(q)) return true;
@@ -242,7 +248,7 @@ class _DischargedPatientsScreenState extends State<DischargedPatientsScreen> {
           final filtered = _applyFilters(all);
           final counts = _countsByOutcome(inPeriod);
           final total = inPeriod.length;
-          final hasSearch = _searchController.text.trim().isNotEmpty;
+          final hasSearch = _searchQuery.trim().isNotEmpty;
 
           filtered.sort((a, b) {
             final da = _outcomeDate(a);
@@ -305,21 +311,19 @@ class _DischargedPatientsScreenState extends State<DischargedPatientsScreen> {
                         const SizedBox(height: 16),
                         _PeriodChipsRow(
                           selected: _period,
-                          onSelected: (next) =>
-                              setState(() => _period = next),
+                          onSelected: (next) => setState(() => _period = next),
                         ),
                         const SizedBox(height: 12),
                         _FilterChipsRow(
                           selected: _filter,
-                          onSelected: (next) =>
-                              setState(() => _filter = next),
+                          onSelected: (next) => setState(() => _filter = next),
                         ),
                         const SizedBox(height: 14),
                         AppTextField(
                           controller: _searchController,
                           hintText: AppTexts.dischargedSearchHint,
                           textInputAction: TextInputAction.search,
-                          onChanged: (_) => setState(() {}),
+                          onChanged: (_) => _onSearchChanged(),
                           prefixIcon: const Icon(
                             Icons.search_rounded,
                             color: AppColors.textSecondary,
@@ -327,8 +331,9 @@ class _DischargedPatientsScreenState extends State<DischargedPatientsScreen> {
                           suffixIcon: hasSearch
                               ? IconButton(
                                   onPressed: () {
+                                    _searchDebounce?.cancel();
                                     _searchController.clear();
-                                    setState(() {});
+                                    setState(() => _searchQuery = '');
                                   },
                                   icon: const Icon(
                                     Icons.clear_rounded,
@@ -355,8 +360,9 @@ class _DischargedPatientsScreenState extends State<DischargedPatientsScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.primary
-                                      .withValues(alpha: 0.8),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.8,
+                                  ),
                                 ),
                               ),
                           ],
@@ -417,10 +423,7 @@ class _DischargedPatientsScreenState extends State<DischargedPatientsScreen> {
 }
 
 class _SummaryHeroCard extends StatelessWidget {
-  const _SummaryHeroCard({
-    required this.total,
-    required this.periodLabel,
-  });
+  const _SummaryHeroCard({required this.total, required this.periodLabel});
 
   final int total;
   final String periodLabel;
@@ -618,10 +621,7 @@ class _OutcomeStatsRow extends StatelessWidget {
 }
 
 class _PeriodChipsRow extends StatelessWidget {
-  const _PeriodChipsRow({
-    required this.selected,
-    required this.onSelected,
-  });
+  const _PeriodChipsRow({required this.selected, required this.onSelected});
 
   final DischargedDatePeriod selected;
   final ValueChanged<DischargedDatePeriod> onSelected;
@@ -657,7 +657,9 @@ class _PeriodChipsRow extends StatelessWidget {
                 labelStyle: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
                 ),
                 side: BorderSide(
                   color: isSelected ? AppColors.primary : AppColors.border,
@@ -675,40 +677,38 @@ class _PeriodChipsRow extends StatelessWidget {
 }
 
 class _FilterChipsRow extends StatelessWidget {
-  const _FilterChipsRow({
-    required this.selected,
-    required this.onSelected,
-  });
+  const _FilterChipsRow({required this.selected, required this.onSelected});
 
   final DischargedPatientsFilter selected;
   final ValueChanged<DischargedPatientsFilter> onSelected;
 
-  static const _chipData = <(DischargedPatientsFilter, String, Color, IconData)>[
-    (
-      DischargedPatientsFilter.all,
-      AppTexts.dischargedFilterAll,
-      AppColors.surface,
-      Icons.grid_view_rounded,
-    ),
-    (
-      DischargedPatientsFilter.improved,
-      AppTexts.dischargedStatsImproved,
-      Color(0xFFD1E7DD),
-      Icons.check_circle_outline,
-    ),
-    (
-      DischargedPatientsFilter.die,
-      AppTexts.dischargedStatsDie,
-      Color(0xFFF8D7DA),
-      Icons.favorite_border,
-    ),
-    (
-      DischargedPatientsFilter.dama,
-      AppTexts.dischargedStatsDama,
-      Color(0xFFD1D2F9),
-      Icons.logout_rounded,
-    ),
-  ];
+  static const _chipData =
+      <(DischargedPatientsFilter, String, Color, IconData)>[
+        (
+          DischargedPatientsFilter.all,
+          AppTexts.dischargedFilterAll,
+          AppColors.surface,
+          Icons.grid_view_rounded,
+        ),
+        (
+          DischargedPatientsFilter.improved,
+          AppTexts.dischargedStatsImproved,
+          Color(0xFFD1E7DD),
+          Icons.check_circle_outline,
+        ),
+        (
+          DischargedPatientsFilter.die,
+          AppTexts.dischargedStatsDie,
+          Color(0xFFF8D7DA),
+          Icons.favorite_border,
+        ),
+        (
+          DischargedPatientsFilter.dama,
+          AppTexts.dischargedStatsDama,
+          Color(0xFFD1D2F9),
+          Icons.logout_rounded,
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -738,8 +738,9 @@ class _FilterChipsRow extends StatelessWidget {
                 avatar: Icon(
                   icon,
                   size: 15,
-                  color:
-                      isSelected ? AppColors.primary : AppColors.textSecondary,
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
                 ),
                 selected: isSelected,
                 onSelected: (_) => onSelected(filter),
@@ -813,10 +814,7 @@ class _DischargedPatientCard extends StatelessWidget {
               left: 0,
               top: 0,
               bottom: 0,
-              child: Container(
-                width: 4,
-                color: _accent,
-              ),
+              child: Container(width: 4, color: _accent),
             ),
             Padding(
               padding: const EdgeInsets.only(left: 4),
@@ -826,70 +824,70 @@ class _DischargedPatientCard extends StatelessWidget {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(14, 14, 8, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                              height: 1.25,
-                            ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: status.dischargedOutcomeBackground,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  status.dischargedScreenLabel,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: _accent,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 14,
+                            runSpacing: 6,
+                            children: [
+                              _MetaItem(
+                                icon: Icons.event_outlined,
+                                label: outcomeDate,
+                              ),
+                              if (bedNumber.isNotEmpty)
+                                _MetaItem(
+                                  icon: Icons.bed_outlined,
+                                  label: 'Bed $bedNumber',
+                                ),
+                              _MetaItem(
+                                icon: Icons.tag_outlined,
+                                label: '#$admissionId',
+                              ),
+                            ],
                           ),
-                          decoration: BoxDecoration(
-                            color: status.dischargedOutcomeBackground,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            status.dischargedScreenLabel,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: _accent,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 14,
-                      runSpacing: 6,
-                      children: [
-                        _MetaItem(
-                          icon: Icons.event_outlined,
-                          label: outcomeDate,
-                        ),
-                        if (bedNumber.isNotEmpty)
-                          _MetaItem(
-                            icon: Icons.bed_outlined,
-                            label: 'Bed $bedNumber',
-                          ),
-                        _MetaItem(
-                          icon: Icons.tag_outlined,
-                          label: '#$admissionId',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
                   const Padding(
                     padding: EdgeInsets.only(right: 10),
                     child: Icon(
@@ -977,10 +975,7 @@ class _DischargedEmptyState extends StatelessWidget {
 }
 
 class _DischargedErrorState extends StatelessWidget {
-  const _DischargedErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _DischargedErrorState({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -1005,11 +1000,7 @@ class _DischargedErrorState extends StatelessWidget {
               style: const TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 16),
-            AppButton(
-              label: AppTexts.retry,
-              width: 180,
-              onPressed: onRetry,
-            ),
+            AppButton(label: AppTexts.retry, width: 180, onPressed: onRetry),
           ],
         ),
       ),

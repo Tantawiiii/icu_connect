@@ -34,10 +34,14 @@ class HospitalModel extends Equatable {
         .toList();
     final totalBedsRaw = (json['total_beds'] as num?)?.toInt();
     final availableBedsRaw = (json['available_beds'] as num?)?.toInt();
-    final totalBedsFromGroups =
-        groups.fold<int>(0, (sum, g) => sum + g.totalBeds);
-    final availableBedsFromGroups =
-        groups.fold<int>(0, (sum, g) => sum + g.availableBeds);
+    final totalBedsFromGroups = groups.fold<int>(
+      0,
+      (sum, g) => sum + g.totalBeds,
+    );
+    final availableBedsFromGroups = groups.fold<int>(
+      0,
+      (sum, g) => sum + g.availableBeds,
+    );
 
     return HospitalModel(
       id: json['id'] as int,
@@ -53,29 +57,29 @@ class HospitalModel extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'location': location,
-        'total_beds': totalBeds,
-        'available_beds': availableBeds,
-        'created_at': createdAt,
-        'updated_at': updatedAt,
-        'deleted_at': deletedAt,
-        'groups': groups.map((g) => g.toJson()).toList(),
-      };
+    'id': id,
+    'name': name,
+    'location': location,
+    'total_beds': totalBeds,
+    'available_beds': availableBeds,
+    'created_at': createdAt,
+    'updated_at': updatedAt,
+    'deleted_at': deletedAt,
+    'groups': groups.map((g) => g.toJson()).toList(),
+  };
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        location,
-        totalBeds,
-        availableBeds,
-        createdAt,
-        updatedAt,
-        deletedAt,
-        groups,
-      ];
+    id,
+    name,
+    location,
+    totalBeds,
+    availableBeds,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    groups,
+  ];
 }
 
 class HospitalGroupModel extends Equatable {
@@ -101,11 +105,11 @@ class HospitalGroupModel extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'total_beds': totalBeds,
-        'available_beds': availableBeds,
-      };
+    'id': id,
+    'name': name,
+    'total_beds': totalBeds,
+    'available_beds': availableBeds,
+  };
 
   @override
   List<Object?> get props => [id, name, totalBeds, availableBeds];

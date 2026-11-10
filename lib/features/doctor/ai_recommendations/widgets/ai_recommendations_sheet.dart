@@ -32,7 +32,6 @@ Future<void> showAdmissionAiRecommendationsSheet({
   );
 }
 
-
 typedef AdmissionAiRecommendationsSheet = AiRecommendationsSheet;
 
 class AiRecommendationsSheet extends StatefulWidget {
@@ -61,7 +60,7 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
   final _selected = <String>{};
 
   late AiRecommendFeature _feature;
-  String _language = 'en';
+  final String _language = 'en';
   bool _loading = false;
   bool _refreshing = false;
   bool _applying = false;
@@ -158,13 +157,6 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
     _load();
   }
 
-  void _setLanguage(String language) {
-    if (language == _language) return;
-    HapticFeedback.selectionClick();
-    setState(() => _language = language);
-    _load();
-  }
-
   void _toggleItem(String item) {
     setState(() {
       if (_selected.contains(item)) {
@@ -217,8 +209,8 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
                       t == AiApplyTarget.timelineNote
                           ? Icons.forum_outlined
                           : t == AiApplyTarget.progressNote
-                              ? Icons.notes_outlined
-                              : Icons.checklist_rtl_outlined,
+                          ? Icons.notes_outlined
+                          : Icons.checklist_rtl_outlined,
                       color: AppColors.primary,
                     ),
                     title: Text(
@@ -400,14 +392,6 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: Row(
               children: [
-                // Expanded(
-                //   child: _LanguageToggle(
-                //     language: _language,
-                //     enabled: !_loading,
-                //     onChanged: _setLanguage,
-                //   ),
-                // ),
-                // const SizedBox(width: 10),
                 _ConfidencePill(confidence: _result?.recommendation.confidence),
               ],
             ),
@@ -565,10 +549,7 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
       key: ValueKey('result_${_feature.name}_$_language'),
       children: [
         FadeTransition(
-          opacity: CurvedAnimation(
-            parent: _revealCtrl,
-            curve: Curves.easeOut,
-          ),
+          opacity: CurvedAnimation(parent: _revealCtrl, curve: Curves.easeOut),
           child: _AiResultView(
             result: result,
             language: _language,
@@ -595,62 +576,6 @@ class _AiRecommendationsSheetState extends State<AiRecommendationsSheet>
   }
 }
 
-class _LanguageToggle extends StatelessWidget {
-  const _LanguageToggle({
-    required this.language,
-    required this.enabled,
-    required this.onChanged,
-  });
-
-  final String language;
-  final bool enabled;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          _langBtn('EN', 'en'),
-          _langBtn('AR', 'ar'),
-        ],
-      ),
-    );
-  }
-
-  Widget _langBtn(String label, String code) {
-    final selected = language == code;
-    return Expanded(
-      child: Material(
-        color: selected ? AppColors.primary : Colors.transparent,
-        borderRadius: BorderRadius.circular(9),
-        child: InkWell(
-          onTap: enabled ? () => onChanged(code) : null,
-          borderRadius: BorderRadius.circular(9),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: selected ? Colors.white : AppColors.textSecondary,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ConfidencePill extends StatelessWidget {
   const _ConfidencePill({required this.confidence});
 
@@ -664,9 +589,9 @@ class _ConfidencePill extends StatelessWidget {
       AiConfidence.medium => (const Color(0xFFFFF8E1), const Color(0xFFF57F17)),
       AiConfidence.low => (const Color(0xFFFFEBEE), const Color(0xFFC62828)),
       AiConfidence.unknown => (
-          const Color(0xFFF2F3F5),
-          AppColors.textSecondary,
-        ),
+        const Color(0xFFF2F3F5),
+        AppColors.textSecondary,
+      ),
     };
 
     return Container(
@@ -844,7 +769,8 @@ class _AiErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final notConfigured = message.toLowerCase().contains('not_configured') ||
+    final notConfigured =
+        message.toLowerCase().contains('not_configured') ||
         message.toLowerCase().contains('not configured') ||
         message.toLowerCase().contains('ai_api_key');
 
@@ -902,173 +828,36 @@ class _AiResultView extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
         children: [
-          _SummaryCard(summary: rec.summary),
-          const SizedBox(height: 10),
-          Text(
-            AppTexts.aiSelectToApplyHint,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary.withValues(alpha: 0.95),
+          if (rec.report.isNotEmpty)
+            _ReportSection(report: rec.report)
+          else
+            Text(
+              AppTexts.aiNoReport,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
-          ),
-          if (rec.safetyFlags.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _BulletSection(
-              title: AppTexts.aiSafetyFlags,
-              items: rec.safetyFlags,
-              icon: Icons.warning_amber_rounded,
-              accent: const Color(0xFFC62828),
-              background: const Color(0xFFFFEBEE),
-              selectable: true,
-              selected: selected,
-              onToggle: onToggle,
-            ),
-          ],
-          if (rec.priorityConcerns.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _BulletSection(
-              title: AppTexts.aiPriorityConcerns,
-              items: rec.priorityConcerns,
-              icon: Icons.priority_high_rounded,
-              accent: const Color(0xFFE65100),
-              background: const Color(0xFFFFF3E0),
-              selectable: true,
-              selected: selected,
-              onToggle: onToggle,
-            ),
-          ],
-          if (rec.recommendations.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _BulletSection(
-              title: AppTexts.aiRecommendations,
-              items: rec.recommendations,
-              icon: Icons.lightbulb_outline,
-              accent: const Color(0xFF2E7D32),
-              background: const Color(0xFFE8F5E9),
-              selectable: true,
-              selected: selected,
-              onToggle: onToggle,
-            ),
-          ],
-          if (rec.missingData.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _BulletSection(
-              title: AppTexts.aiMissingData,
-              items: rec.missingData,
-              icon: Icons.playlist_add_check_outlined,
-              accent: const Color(0xFF455A64),
-              background: const Color(0xFFECEFF1),
-              selectable: true,
-              selected: selected,
-              onToggle: onToggle,
-            ),
-          ],
-          const SizedBox(height: 14),
-          Text(
-            AppTexts.aiCachedHint,
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary.withValues(alpha: 0.9),
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.summary});
+class _ReportSection extends StatefulWidget {
+  const _ReportSection({required this.report});
 
-  final String summary;
+  final String report;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1A1F36), Color(0xFF2C3555)],
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.2),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.auto_awesome, size: 12, color: Colors.white),
-                SizedBox(width: 4),
-                Text(
-                  AppTexts.aiSummary,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            summary.isEmpty ? '—' : summary,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              height: 1.5,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<_ReportSection> createState() => _ReportSectionState();
 }
 
-class _BulletSection extends StatelessWidget {
-  const _BulletSection({
-    required this.title,
-    required this.items,
-    required this.icon,
-    required this.accent,
-    required this.background,
-    required this.selectable,
-    required this.selected,
-    required this.onToggle,
-  });
-
-  final String title;
-  final List<String> items;
-  final IconData icon;
-  final Color accent;
-  final Color background;
-  final bool selectable;
-  final Set<String> selected;
-  final ValueChanged<String> onToggle;
+class _ReportSectionState extends State<_ReportSection> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -1077,100 +866,66 @@ class _BulletSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: background,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, size: 16, color: accent),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: accent,
-                  ),
-                ),
-              ),
-              Text(
-                '${items.length}',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: accent.withValues(alpha: 0.8),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ...items.map((item) {
-            final isOn = selected.contains(item);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Material(
-                color: isOn
-                    ? accent.withValues(alpha: 0.08)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-                child: InkWell(
-                  onTap: selectable ? () => onToggle(item) : null,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 6,
+          Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.description_outlined,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (selectable)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 1),
-                            child: Icon(
-                              isOn
-                                  ? Icons.check_box_rounded
-                                  : Icons.check_box_outline_blank_rounded,
-                              size: 20,
-                              color: isOn ? accent : AppColors.textSecondary,
-                            ),
-                          )
-                        else
-                          Container(
-                            margin: const EdgeInsets.only(top: 6, left: 6),
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: accent,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            item,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              height: 1.45,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        AppTexts.aiFullReport,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    Icon(
+                      _expanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ],
                 ),
               ),
-            );
-          }),
+            ),
+          ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: SelectableText(
+                widget.report,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.55,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 }
+

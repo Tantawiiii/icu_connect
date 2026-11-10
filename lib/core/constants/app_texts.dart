@@ -9,6 +9,7 @@ class AppTexts {
   static const String emailLabel = 'Email';
   static const String passwordLabel = 'Password';
   static const String cancel = 'Cancel';
+  static const String confirm = 'Confirm';
 
   // Onboarding
   static const String skip = 'Skip';
@@ -193,6 +194,10 @@ class AppTexts {
   static const String saveChanges = 'Save changes';
   static const String entryUpdated = 'Entry updated';
   static const String deleteEntry = 'Delete entry';
+  static const String medicationDiscontinued = 'Medication discontinued';
+  static const String medicationResumed = 'Medication resumed';
+  static const String discontinueMedication = 'Discontinue';
+  static const String resumeMedication = 'Resume';
   static const String admissionDeleted = 'Admission deleted successfully';
   static const String activityHistorySection = 'Activity history';
   static const String activityFilterAll = 'All';
@@ -232,11 +237,16 @@ class AppTexts {
   static const String aiCachedHint =
       'Cached until admission data changes (or 6h). Refresh to regenerate.';
   static const String aiSummary = 'Clinical summary';
+  static const String aiCriticalAlert = 'Critical alert';
   static const String aiPriorityConcerns = 'Priority concerns';
   static const String aiRecommendations = 'Recommendations';
   static const String aiMissingData = 'Missing data';
   static const String aiSafetyFlags = 'Safety flags';
   static const String aiConfidence = 'Confidence';
+  static const String aiFullReport = 'Full clinical report';
+  static const String aiNoReport = 'No clinical report available yet.';
+  static const String aiViewFullReport = 'View full report';
+  static const String aiHideFullReport = 'Hide full report';
   static const String aiLanguage = 'Language';
   static const String aiEmptyFeature =
       'Select a focus area to generate AI recommendations.';
@@ -304,8 +314,6 @@ class AppTexts {
   static const String normalRangeMax = 'Max Val';
   static const String normalRangeMaxMustExceedMin =
       'Maximum must be greater than minimum';
-  static const String Min = 'Min Val';
-  static const String Max = 'Max Val';
 
   // Vitals titles CRUD
   static const String vitalsLabel = 'Vitals';
@@ -329,6 +337,21 @@ class AppTexts {
   static const String drugsSearchEmpty = 'No drugs match your search.';
   static const String addDrug = 'Add Drug';
   static const String editDrug = 'Edit Drug';
+  static const String addNewDrug = 'Add new drug';
+  static const String fillWithAi = 'Fill with AI';
+  static const String aiDrugLookupHint =
+      'Enter a generic or trade name, then let AI suggest the details.';
+  static const String aiDrugLookupNameRequired =
+      'Enter a generic or trade name first.';
+  static const String aiDrugLookupError = 'Could not fetch AI suggestions.';
+  static const String aiDrugLookupNotFound =
+      "AI couldn't find this drug. Try a different name or fill the form manually.";
+  static const String aiDrugLookupRegenerate = 'Regenerate suggestion';
+  static const String aiDrugLookupMissingFieldsLabel =
+      "AI wasn't confident about:";
+  static const String aiDrugLookupSourcesLabel = 'Sources';
+  static const String drugCreatedSuccess = 'Drug added successfully.';
+  static const String saveAndAddAnother = 'Save & Add Another';
   static const String drugDetails = 'Drug Details';
   static const String archiveDrug = 'Archive Drug';
   static const String restoreDrug = 'Restore Drug';
@@ -342,6 +365,8 @@ class AppTexts {
   static const String drugRestored = 'Drug restored successfully';
   static const String genericName = 'Generic name';
   static const String tradeNames = 'Trade names';
+  static const String doseAmount = 'Dose amount';
+  static const String doseUnit = 'Unit';
   static const String dosingGuidelines = 'Dosing guidelines';
   static const String indications = 'Indications';
   static const String contraindications = 'Contraindications';
@@ -488,6 +513,14 @@ class AppTexts {
   static const String privacyPolicy = 'Privacy Policy';
   static const String termsOfUse = 'Terms of Use';
   static const String reportProblem = 'Report a Problem';
+  static const String contactUs = 'Contact Us';
+  static const String contactUsWhatsapp = 'WhatsApp';
+  static const String contactUsWhatsappNumber = '+20 115 658 7388';
+  static const String contactUsWhatsappHint =
+      'Chat with our support team on WhatsApp';
+  static const String contactUsOpenWhatsapp = 'Open WhatsApp';
+  static const String contactUsWhatsappError =
+      'Could not open WhatsApp. Make sure it is installed.';
   static const String setting = 'Settings';
   static const String trash = 'Trash';
   static const String logOut = 'Log Out';

@@ -23,11 +23,7 @@ bool isBedLabelOccupied(Set<String> occupied, String bedLabel) {
   return occupied.contains(normalized);
 }
 
-int? lookupAdmissionId(
-  Map<String, int> map,
-  int? groupId,
-  String bedLabel,
-) {
+int? lookupAdmissionId(Map<String, int> map, int? groupId, String bedLabel) {
   return map[bedOccupancyLookupKey(groupId, bedLabel)];
 }
 
@@ -79,7 +75,8 @@ class HospitalGroupBedCard extends StatelessWidget {
     String bedNumber,
     int? hospitalGroupId,
     int? admissionIdIfOccupied,
-  ) onBedTap;
+  )
+  onBedTap;
   final bool swapMode;
   final String? firstSwapBedKey;
   final String? secondSwapBedKey;
@@ -88,7 +85,8 @@ class HospitalGroupBedCard extends StatelessWidget {
     int? hospitalGroupId,
     int admissionId,
     String patientName,
-  )? onOccupiedBedLongPress;
+  )?
+  onOccupiedBedLongPress;
 
   static const Color _bedRowBackground = Color(0xFFDFF5E3);
   static const Color _bedIconColor = Color(0xFF4CAF50);
@@ -123,9 +121,9 @@ class HospitalGroupBedCard extends StatelessWidget {
         child: Text(
           AppTexts.noBedsInGroup,
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
         ),
       );
     }
@@ -143,9 +141,9 @@ class HospitalGroupBedCard extends StatelessWidget {
         child: Text(
           AppTexts.bedsSearchEmpty,
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
         ),
       );
     }
@@ -208,7 +206,8 @@ class _BedRow extends StatelessWidget {
     String bedNumber,
     int? hospitalGroupId,
     int? admissionIdIfOccupied,
-  ) onBedTap;
+  )
+  onBedTap;
   final Color backgroundColor;
   final Color iconColor;
   final bool swapMode;
@@ -219,7 +218,8 @@ class _BedRow extends StatelessWidget {
     int? hospitalGroupId,
     int admissionId,
     String patientName,
-  )? onOccupiedBedLongPress;
+  )?
+  onOccupiedBedLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -302,56 +302,56 @@ class _BedRow extends StatelessWidget {
             onBedTap(bedLabel, groupId, admissionIdIfOccupied);
           },
           child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          child: Row(
-            children: [
-              if (swapMode && isSelected) ...[
-                _SelectionBadge(
-                  label: isFirstSelected ? '1' : '2',
-                  color: isFirstSelected
-                      ? AppColors.primary
-                      : const Color(0xFFFF9800),
-                ),
-                const SizedBox(width: 10),
-              ],
-              Text(
-                bedLabel,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: swapMode && !isOccupied
-                      ? AppColors.textPrimary.withValues(alpha: 0.45)
-                      : AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Icon(
-                Icons.bed_rounded,
-                size: 22,
-                color: swapMode && !isOccupied
-                    ? iconColor.withValues(alpha: 0.45)
-                    : iconColor,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  patientName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            child: Row(
+              children: [
+                if (swapMode && isSelected) ...[
+                  _SelectionBadge(
+                    label: isFirstSelected ? '1' : '2',
+                    color: isFirstSelected
+                        ? AppColors.primary
+                        : const Color(0xFFFF9800),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Text(
+                  bedLabel,
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
                     color: swapMode && !isOccupied
-                        ? AppColors.textPrimary.withValues(alpha: 0.4)
+                        ? AppColors.textPrimary.withValues(alpha: 0.45)
                         : AppColors.textPrimary,
-                    height: 1.2,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 10),
+                Icon(
+                  Icons.bed_rounded,
+                  size: 22,
+                  color: swapMode && !isOccupied
+                      ? iconColor.withValues(alpha: 0.45)
+                      : iconColor,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    patientName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: swapMode && !isOccupied
+                          ? AppColors.textPrimary.withValues(alpha: 0.4)
+                          : AppColors.textPrimary,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );

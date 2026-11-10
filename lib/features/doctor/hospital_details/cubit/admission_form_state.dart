@@ -1,19 +1,19 @@
 import '../../../superAdmin/patients/models/patient_admission_models.dart';
 
-abstract class AdmissionFormState {
-  const AdmissionFormState();
+abstract class DoctorAdmissionFormState {
+  const DoctorAdmissionFormState();
 }
 
-class AdmissionFormInitial extends AdmissionFormState {
-  const AdmissionFormInitial();
+class DoctorAdmissionFormInitial extends DoctorAdmissionFormState {
+  const DoctorAdmissionFormInitial();
 }
 
-class AdmissionFormLoadingRefs extends AdmissionFormState {
-  const AdmissionFormLoadingRefs();
+class DoctorAdmissionFormLoadingRefs extends DoctorAdmissionFormState {
+  const DoctorAdmissionFormLoadingRefs();
 }
 
-class AdmissionFormRefsReady extends AdmissionFormState {
-  const AdmissionFormRefsReady({
+class DoctorAdmissionFormRefsReady extends DoctorAdmissionFormState {
+  const DoctorAdmissionFormRefsReady({
     required this.vitalsTitles,
     required this.labsTitles,
     required this.patients,
@@ -28,16 +28,16 @@ class AdmissionFormRefsReady extends AdmissionFormState {
   final int currentDoctorId;
 }
 
-class AdmissionFormSubmitting extends AdmissionFormState {
-  const AdmissionFormSubmitting();
+class DoctorAdmissionFormSubmitting extends DoctorAdmissionFormState {
+  const DoctorAdmissionFormSubmitting();
 }
 
-class AdmissionFormSuccess extends AdmissionFormState {
-  const AdmissionFormSuccess(this.message);
+class DoctorAdmissionFormSuccess extends DoctorAdmissionFormState {
+  const DoctorAdmissionFormSuccess(this.message);
   final String message;
 }
 
-class AdmissionFormFailure extends AdmissionFormState {
-  const AdmissionFormFailure(this.message);
+class DoctorAdmissionFormFailure extends DoctorAdmissionFormState {
+  const DoctorAdmissionFormFailure(this.message);
   final String message;
 }

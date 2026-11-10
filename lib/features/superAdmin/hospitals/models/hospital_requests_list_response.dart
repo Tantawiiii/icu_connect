@@ -16,9 +16,9 @@ class HospitalRequestsListResponse extends Equatable {
     final raw = json['data'];
     final list = raw is List<dynamic>
         ? raw
-            .whereType<Map<String, dynamic>>()
-            .map(HospitalRegistrationRequest.fromJson)
-            .toList()
+              .whereType<Map<String, dynamic>>()
+              .map(HospitalRegistrationRequest.fromJson)
+              .toList()
         : <HospitalRegistrationRequest>[];
 
     final paginationJson = json['pagination'] as Map<String, dynamic>?;

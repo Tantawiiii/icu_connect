@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
-import 'package:icu_connect/core/constants/app_colors.dart';
 
 import '../cubit/doctor_hospitals_cubit.dart';
 import '../repository/doctor_hospitals_repository.dart';
@@ -9,7 +8,6 @@ import '../widgets/doctor_hospitals_section.dart';
 import '../../session/doctor_session_display.dart';
 import '../screens/request_hospital_screen.dart';
 import '../widgets/side_drawer.dart';
-
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
@@ -46,16 +44,10 @@ class _MainViewState extends State<_MainView> {
           SideDrawer.fetchAndApplyProfile();
         }
       },
-      appBar: AppBar(
-        title: const Text(AppTexts.appName),
-        backgroundColor: AppColors.background,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
-      ),
+      appBar: AppBar(title: const Text(AppTexts.appName)),
       drawer: const SideDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openRequestHospital(context),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
         icon: const Icon(Icons.add_business_outlined),
         label: const Text(AppTexts.requestNewHospital),
       ),
@@ -75,4 +67,3 @@ class _MainViewState extends State<_MainView> {
     }
   }
 }
-

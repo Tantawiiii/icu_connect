@@ -48,10 +48,8 @@ class _VitalTitleFormViewState extends State<_VitalTitleFormView> {
     super.initState();
     _titleCtrl = TextEditingController(text: widget.vital?.title ?? '');
     _unitCtrl = TextEditingController(text: widget.vital?.unit ?? '');
-    _minCtrl =
-        TextEditingController(text: widget.vital?.normalRangeMin ?? '');
-    _maxCtrl =
-        TextEditingController(text: widget.vital?.normalRangeMax ?? '');
+    _minCtrl = TextEditingController(text: widget.vital?.normalRangeMin ?? '');
+    _maxCtrl = TextEditingController(text: widget.vital?.normalRangeMax ?? '');
     _valueType = widget.vital?.valueType ?? 'numeric';
   }
 
@@ -107,7 +105,9 @@ class _VitalTitleFormViewState extends State<_VitalTitleFormView> {
         title: Text(
           _isEdit ? AppTexts.editVitalTitle : AppTexts.addVitalTitle,
           style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),

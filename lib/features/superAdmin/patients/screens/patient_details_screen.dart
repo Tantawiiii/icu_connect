@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
 import '../../../../core/network/network_exceptions.dart';
+import '../../../../core/utils/date_formatters.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../cubit/patient_details_cubit.dart';
 import '../cubit/patient_details_state.dart';
 import '../models/patient_admission_models.dart';
@@ -34,17 +37,17 @@ class _PatientDetailsView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<PatientDetailsCubit, PatientDetailsState>(
       builder: (context, state) {
-        final patient =
-            state is PatientDetailsLoaded ? state.patient : null;
+        final patient = state is PatientDetailsLoaded ? state.patient : null;
 
         return Scaffold(
           backgroundColor: AppColors.background,
           appBar: AppBar(
             backgroundColor: AppColors.primary,
-            iconTheme: const IconThemeData(color: Colors.white),
-            title: const Text(
-              AppTexts.patientDetailsTitle,
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            foregroundColor: Colors.white,
+            title: const Text(AppTexts.patientDetailsTitle),
+            titleTextStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontSize: 18,
             ),
             centerTitle: true,
           ),
@@ -60,9 +63,9 @@ class _PatientDetailsView extends StatelessWidget {
                       ),
                     );
                     if (saved == true && context.mounted) {
-                      context
-                          .read<PatientDetailsCubit>()
-                          .fetchPatient(patientId);
+                      context.read<PatientDetailsCubit>().fetchPatient(
+                        patientId,
+                      );
                     }
                   },
                   backgroundColor: AppColors.primary,
@@ -89,13 +92,12 @@ class _PatientDetailsView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline,
-                  color: AppColors.error, size: 48),
-              const SizedBox(height: 16),
+              const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 state.message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary),
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
           ),
@@ -117,14 +119,14 @@ class _DetailsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Card(
             elevation: 1,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(8),
               child: Row(
@@ -136,8 +138,8 @@ class _DetailsContent extends StatelessWidget {
                       patient.gender.toLowerCase() == 'male'
                           ? Icons.male
                           : patient.gender.toLowerCase() == 'female'
-                              ? Icons.female
-                              : Icons.person_outline,
+                          ? Icons.female
+                          : Icons.person_outline,
                       color: AppColors.primary,
                       size: 26,
                     ),
@@ -149,35 +151,27 @@ class _DetailsContent extends StatelessWidget {
                       children: [
                         Text(
                           patient.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: AppColors.textPrimary,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xs),
                         Text(
                           '${AppTexts.age}: ${patient.age}',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                         if (patient.bloodGroup.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.only(top: AppSpacing.xs),
                             child: Row(
                               children: [
-                                const Icon(Icons.bloodtype_outlined,
-                                    size: 14,
-                                    color: AppColors.textSecondary),
-                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.bloodtype_outlined,
+                                  size: 14,
+                                  color: AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: AppSpacing.xs),
                                 Text(
                                   patient.bloodGroup,
-                                  style: const TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 13,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ],
                             ),
@@ -194,20 +188,19 @@ class _DetailsContent extends StatelessWidget {
 
           Card(
             elevation: 1,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     AppTexts.identifiersSection,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleSmall?.copyWith(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 12),
                   _InfoRow(
@@ -229,7 +222,7 @@ class _DetailsContent extends StatelessWidget {
                     value: patient.gender.isEmpty
                         ? AppTexts.notAvailable
                         : patient.gender[0].toUpperCase() +
-                            patient.gender.substring(1),
+                              patient.gender.substring(1),
                   ),
                 ],
               ),
@@ -240,8 +233,9 @@ class _DetailsContent extends StatelessWidget {
 
           Card(
             elevation: 1,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -249,19 +243,16 @@ class _DetailsContent extends StatelessWidget {
                 children: [
                   Text(
                     AppTexts.notes,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleSmall?.copyWith(color: AppColors.textSecondary),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     patient.notes.isEmpty
                         ? AppTexts.notAvailable
                         : patient.notes,
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.textPrimary,
                     ),
                   ),
@@ -274,20 +265,19 @@ class _DetailsContent extends StatelessWidget {
 
           Card(
             elevation: 1,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     AppTexts.recordSection,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleSmall?.copyWith(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 12),
                   _InfoRow(
@@ -305,24 +295,17 @@ class _DetailsContent extends StatelessWidget {
           ),
 
           const SizedBox(height: 22),
-          const Text(
+          Text(
             AppTexts.admissionsSection,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: AppColors.textPrimary,
-            ),
+            style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 12),
           if (patient.admissions.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Text(
                 '${AppTexts.noAdmissionsYetPrefix}${AppTexts.addAdmission}${AppTexts.noAdmissionsYetSuffix}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             )
           else
@@ -338,16 +321,8 @@ class _DetailsContent extends StatelessWidget {
   }
 }
 
-String _formatIsoDateTime(String raw) {
-  if (raw.isEmpty) return AppTexts.notAvailable;
-  final t = raw.indexOf('T');
-  if (t <= 0) return raw;
-  final date = raw.substring(0, t);
-  final time = raw.length > t + 1
-      ? raw.substring(t + 1, raw.length > t + 9 ? t + 9 : raw.length)
-      : '';
-  return time.isEmpty ? date : '$date $time${AppTexts.utcTimeZoneSuffix}';
-}
+String _formatIsoDateTime(String raw) =>
+    isoDateTime(raw, suffix: AppTexts.utcTimeZoneSuffix);
 
 class _AdmissionCard extends StatelessWidget {
   const _AdmissionCard({required this.patient, required this.admission});
@@ -356,27 +331,13 @@ class _AdmissionCard extends StatelessWidget {
   final PatientAdmissionModel admission;
 
   Future<void> _onDelete(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(AppTexts.deleteAdmission),
-        content: Text(AppTexts.deleteAdmissionConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppTexts.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              AppTexts.deleteAdmission,
-              style: const TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
+    final confirm = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.deleteAdmission,
+      message: AppTexts.deleteAdmissionConfirmation,
+      confirmLabel: AppTexts.deleteAdmission,
     );
-    if (confirm != true || !context.mounted) return;
+    if (!confirm || !context.mounted) return;
 
     try {
       await const AdmissionsRepository().deleteAdmission(admission.id);
@@ -418,8 +379,11 @@ class _AdmissionCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.local_hospital_outlined,
-                    size: 20, color: AppColors.primary),
+                const Icon(
+                  Icons.local_hospital_outlined,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -429,32 +393,28 @@ class _AdmissionCard extends StatelessWidget {
                           ? admission.status
                           : admission.bedNumber,
                     ),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: AppColors.textPrimary,
-                    ),
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withAlpha(28),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     admission.status,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelMedium?.copyWith(color: AppColors.primary),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -470,9 +430,9 @@ class _AdmissionCard extends StatelessWidget {
                       ),
                     );
                     if (saved == true && context.mounted) {
-                      context
-                          .read<PatientDetailsCubit>()
-                          .fetchPatient(patient.id);
+                      context.read<PatientDetailsCubit>().fetchPatient(
+                        patient.id,
+                      );
                     }
                   },
                   icon: const Icon(Icons.edit_outlined, size: 18),
@@ -487,23 +447,16 @@ class _AdmissionCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             if (h != null) ...[
-              const Text(
+              Text(
                 AppTexts.patientDetailsHospital,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.labelMedium,
               ),
               const SizedBox(height: 6),
               _InfoRow(label: AppTexts.name, value: h.name),
               const SizedBox(height: 6),
               _InfoRow(label: AppTexts.location, value: h.location),
               const SizedBox(height: 6),
-              _InfoRow(
-                label: AppTexts.totalBeds,
-                value: '${h.totalBeds}',
-              ),
+              _InfoRow(label: AppTexts.totalBeds, value: '${h.totalBeds}'),
               const SizedBox(height: 6),
               _InfoRow(
                 label: AppTexts.availableBeds,
@@ -512,20 +465,19 @@ class _AdmissionCard extends StatelessWidget {
               const SizedBox(height: 14),
             ],
             if (d != null) ...[
-              const Text(
+              Text(
                 AppTexts.patientDetailsDoctor,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.labelMedium,
               ),
               const SizedBox(height: 6),
               _InfoRow(label: AppTexts.name, value: d.name),
               const SizedBox(height: 6),
               _InfoRow(label: AppTexts.emailLabel, value: d.email),
               const SizedBox(height: 6),
-              _InfoRow(label: AppTexts.phone, value: d.phone.isEmpty ? AppTexts.notAvailable : d.phone),
+              _InfoRow(
+                label: AppTexts.phone,
+                value: d.phone.isEmpty ? AppTexts.notAvailable : d.phone,
+              ),
               const SizedBox(height: 6),
               _InfoRow(
                 label: AppTexts.roleLabel,
@@ -540,43 +492,39 @@ class _AdmissionCard extends StatelessWidget {
             const SizedBox(height: 8),
             _InfoRow(
               label: AppTexts.dischargedLabel,
-              value: admission.dateLeave != null && admission.dateLeave!.isNotEmpty
+              value:
+                  admission.dateLeave != null && admission.dateLeave!.isNotEmpty
                   ? _formatIsoDateTime(admission.dateLeave!)
                   : AppTexts.notAvailable,
             ),
             const SizedBox(height: 8),
             _InfoRow(
               label: AppTexts.dateOfDeathLabel,
-              value: admission.dateOfDeath != null &&
+              value:
+                  admission.dateOfDeath != null &&
                       admission.dateOfDeath!.isNotEmpty
                   ? _formatIsoDateTime(admission.dateOfDeath!)
                   : AppTexts.notAvailable,
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               AppTexts.admissionNotesSection,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
+              style: Theme.of(context).textTheme.labelMedium,
             ),
             const SizedBox(height: 6),
             Text(
               admission.notes.isEmpty ? AppTexts.notAvailable : admission.notes,
-              style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
             ),
             if (admission.clinicalNotes.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 AppTexts.clinicalNotesSection,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.labelMedium,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               ...admission.clinicalNotes.map(
                 (n) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -593,27 +541,20 @@ class _AdmissionCard extends StatelessWidget {
                       children: [
                         Text(
                           n.type.replaceAll('_', ' '),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                            color: AppColors.primary,
-                          ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelMedium?.copyWith(color: AppColors.primary),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xs),
                         Text(
                           n.content,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textPrimary,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppColors.textPrimary),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xs),
                         Text(
                           _formatIsoDateTime(n.createdAt),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                     ),
@@ -622,16 +563,12 @@ class _AdmissionCard extends StatelessWidget {
               ),
             ],
             if (admission.radiologyImages.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text(
+              const SizedBox(height: AppSpacing.sm),
+              Text(
                 AppTexts.radiology,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.labelMedium,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               ...admission.radiologyImages.map(
                 (r) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -648,29 +585,20 @@ class _AdmissionCard extends StatelessWidget {
                       children: [
                         Text(
                           r.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: AppColors.textPrimary,
-                          ),
+                          style: Theme.of(context).textTheme.labelLarge,
                         ),
                         if (r.imagePath.isNotEmpty) ...[
-                          const SizedBox(height: 4),
+                          const SizedBox(height: AppSpacing.xs),
                           Text(
                             r.imagePath,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
                         const SizedBox(height: 6),
                         Text(
                           r.report.isEmpty ? AppTexts.notAvailable : r.report,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textPrimary,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppColors.textPrimary),
                         ),
                       ],
                     ),
@@ -679,16 +607,12 @@ class _AdmissionCard extends StatelessWidget {
               ),
             ],
             if (admission.treatmentPlans.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text(
+              const SizedBox(height: AppSpacing.sm),
+              Text(
                 AppTexts.treatmentPlansSection,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.labelMedium,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               ...admission.treatmentPlans.map(
                 (p) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -702,31 +626,27 @@ class _AdmissionCard extends StatelessWidget {
                     ),
                     child: Text(
                       p.planContent,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textPrimary,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
                     ),
                   ),
                 ),
               ),
             ],
             if (admission.vitals.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text(
+              const SizedBox(height: AppSpacing.sm),
+              Text(
                 AppTexts.vitalsLabel,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.labelMedium,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               ...admission.vitals.map(
                 (v) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _MeasurementRow(
-                    title: v.vitalsTitle?.title ??
+                    title:
+                        v.vitalsTitle?.title ??
                         AppTexts.defaultVitalMeasurementTitle,
                     unit: v.vitalsTitle?.unit ?? '',
                     value: v.value,
@@ -738,21 +658,18 @@ class _AdmissionCard extends StatelessWidget {
               ),
             ],
             if (admission.labs.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text(
+              const SizedBox(height: AppSpacing.sm),
+              Text(
                 AppTexts.labs,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.labelMedium,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               ...admission.labs.map(
                 (lab) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _MeasurementRow(
-                    title: lab.labsTitle?.title ??
+                    title:
+                        lab.labsTitle?.title ??
                         AppTexts.defaultLabMeasurementTitle,
                     unit: lab.labsTitle?.unit ?? '',
                     value: lab.value,
@@ -789,7 +706,8 @@ class _MeasurementRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final range = (normalMin != null &&
+    final range =
+        (normalMin != null &&
             normalMax != null &&
             normalMin!.isNotEmpty &&
             normalMax!.isNotEmpty)
@@ -809,32 +727,26 @@ class _MeasurementRow extends StatelessWidget {
         children: [
           Text(
             '${title.toUpperCase()}${unit.isNotEmpty ? ' ($unit)' : ''}',
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-              color: AppColors.primary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: AppColors.primary),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
+            style: Theme.of(context).textTheme.titleSmall,
           ),
           if (range != null) ...[
             const SizedBox(height: 2),
             Text(
               '${AppTexts.normalRangePrefix} $range',
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             _formatIsoDateTime(date),
-            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
@@ -855,27 +767,18 @@ class _InfoRow extends StatelessWidget {
       children: [
         SizedBox(
           width: 110,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-              color: AppColors.textSecondary,
-            ),
-          ),
+          child: Text(label, style: Theme.of(context).textTheme.labelMedium),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.textPrimary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
           ),
         ),
       ],
     );
   }
 }
-

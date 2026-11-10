@@ -45,7 +45,9 @@ class AdmissionDetailsClinicalNotesSection extends StatelessWidget {
   final void Function(int id) onDelete;
 
   List<ClinicalNoteModel> _notesForType(String type) {
-    return notes.where((n) => AdmissionClinicalNoteType.normalize(n.type) == type).toList();
+    return notes
+        .where((n) => AdmissionClinicalNoteType.normalize(n.type) == type)
+        .toList();
   }
 
   bool _isAddingType(String type) =>
@@ -125,81 +127,69 @@ class _ClinicalNoteTypeCard extends StatelessWidget {
   final VoidCallback onSaveEdit;
   final void Function(int id) onDelete;
 
-  String get _typeLabel =>
-      AdmissionClinicalNoteType.labelFor(type);
+  String get _typeLabel => AdmissionClinicalNoteType.labelFor(type);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _typeLabel,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
+    final hasContent = showAddForm || notes.isNotEmpty;
+
+    return AdmissionDetailsSectionContainer(
+      title: _typeLabel,
+      headerAction: canAdd
+          ? IconButton(
+              tooltip: 'Add $_typeLabel',
+              onPressed: onAdd,
+              icon: const Icon(
+                Icons.add_circle_outline,
+                color: AppColors.primary,
+                size: 20,
               ),
-              if (canAdd)
-                IconButton(
-                  tooltip: 'Add $_typeLabel',
-                  onPressed: onAdd,
-                  icon: const Icon(
-                    Icons.add_circle_outline,
-                    color: AppColors.primary,
-                    size: 20,
+              visualDensity: VisualDensity.compact,
+            )
+          : null,
+      child: !hasContent
+          ? AdmissionDetailsEmptyHint('No $_typeLabel recorded.')
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (showAddForm) ...[
+                  _ClinicalNoteForm(
+                    title: 'Add $_typeLabel',
+                    saving: saving,
+                    contentController: contentController,
+                    onCancel: onCancelAdd,
+                    onSave: onSaveAdd,
                   ),
-                  visualDensity: VisualDensity.compact,
-                ),
-            ],
-          ),
-          if (showAddForm) ...[
-            const SizedBox(height: 8),
-            _ClinicalNoteForm(
-              title: 'Add $_typeLabel',
-              saving: saving,
-              contentController: contentController,
-              onCancel: onCancelAdd,
-              onSave: onSaveAdd,
+                  if (notes.isNotEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(height: 1),
+                    ),
+                ],
+                for (var i = 0; i < notes.length; i++) ...[
+                  if (i > 0)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(height: 1),
+                    ),
+                  if (editingItemId == notes[i].id)
+                    _ClinicalNoteForm(
+                      title: 'Edit $_typeLabel',
+                      isEditing: true,
+                      saving: saving,
+                      contentController: contentController,
+                      onCancel: onCancelEdit,
+                      onSave: onSaveEdit,
+                    )
+                  else
+                    _ClinicalNoteEntry(
+                      note: notes[i],
+                      onEdit: () => onBeginEdit(notes[i]),
+                      onDelete: () => onDelete(notes[i].id),
+                    ),
+                ],
+              ],
             ),
-          ],
-          if (notes.isEmpty && !showAddForm)
-            AdmissionDetailsEmptyHint('No $_typeLabel recorded.')
-          else ...[
-            for (final note in notes) ...[
-              const SizedBox(height: 8),
-              if (editingItemId == note.id)
-                _ClinicalNoteForm(
-                  title: 'Edit $_typeLabel',
-                  isEditing: true,
-                  saving: saving,
-                  contentController: contentController,
-                  onCancel: onCancelEdit,
-                  onSave: onSaveEdit,
-                )
-              else
-                _ClinicalNoteEntry(
-                  note: note,
-                  onEdit: () => onBeginEdit(note),
-                  onDelete: () => onDelete(note.id),
-                ),
-            ],
-          ],
-        ],
-      ),
     );
   }
 }
@@ -217,43 +207,31 @@ class _ClinicalNoteEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  note.content,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13,
-                    height: 1.5,
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                note.content,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                  height: 1.5,
                 ),
               ),
-              AdmissionDetailsItemActions(onEdit: onEdit, onDelete: onDelete),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            admissionDetailsFormatDateTime(note.createdAt),
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 11,
             ),
-          ),
-        ],
-      ),
+            AdmissionDetailsItemActions(onEdit: onEdit, onDelete: onDelete),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          admissionDetailsFormatDateTime(note.createdAt),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+        ),
+      ],
     );
   }
 }
@@ -277,60 +255,52 @@ class _ClinicalNoteForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: AppColors.textPrimary,
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: AppColors.textPrimary,
                 ),
               ),
-              IconButton(
-                onPressed: saving ? null : onCancel,
-                icon: const Icon(
-                  Icons.close,
-                  size: 18,
-                  color: AppColors.textSecondary,
-                ),
-                visualDensity: VisualDensity.compact,
-              ),
-            ],
-          ),
-          AppTextField(
-            controller: contentController,
-            hintText: 'Content *',
-            maxLines: 5,
-            enabled: !saving,
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: AppButton(
-              label: saving
-                  ? 'Saving...'
-                  : isEditing
-                      ? AppTexts.saveChanges
-                      : 'Save Entry',
-              onPressed: saving ? null : onSave,
             ),
+            IconButton(
+              onPressed: saving ? null : onCancel,
+              icon: const Icon(
+                Icons.close,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+        AppTextField(
+          controller: contentController,
+          hintText: 'Content *',
+          maxLines: 5,
+          enabled: !saving,
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          height: 44,
+          child: AppButton(
+            label: saving
+                ? 'Saving...'
+                : isEditing
+                ? AppTexts.saveChanges
+                : 'Save Entry',
+            onPressed: saving ? null : onSave,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

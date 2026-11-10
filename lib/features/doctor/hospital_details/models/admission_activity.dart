@@ -34,25 +34,21 @@ class AdmissionActivity extends Equatable {
       actorName = actor['name'] as String?;
     }
 
-    final description = [
-      json['description'],
-      json['message'],
-      json['note'],
-      json['summary'],
-    ]
-        .whereType<String>()
-        .map((e) => e.trim())
-        .firstWhere((e) => e.isNotEmpty, orElse: () => '');
+    final description =
+        [json['description'], json['message'], json['note'], json['summary']]
+            .whereType<String>()
+            .map((e) => e.trim())
+            .firstWhere((e) => e.isNotEmpty, orElse: () => '');
 
     return AdmissionActivity(
       id: (json['id'] as num?)?.toInt() ?? 0,
       subjectType: json['subject_type'] as String? ?? '',
       subjectId: (json['subject_id'] as num?)?.toInt(),
-      event: (json['event'] ?? json['action'] ?? json['type'] ?? '')
-          .toString(),
+      event: (json['event'] ?? json['action'] ?? json['type'] ?? '').toString(),
       description: description,
       actorName: actorName ?? json['user_name'] as String?,
-      createdAt: json['created_at'] as String? ??
+      createdAt:
+          json['created_at'] as String? ??
           json['performed_at'] as String? ??
           '',
       changes: parseAdmissionActivityChanges(json),
@@ -61,13 +57,13 @@ class AdmissionActivity extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        subjectType,
-        subjectId,
-        event,
-        description,
-        actorName,
-        createdAt,
-        changes,
-      ];
+    id,
+    subjectType,
+    subjectId,
+    event,
+    description,
+    actorName,
+    createdAt,
+    changes,
+  ];
 }

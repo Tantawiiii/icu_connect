@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
-import 'package:icu_connect/core/widgets/app_text_field.dart';
 import 'package:icu_connect/features/superAdmin/patients/models/patient_admission_models.dart';
 
 import '../enums/admission_status.dart';
-import 'admission_details_formatters.dart';
 import 'admission_details_meta_chip.dart';
 import 'admission_details_section_container.dart';
 
@@ -211,55 +209,9 @@ class _PatientSummary extends StatelessWidget {
         ),
         if (chips.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 8,
-            children: chips,
-          ),
+          Wrap(spacing: 10, runSpacing: 8, children: chips),
         ],
       ],
-    );
-  }
-}
-
-class _DateTile extends StatelessWidget {
-  const _DateTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.onTap,
-    this.onClear,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final VoidCallback? onTap;
-  final VoidCallback? onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      dense: true,
-      leading: Icon(icon, size: 20, color: AppColors.primary),
-      title: Text(label, style: const TextStyle(fontSize: 13)),
-      subtitle: Text(
-        value,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
-        ),
-      ),
-      trailing: onClear != null
-          ? IconButton(
-              icon: const Icon(Icons.close, size: 18),
-              onPressed: onClear,
-            )
-          : (onTap != null
-              ? const Icon(Icons.chevron_right, color: AppColors.textSecondary)
-              : null),
-      onTap: onTap,
     );
   }
 }

@@ -9,10 +9,7 @@ import '../repository/hospital_admissions_repository.dart';
 import '../widgets/admission_details_activity_section.dart';
 
 class AdmissionActivityHistoryScreen extends StatefulWidget {
-  const AdmissionActivityHistoryScreen({
-    super.key,
-    required this.admissionId,
-  });
+  const AdmissionActivityHistoryScreen({super.key, required this.admissionId});
 
   final int admissionId;
 

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../../admins/models/pagination_model.dart';
 import '../cubit/drugs_cubit.dart';
 import '../cubit/drugs_state.dart';
@@ -80,11 +82,11 @@ class _DrugsListViewState extends State<_DrugsListView> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          AppTexts.drugsLabel,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        foregroundColor: Colors.white,
+        title: const Text(AppTexts.drugsLabel),
+        titleTextStyle: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(color: Colors.white, fontSize: 18),
         centerTitle: true,
         actions: [
           IconButton(
@@ -92,8 +94,9 @@ class _DrugsListViewState extends State<_DrugsListView> {
             onPressed: () {
               final cubit = context.read<DrugsCubit>();
               final state = cubit.state;
-              final page =
-                  state is DrugsLoaded ? state.pagination.currentPage : 1;
+              final page = state is DrugsLoaded
+                  ? state.pagination.currentPage
+                  : 1;
               cubit.fetchDrugs(page: page);
             },
           ),
@@ -109,58 +112,66 @@ class _DrugsListViewState extends State<_DrugsListView> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _submitSearch(),
-              decoration: InputDecoration(
-                hintText: AppTexts.searchDrugsHint,
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: AppColors.textSecondary,
-                ),
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_searchController.text.isNotEmpty)
-                      IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {});
-                          context.read<DrugsCubit>().search('');
-                        },
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.search),
-                      onPressed: _submitSearch,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              12,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _searchController,
+              builder: (context, value, _) {
+                return TextField(
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _submitSearch(),
+                  decoration: InputDecoration(
+                    hintText: AppTexts.searchDrugsHint,
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.textSecondary,
                     ),
-                  ],
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: AppColors.primary,
-                    width: 1.5,
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (value.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              context.read<DrugsCubit>().search('');
+                            },
+                          ),
+                        IconButton(
+                          icon: const Icon(Icons.search),
+                          onPressed: _submitSearch,
+                        ),
+                      ],
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 1.5,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                   ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-              ),
-              onChanged: (_) => setState(() {}),
+                );
+              },
             ),
           ),
           BlocBuilder<DrugsCubit, DrugsState>(
@@ -170,39 +181,44 @@ class _DrugsListViewState extends State<_DrugsListView> {
                   : DrugsListFilter.all;
               return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  0,
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                ),
                 child: Row(
                   children: [
                     _FilterChip(
                       label: AppTexts.drugAllFilter,
                       selected: filter == DrugsListFilter.all,
-                      onTap: () => context
-                          .read<DrugsCubit>()
-                          .setFilter(DrugsListFilter.all),
+                      onTap: () => context.read<DrugsCubit>().setFilter(
+                        DrugsListFilter.all,
+                      ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     _FilterChip(
                       label: AppTexts.drugActive,
                       selected: filter == DrugsListFilter.active,
-                      onTap: () => context
-                          .read<DrugsCubit>()
-                          .setFilter(DrugsListFilter.active),
+                      onTap: () => context.read<DrugsCubit>().setFilter(
+                        DrugsListFilter.active,
+                      ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     _FilterChip(
                       label: AppTexts.drugInactive,
                       selected: filter == DrugsListFilter.inactive,
-                      onTap: () => context
-                          .read<DrugsCubit>()
-                          .setFilter(DrugsListFilter.inactive),
+                      onTap: () => context.read<DrugsCubit>().setFilter(
+                        DrugsListFilter.inactive,
+                      ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     _FilterChip(
                       label: AppTexts.drugArchivedFilter,
                       selected: filter == DrugsListFilter.archived,
-                      onTap: () => context
-                          .read<DrugsCubit>()
-                          .setFilter(DrugsListFilter.archived),
+                      onTap: () => context.read<DrugsCubit>().setFilter(
+                        DrugsListFilter.archived,
+                      ),
                     ),
                   ],
                 ),
@@ -301,9 +317,7 @@ class _FilterChip extends StatelessWidget {
         color: selected ? AppColors.primary : AppColors.textSecondary,
         fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
       ),
-      side: BorderSide(
-        color: selected ? AppColors.primary : AppColors.border,
-      ),
+      side: BorderSide(color: selected ? AppColors.primary : AppColors.border),
       backgroundColor: Colors.white,
     );
   }
@@ -341,7 +355,7 @@ class _DrugsList extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               searchActive ? AppTexts.drugsSearchEmpty : 'No drugs found',
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
         ),
@@ -350,32 +364,34 @@ class _DrugsList extends StatelessWidget {
 
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: () => context
-          .read<DrugsCubit>()
-          .fetchDrugs(page: pagination.currentPage),
-      child: ListView(
+      onRefresh: () =>
+          context.read<DrugsCubit>().fetchDrugs(page: pagination.currentPage),
+      child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Showing ${pagination.from}-${pagination.to} of ${pagination.total}',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
+        itemCount: items.length + 2,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Showing ${pagination.from}-${pagination.to} of ${pagination.total}',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-            ),
-          ),
-          ...items.map(
-            (drug) => _DrugCard(
-              drug: drug,
-              onTap: () => onOpen(drug),
-              onEdit: () => onEdit(drug),
-            ),
-          ),
-          const SizedBox(height: 8),
-          _PaginationControls(pagination: pagination),
-        ],
+            );
+          }
+          if (index == items.length + 1) {
+            return Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: _PaginationControls(pagination: pagination),
+            );
+          }
+          final drug = items[index - 1];
+          return _DrugCard(
+            drug: drug,
+            onTap: () => onOpen(drug),
+            onEdit: () => onEdit(drug),
+          );
+        },
       ),
     );
   }
@@ -416,30 +432,29 @@ class _DrugCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       drug.genericName,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: archived
                             ? AppColors.textSecondary
                             : AppColors.textPrimary,
-                        decoration:
-                            archived ? TextDecoration.lineThrough : null,
+                        decoration: archived
+                            ? TextDecoration.lineThrough
+                            : null,
                       ),
                     ),
                   ),
                   _StatusBadge(drug: drug),
                 ],
               ),
-              if (drug.tradeNames.isNotEmpty) ...[
+              if (drug.tradeNames.isNotEmpty || drug.doseLabel.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
-                  drug.tradeNames.join(' · '),
+                  [
+                    if (drug.tradeNames.isNotEmpty) drug.tradeNames.join(' · '),
+                    if (drug.doseLabel.isNotEmpty) drug.doseLabel,
+                  ].join(' — '),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
               const SizedBox(height: 10),
@@ -483,47 +498,26 @@ class _DrugCard extends StatelessWidget {
   }
 
   Future<void> _confirmArchive(BuildContext context, DrugModel drug) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.archiveDrug),
-        content: const Text(AppTexts.archiveDrugConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(AppTexts.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(AppTexts.archiveDrug),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.archiveDrug,
+      message: AppTexts.archiveDrugConfirmation,
+      confirmLabel: AppTexts.archiveDrug,
     );
-    if (confirmed == true && context.mounted) {
+    if (confirmed && context.mounted) {
       context.read<DrugsCubit>().archiveDrug(drug.id);
     }
   }
 
   Future<void> _confirmRestore(BuildContext context, DrugModel drug) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(AppTexts.restoreDrug),
-        content: const Text(AppTexts.restoreDrugConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(AppTexts.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(AppTexts.restoreDrug),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.restoreDrug,
+      message: AppTexts.restoreDrugConfirmation,
+      confirmLabel: AppTexts.restoreDrug,
+      isDestructive: false,
     );
-    if (confirmed == true && context.mounted) {
+    if (confirmed && context.mounted) {
       context.read<DrugsCubit>().restoreDrug(drug.id);
     }
   }
@@ -581,9 +575,9 @@ class _PaginationControls extends StatelessWidget {
       children: [
         TextButton(
           onPressed: pagination.currentPage > 1
-              ? () => context
-                  .read<DrugsCubit>()
-                  .fetchDrugs(page: pagination.currentPage - 1)
+              ? () => context.read<DrugsCubit>().fetchDrugs(
+                  page: pagination.currentPage - 1,
+                )
               : null,
           child: const Text('Prev'),
         ),
@@ -593,9 +587,9 @@ class _PaginationControls extends StatelessWidget {
         ),
         TextButton(
           onPressed: pagination.hasNextPage
-              ? () => context
-                  .read<DrugsCubit>()
-                  .fetchDrugs(page: pagination.currentPage + 1)
+              ? () => context.read<DrugsCubit>().fetchDrugs(
+                  page: pagination.currentPage + 1,
+                )
               : null,
           child: const Text('Next'),
         ),

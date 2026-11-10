@@ -9,6 +9,7 @@ class PatientCardWidget extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+
   /// When true, [admittedDate] is shown without an "Admitted :" prefix (e.g. age · phone).
   final bool plainDetailLine;
 
@@ -28,11 +29,14 @@ class PatientCardWidget extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Card(
-        color: AppColors.background, // Using background color as per list item look in wireframe (greyish)
+        color: AppColors
+            .background, // Using background color as per list item look in wireframe (greyish)
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border), // Adding border for definition
+          side: const BorderSide(
+            color: AppColors.border,
+          ), // Adding border for definition
         ),
         margin: const EdgeInsets.only(bottom: 12),
         child: Padding(
@@ -45,7 +49,10 @@ class PatientCardWidget extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(20),
@@ -62,16 +69,16 @@ class PatientCardWidget extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              
+
               // Patient Name
               Text(
                 name,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontSize: 18,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontSize: 18),
               ),
               const SizedBox(height: 4),
-              
+
               Text(
                 plainDetailLine
                     ? admittedDate
@@ -86,7 +93,11 @@ class PatientCardWidget extends StatelessWidget {
                 children: [
                   if (onEdit != null)
                     IconButton(
-                      icon: const Icon(Icons.edit, size: 20, color: AppColors.secondary),
+                      icon: const Icon(
+                        Icons.edit,
+                        size: 20,
+                        color: AppColors.secondary,
+                      ),
                       onPressed: onEdit,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -94,7 +105,11 @@ class PatientCardWidget extends StatelessWidget {
                   const SizedBox(width: 16),
                   if (onDelete != null)
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.secondary),
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        size: 20,
+                        color: AppColors.secondary,
+                      ),
                       onPressed: onDelete,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),

@@ -17,15 +17,12 @@ class AdminDashboardSection extends StatelessWidget {
       builder: (context, state) {
         return switch (state) {
           AdminDashboardInitial() ||
-          AdminDashboardLoading() =>
-            const _DashboardShimmer(),
-          AdminDashboardLoaded(:final data) =>
-            _DashboardContent(data: data),
+          AdminDashboardLoading() => const _DashboardShimmer(),
+          AdminDashboardLoaded(:final data) => _DashboardContent(data: data),
           AdminDashboardFailure(:final message) => _DashboardError(
-              message: message,
-              onRetry: () =>
-                  context.read<AdminDashboardCubit>().fetchDashboard(),
-            ),
+            message: message,
+            onRetry: () => context.read<AdminDashboardCubit>().fetchDashboard(),
+          ),
         };
       },
     );
@@ -347,8 +344,7 @@ class _RecentAdmissionTile extends StatelessWidget {
         admission.hospitalName!,
       if (admission.status != null && admission.status!.trim().isNotEmpty)
         admission.status!,
-      if (admission.bedNumber != null &&
-          admission.bedNumber!.trim().isNotEmpty)
+      if (admission.bedNumber != null && admission.bedNumber!.trim().isNotEmpty)
         '${AppTexts.bedNo} ${admission.bedNumber}',
     ];
 

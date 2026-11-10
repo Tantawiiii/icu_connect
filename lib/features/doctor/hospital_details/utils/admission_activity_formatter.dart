@@ -82,11 +82,19 @@ List<String> admissionActivityChangeLines(AdmissionActivity activity) {
     final actor = admissionActivityActorName(activity);
     return activity.changes.map((change) {
       final field = admissionActivityFieldLabel(change.field);
-      final oldValue = admissionActivityFormatValue(change.field, change.oldValue);
-      final newValue = admissionActivityFormatValue(change.field, change.newValue);
+      final oldValue = admissionActivityFormatValue(
+        change.field,
+        change.oldValue,
+      );
+      final newValue = admissionActivityFormatValue(
+        change.field,
+        change.newValue,
+      );
 
-      final hasOld = change.oldValue != null && change.oldValue!.trim().isNotEmpty;
-      final hasNew = change.newValue != null && change.newValue!.trim().isNotEmpty;
+      final hasOld =
+          change.oldValue != null && change.oldValue!.trim().isNotEmpty;
+      final hasNew =
+          change.newValue != null && change.newValue!.trim().isNotEmpty;
 
       if (hasOld && hasNew) {
         return '$actor changed $field from $oldValue to $newValue';

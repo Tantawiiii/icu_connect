@@ -6,8 +6,8 @@ import 'admin_dashboard_state.dart';
 
 class AdminDashboardCubit extends Cubit<AdminDashboardState> {
   AdminDashboardCubit({AdminDashboardRepository? repository})
-      : _repository = repository ?? const AdminDashboardRepository(),
-        super(const AdminDashboardInitial());
+    : _repository = repository ?? const AdminDashboardRepository(),
+      super(const AdminDashboardInitial());
 
   final AdminDashboardRepository _repository;
 

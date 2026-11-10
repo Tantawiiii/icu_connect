@@ -10,8 +10,8 @@ import '../cubit/patient_form_state.dart';
 import '../models/patient_model.dart';
 import '../models/patient_request_model.dart';
 
-class PatientFormScreen extends StatelessWidget {
-  const PatientFormScreen({super.key, this.patient});
+class AdminPatientFormScreen extends StatelessWidget {
+  const AdminPatientFormScreen({super.key, this.patient});
 
   /// Null = create mode, non-null = edit mode.
   final PatientModel? patient;
@@ -56,7 +56,7 @@ class _PatientFormViewState extends State<_PatientFormView> {
     'AB+',
     'AB-',
     'O+',
-    'O-'
+    'O-',
   ];
 
   @override
@@ -65,8 +65,7 @@ class _PatientFormViewState extends State<_PatientFormView> {
     final p = widget.patient;
     _nameCtrl = TextEditingController(text: p?.name ?? '');
     _nationalIdCtrl = TextEditingController(text: p?.nationalId ?? '');
-    _ageCtrl =
-        TextEditingController(text: p != null ? p.age.toString() : '');
+    _ageCtrl = TextEditingController(text: p != null ? p.age.toString() : '');
     _phoneCtrl = TextEditingController(text: p?.phone ?? '');
     _notesCtrl = TextEditingController(text: p?.notes ?? '');
     _gender = p?.gender ?? 'female';
@@ -93,17 +92,16 @@ class _PatientFormViewState extends State<_PatientFormView> {
       nationalId: _nationalIdCtrl.text.trim(),
       age: age,
       gender: _gender,
-      phone: _phoneCtrl.text.trim().isEmpty
-          ? null
-          : _phoneCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
       bloodGroup: _bloodGroup,
       notes: _notesCtrl.text.trim(),
     );
 
     if (_isEdit) {
-      context
-          .read<PatientFormCubit>()
-          .updatePatient(widget.patient!.id, request);
+      context.read<PatientFormCubit>().updatePatient(
+        widget.patient!.id,
+        request,
+      );
     } else {
       context.read<PatientFormCubit>().createPatient(request);
     }
@@ -119,7 +117,9 @@ class _PatientFormViewState extends State<_PatientFormView> {
         title: Text(
           _isEdit ? AppTexts.editPatientAdmin : AppTexts.addPatientAdmin,
           style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -160,7 +160,8 @@ class _PatientFormViewState extends State<_PatientFormView> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -168,8 +169,7 @@ class _PatientFormViewState extends State<_PatientFormView> {
                           AppTextField(
                             controller: _nameCtrl,
                             labelText: AppTexts.name,
-                            prefixIcon:
-                                const Icon(Icons.person_outline),
+                            prefixIcon: const Icon(Icons.person_outline),
                             textInputAction: TextInputAction.next,
                             enabled: !isLoading,
                             validator: (v) {
@@ -191,8 +191,9 @@ class _PatientFormViewState extends State<_PatientFormView> {
                           AppTextField(
                             controller: _ageCtrl,
                             labelText: AppTexts.age,
-                            prefixIcon:
-                                const Icon(Icons.calendar_today_outlined),
+                            prefixIcon: const Icon(
+                              Icons.calendar_today_outlined,
+                            ),
                             keyboardType: TextInputType.number,
                             textInputAction: TextInputAction.next,
                             enabled: !isLoading,
@@ -211,8 +212,7 @@ class _PatientFormViewState extends State<_PatientFormView> {
                           AppTextField(
                             controller: _phoneCtrl,
                             labelText: AppTexts.phone,
-                            prefixIcon:
-                                const Icon(Icons.phone_outlined),
+                            prefixIcon: const Icon(Icons.phone_outlined),
                             keyboardType: TextInputType.phone,
                             textInputAction: TextInputAction.next,
                             enabled: !isLoading,
@@ -229,7 +229,8 @@ class _PatientFormViewState extends State<_PatientFormView> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -239,27 +240,28 @@ class _PatientFormViewState extends State<_PatientFormView> {
                             isExpanded: true,
                             decoration: InputDecoration(
                               labelText: AppTexts.gender,
-                              prefixIcon:
-                                  const Icon(Icons.wc_outlined),
+                              prefixIcon: const Icon(Icons.wc_outlined),
                               border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(10)),
-                              contentPadding:
-                                  const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
                             ),
                             items: _genders
-                                .map((g) => DropdownMenuItem(
-                                      value: g,
-                                      child: Text(
-                                          g[0].toUpperCase() +
-                                              g.substring(1)),
-                                    ))
+                                .map(
+                                  (g) => DropdownMenuItem(
+                                    value: g,
+                                    child: Text(
+                                      g[0].toUpperCase() + g.substring(1),
+                                    ),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: isLoading
                                 ? null
-                                : (v) => setState(
-                                    () => _gender = v ?? _gender),
+                                : (v) => setState(() => _gender = v ?? _gender),
                           ),
                           const SizedBox(height: 14),
                           DropdownButtonFormField<String>(
@@ -267,32 +269,36 @@ class _PatientFormViewState extends State<_PatientFormView> {
                             isExpanded: true,
                             decoration: InputDecoration(
                               labelText: AppTexts.bloodGroup,
-                              prefixIcon: const Icon(
-                                  Icons.bloodtype_outlined),
+                              prefixIcon: const Icon(Icons.bloodtype_outlined),
                               border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(10)),
-                              contentPadding:
-                                  const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
                             ),
                             items: _bloodGroups
-                                .map((b) => DropdownMenuItem(
-                                      value: b,
-                                      child: Text(b),
-                                    ))
+                                .map(
+                                  (b) => DropdownMenuItem(
+                                    value: b,
+                                    child: Text(b),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: isLoading
                                 ? null
-                                : (v) => setState(() =>
-                                    _bloodGroup = v ?? _bloodGroup),
+                                : (v) => setState(
+                                    () => _bloodGroup = v ?? _bloodGroup,
+                                  ),
                           ),
                           const SizedBox(height: 14),
                           AppTextField(
                             controller: _notesCtrl,
                             labelText: AppTexts.notes,
-                            prefixIcon:
-                                const Icon(Icons.sticky_note_2_outlined),
+                            prefixIcon: const Icon(
+                              Icons.sticky_note_2_outlined,
+                            ),
                             textInputAction: TextInputAction.newline,
                             enabled: !isLoading,
                             keyboardType: TextInputType.multiline,
@@ -347,4 +353,3 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
-

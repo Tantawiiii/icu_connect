@@ -30,4 +30,3 @@ class PatientFormFailure extends PatientFormState {
   @override
   List<Object?> get props => [message];
 }
-

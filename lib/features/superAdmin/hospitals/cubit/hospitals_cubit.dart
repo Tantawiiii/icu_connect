@@ -28,21 +28,30 @@ class HospitalsCubit extends Cubit<HospitalsState> {
     emit(HospitalsActionLoading(current.hospitals, current.pagination));
     try {
       await _repo.deleteHospital(id);
-      final updated =
-          current.hospitals.where((h) => h.id != id).toList();
-      emit(HospitalsActionSuccess(
-        updated,
-        current.pagination,
-        'Hospital deleted successfully',
-      ));
+      final updated = current.hospitals.where((h) => h.id != id).toList();
+      emit(
+        HospitalsActionSuccess(
+          updated,
+          current.pagination,
+          'Hospital deleted successfully',
+        ),
+      );
     } on NetworkException catch (e) {
-      emit(HospitalsActionFailure(current.hospitals, current.pagination, e.message));
+      emit(
+        HospitalsActionFailure(
+          current.hospitals,
+          current.pagination,
+          e.message,
+        ),
+      );
     } catch (_) {
-      emit(HospitalsActionFailure(
-        current.hospitals,
-        current.pagination,
-        'An unexpected error occurred',
-      ));
+      emit(
+        HospitalsActionFailure(
+          current.hospitals,
+          current.pagination,
+          'An unexpected error occurred',
+        ),
+      );
     }
   }
 
@@ -56,19 +65,29 @@ class HospitalsCubit extends Cubit<HospitalsState> {
       final updated = current.hospitals
           .map((h) => h.id == id ? restored : h)
           .toList();
-      emit(HospitalsActionSuccess(
-        updated,
-        current.pagination,
-        'Hospital restored successfully',
-      ));
+      emit(
+        HospitalsActionSuccess(
+          updated,
+          current.pagination,
+          'Hospital restored successfully',
+        ),
+      );
     } on NetworkException catch (e) {
-      emit(HospitalsActionFailure(current.hospitals, current.pagination, e.message));
+      emit(
+        HospitalsActionFailure(
+          current.hospitals,
+          current.pagination,
+          e.message,
+        ),
+      );
     } catch (_) {
-      emit(HospitalsActionFailure(
-        current.hospitals,
-        current.pagination,
-        'An unexpected error occurred',
-      ));
+      emit(
+        HospitalsActionFailure(
+          current.hospitals,
+          current.pagination,
+          'An unexpected error occurred',
+        ),
+      );
     }
   }
 }

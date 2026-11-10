@@ -47,15 +47,21 @@ class AdminLoginData extends Equatable {
   final String expiresIn;
 
   factory AdminLoginData.fromJson(Map<String, dynamic> json) => AdminLoginData(
-        message: json['message'] as String,
-        admin: AdminModel.fromJson(json['admin'] as Map<String, dynamic>),
-        accessToken: json['access_token'] as String,
-        refreshToken: json['refresh_token'] as String,
-        tokenType: json['token_type'] as String,
-        expiresIn: json['expires_in'] as String,
-      );
+    message: json['message'] as String,
+    admin: AdminModel.fromJson(json['admin'] as Map<String, dynamic>),
+    accessToken: json['access_token'] as String,
+    refreshToken: json['refresh_token'] as String,
+    tokenType: json['token_type'] as String,
+    expiresIn: json['expires_in'] as String,
+  );
 
   @override
-  List<Object?> get props =>
-      [message, admin, accessToken, refreshToken, tokenType, expiresIn];
+  List<Object?> get props => [
+    message,
+    admin,
+    accessToken,
+    refreshToken,
+    tokenType,
+    expiresIn,
+  ];
 }

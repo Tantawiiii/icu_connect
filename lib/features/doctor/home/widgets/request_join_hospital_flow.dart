@@ -7,7 +7,6 @@ import 'package:icu_connect/features/doctor/home/cubit/doctor_hospitals_cubit.da
 import 'package:icu_connect/features/doctor/home/models/doctor_hospital.dart';
 import 'package:icu_connect/features/doctor/profile/repository/doctor_profile_repository.dart';
 
-
 Future<void> showJoinHospitalRequestFlow(
   BuildContext context,
   DoctorHospital hospital,
@@ -21,10 +20,8 @@ Future<void> showJoinHospitalRequestFlow(
     barrierColor: Colors.black.withValues(alpha: 0.45),
     isDismissible: true,
     enableDrag: true,
-    builder: (sheetContext) => _JoinHospitalRequestSheet(
-      hospital: hospital,
-      rootContext: rootContext,
-    ),
+    builder: (sheetContext) =>
+        _JoinHospitalRequestSheet(hospital: hospital, rootContext: rootContext),
   );
 }
 
@@ -38,7 +35,8 @@ class _JoinHospitalRequestSheet extends StatefulWidget {
   final BuildContext rootContext;
 
   @override
-  State<_JoinHospitalRequestSheet> createState() => _JoinHospitalRequestSheetState();
+  State<_JoinHospitalRequestSheet> createState() =>
+      _JoinHospitalRequestSheetState();
 }
 
 class _JoinHospitalRequestSheetState extends State<_JoinHospitalRequestSheet> {
@@ -49,7 +47,8 @@ class _JoinHospitalRequestSheetState extends State<_JoinHospitalRequestSheet> {
     try {
       const repo = DoctorProfileRepository();
       final profile = await repo.fetchProfile();
-      final ids = profile.hospitals.map((h) => h.id).toSet()..add(widget.hospital.id);
+      final ids = profile.hospitals.map((h) => h.id).toSet()
+        ..add(widget.hospital.id);
       await repo.updateProfile(
         name: profile.name,
         email: profile.email,
@@ -63,7 +62,9 @@ class _JoinHospitalRequestSheetState extends State<_JoinHospitalRequestSheet> {
         SnackBar(
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           content: const Row(
             children: [
               Icon(
@@ -240,7 +241,9 @@ class _JoinHospitalRequestSheetState extends State<_JoinHospitalRequestSheet> {
             ),
             if (_loading)
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 child: ColoredBox(
                   color: AppColors.surface.withValues(alpha: 0.92),
                   child: Column(
@@ -252,7 +255,9 @@ class _JoinHospitalRequestSheetState extends State<_JoinHospitalRequestSheet> {
                         child: CircularProgressIndicator(
                           strokeWidth: 3,
                           color: AppColors.accent,
-                          backgroundColor: AppColors.accent.withValues(alpha: 0.12),
+                          backgroundColor: AppColors.accent.withValues(
+                            alpha: 0.12,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),

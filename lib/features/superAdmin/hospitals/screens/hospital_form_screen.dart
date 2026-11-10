@@ -44,10 +44,10 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
   @override
   void initState() {
     super.initState();
-    _nameCtrl =
-        TextEditingController(text: widget.hospital?.name ?? '');
-    _locationCtrl =
-        TextEditingController(text: widget.hospital?.location ?? '');
+    _nameCtrl = TextEditingController(text: widget.hospital?.name ?? '');
+    _locationCtrl = TextEditingController(
+      text: widget.hospital?.location ?? '',
+    );
 
     if (widget.hospital != null && widget.hospital!.groups.isNotEmpty) {
       for (final g in widget.hospital!.groups) {
@@ -76,22 +76,18 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    final groups = _groups
-        .map(
-          (g) {
-            final total = g.markedForDeletion
-                ? null
-                : int.tryParse(g.totalBedsCtrl.text.trim()) ?? 0;
-            return HospitalGroupRequest(
-              id: g.id,
-              delete: g.markedForDeletion,
-              name: g.markedForDeletion ? null : g.nameCtrl.text.trim(),
-              totalBeds: total,
-              availableBeds: total,
-            );
-          },
-        )
-        .toList();
+    final groups = _groups.map((g) {
+      final total = g.markedForDeletion
+          ? null
+          : int.tryParse(g.totalBedsCtrl.text.trim()) ?? 0;
+      return HospitalGroupRequest(
+        id: g.id,
+        delete: g.markedForDeletion,
+        name: g.markedForDeletion ? null : g.nameCtrl.text.trim(),
+        totalBeds: total,
+        availableBeds: total,
+      );
+    }).toList();
 
     final request = HospitalRequest(
       name: _nameCtrl.text.trim(),
@@ -100,9 +96,10 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
     );
 
     if (_isEdit) {
-      context
-          .read<HospitalFormCubit>()
-          .updateHospital(widget.hospital!.id, request);
+      context.read<HospitalFormCubit>().updateHospital(
+        widget.hospital!.id,
+        request,
+      );
     } else {
       context.read<HospitalFormCubit>().createHospital(request);
     }
@@ -127,7 +124,9 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
         title: Text(
           _isEdit ? AppTexts.editHospital : AppTexts.addHospital,
           style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -169,7 +168,8 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -177,8 +177,9 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
                           AppTextField(
                             controller: _nameCtrl,
                             labelText: AppTexts.name,
-                            prefixIcon:
-                                const Icon(Icons.local_hospital_outlined),
+                            prefixIcon: const Icon(
+                              Icons.local_hospital_outlined,
+                            ),
                             textInputAction: TextInputAction.next,
                             enabled: !isLoading,
                             validator: (v) {
@@ -192,13 +193,11 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
                           AppTextField(
                             controller: _locationCtrl,
                             labelText: AppTexts.location,
-                            prefixIcon:
-                                const Icon(Icons.location_on_outlined),
+                            prefixIcon: const Icon(Icons.location_on_outlined),
                             textInputAction: TextInputAction.next,
                             enabled: !isLoading,
                             validator: (v) {
-                              if (!_isEdit &&
-                                  (v == null || v.trim().isEmpty)) {
+                              if (!_isEdit && (v == null || v.trim().isEmpty)) {
                                 return 'Location is required';
                               }
                               return null;
@@ -251,7 +250,8 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
                             setState(() {
                               _groups.add(
                                 _GroupDraft(
-                                  name: 'Group ${String.fromCharCode(65 + _groups.length)}',
+                                  name:
+                                      'Group ${String.fromCharCode(65 + _groups.length)}',
                                 ),
                               );
                             });
@@ -319,12 +319,9 @@ class _HospitalFormViewState extends State<_HospitalFormView> {
 }
 
 class _GroupDraft {
-  _GroupDraft({
-    this.id,
-    String name = '',
-    String totalBeds = '',
-  })  : nameCtrl = TextEditingController(text: name),
-        totalBedsCtrl = TextEditingController(text: totalBeds);
+  _GroupDraft({this.id, String name = '', String totalBeds = ''})
+    : nameCtrl = TextEditingController(text: name),
+      totalBedsCtrl = TextEditingController(text: totalBeds);
 
   final int? id;
   bool markedForDeletion = false;
@@ -415,8 +412,11 @@ class _GroupCard extends StatelessWidget {
 }
 
 class _StatChip extends StatelessWidget {
-  const _StatChip(
-      {required this.label, required this.value, required this.color});
+  const _StatChip({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   final String label;
   final int value;
@@ -426,17 +426,22 @@ class _StatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value.toString(),
-            style: TextStyle(
-                fontSize: 22, fontWeight: FontWeight.bold, color: color)),
-        Text(label,
-            style:
-                const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+        Text(
+          value.toString(),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+        ),
       ],
     );
   }
 }
-
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader(this.title);

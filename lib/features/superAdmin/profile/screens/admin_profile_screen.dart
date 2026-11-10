@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_texts.dart';
+import '../../../../core/utils/date_formatters.dart';
+import '../../../../core/widgets/list_error_view.dart';
 import '../../login/models/admin_model.dart';
 import '../cubit/admin_profile_cubit.dart';
 import '../cubit/admin_profile_state.dart';
@@ -14,7 +16,8 @@ class AdminProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => AdminProfileCubit(AdminProfileRepository())..fetchProfile(),
+      create: (_) =>
+          AdminProfileCubit(AdminProfileRepository())..fetchProfile(),
       child: const _AdminProfileView(),
     );
   }
@@ -39,8 +42,7 @@ class _AdminProfileView extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.refresh_outlined, color: Colors.white),
             tooltip: 'Refresh',
-            onPressed: () =>
-                context.read<AdminProfileCubit>().fetchProfile(),
+            onPressed: () => context.read<AdminProfileCubit>().fetchProfile(),
           ),
         ],
       ),
@@ -48,13 +50,12 @@ class _AdminProfileView extends StatelessWidget {
         builder: (context, state) {
           return switch (state) {
             AdminProfileInitial() || AdminProfileLoading() => const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
-            AdminProfileFailure(:final message) => _ErrorView(
-                message: message,
-                onRetry: () =>
-                    context.read<AdminProfileCubit>().fetchProfile(),
-              ),
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+            AdminProfileFailure(:final message) => ListErrorView(
+              message: message,
+              onRetry: () => context.read<AdminProfileCubit>().fetchProfile(),
+            ),
             AdminProfileSuccess(:final profile) => _ProfileBody(admin: profile),
           };
         },
@@ -159,8 +160,7 @@ class _ProfileHeader extends StatelessWidget {
               Text(
                 admin.isActive ? AppTexts.active : AppTexts.inactive,
                 style: TextStyle(
-                  color:
-                      admin.isActive ? Colors.greenAccent : Colors.redAccent,
+                  color: admin.isActive ? Colors.greenAccent : Colors.redAccent,
                   fontSize: 12,
                 ),
               ),
@@ -201,7 +201,9 @@ class _ProfileInfoCard extends StatelessWidget {
             _InfoRow(
               icon: Icons.phone_outlined,
               label: AppTexts.phone,
-              value: admin.phone.isNotEmpty ? admin.phone : AppTexts.notAvailable,
+              value: admin.phone.isNotEmpty
+                  ? admin.phone
+                  : AppTexts.notAvailable,
             ),
             _InfoRow(
               icon: Icons.access_time_outlined,
@@ -217,16 +219,7 @@ class _ProfileInfoCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(String iso) {
-    try {
-      final dt = DateTime.parse(iso).toLocal();
-      return '${dt.day}/${dt.month}/${dt.year}  '
-          '${dt.hour.toString().padLeft(2, '0')}:'
-          '${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return iso;
-    }
-  }
+  String _formatDate(String iso) => formatLocalDateTime(iso);
 }
 
 class _InfoRow extends StatelessWidget {
@@ -276,42 +269,6 @@ class _InfoRow extends StatelessWidget {
         ),
         if (!isLast) const Divider(height: 1),
       ],
-    );
-  }
-}
-
-// ── Error view ────────────────────────────────────────────────────────────────
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 20),
-            TextButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

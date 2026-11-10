@@ -35,13 +35,13 @@ class VitalTitleModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        title,
-        unit,
-        valueType,
-        normalRangeMin,
-        normalRangeMax,
-        createdAt,
-        updatedAt,
-      ];
+    id,
+    title,
+    unit,
+    valueType,
+    normalRangeMin,
+    normalRangeMax,
+    createdAt,
+    updatedAt,
+  ];
 }

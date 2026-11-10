@@ -11,4 +11,3 @@ class HospitalEntry {
   String role;
   String? status;
 }
-

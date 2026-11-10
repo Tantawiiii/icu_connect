@@ -1,8 +1,23 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 
 import 'api_constants.dart';
 import 'token_storage.dart';
+
+Dio? _mediaDio;
+
+/// Lightweight Dio instance (no auth/base-url interceptors) used only for
+/// fetching raw media bytes; headers are set manually per-request instead.
+Dio _mediaClient() {
+  return _mediaDio ??= Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 20),
+      receiveTimeout: const Duration(seconds: 30),
+      responseType: ResponseType.bytes,
+      validateStatus: (_) => true,
+    ),
+  );
+}
 
 /// Host used for files under [ApiConstants.imageBaseUrl].
 String get _apiFileHost => Uri.parse(ApiConstants.imageBaseUrl).host;
@@ -58,14 +73,17 @@ Future<Uint8List?> fetchHttpImageBytes(String url) async {
   }
 
   try {
-    final response = await http.get(uri, headers: headers);
+    final response = await _mediaClient().getUri<List<int>>(
+      uri,
+      options: Options(headers: headers),
+    );
     if (kDebugMode) {
       debugPrint('fetchHttpImageBytes status=${response.statusCode} url=$fullUrl');
     }
     if (response.statusCode != 200) return null;
-    final bytes = response.bodyBytes;
-    if (bytes.isEmpty) return null;
-    return bytes;
+    final bytes = response.data;
+    if (bytes == null || bytes.isEmpty) return null;
+    return Uint8List.fromList(bytes);
   } catch (e, st) {
     if (kDebugMode) {
       debugPrint('fetchHttpImageBytes error: $e\n$st');

@@ -64,61 +64,62 @@ class _AdmissionTimelineNotesSectionState
             child: CircularProgressIndicator(color: AppColors.primary),
           )
         : sorted.isEmpty
-            ? Center(
-                child: Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF7F8FA),
-                    borderRadius: BorderRadius.circular(16),
+        ? Center(
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7F8FA),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.forum_outlined,
+                    size: 36,
+                    color: AppColors.textSecondary,
                   ),
-                  child: const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.forum_outlined,
-                        size: 36,
-                        color: AppColors.textSecondary,
-                      ),
-                      SizedBox(height: 10),
-                      Text(
-                        AppTexts.timelineNoteEmpty,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
+                  SizedBox(height: 10),
+                  Text(
+                    AppTexts.timelineNoteEmpty,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
                   ),
-                ),
-              )
-            : RefreshIndicator(
-                color: AppColors.primary,
-                onRefresh: widget.onRefresh,
-                child: ListView.builder(
-                  reverse: true,
-                  padding: const EdgeInsets.only(bottom: 4),
-                  itemCount: sorted.length,
-                  itemBuilder: (context, index) {
-                    final note = sorted[index];
-                    final previous =
-                        index < sorted.length - 1 ? sorted[index + 1] : null;
-                    final showDateSeparator = previous == null ||
-                        !_sameDay(previous.createdAt, note.createdAt);
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (showDateSeparator)
-                          _DateSeparator(label: _dayLabel(note.createdAt)),
-                        _TimelineNoteBubble(note: note),
-                      ],
-                    );
-                  },
-                ),
-              );
+                ],
+              ),
+            ),
+          )
+        : RefreshIndicator(
+            color: AppColors.primary,
+            onRefresh: widget.onRefresh,
+            child: ListView.builder(
+              reverse: true,
+              padding: const EdgeInsets.only(bottom: 4),
+              itemCount: sorted.length,
+              itemBuilder: (context, index) {
+                final note = sorted[index];
+                final previous = index < sorted.length - 1
+                    ? sorted[index + 1]
+                    : null;
+                final showDateSeparator =
+                    previous == null ||
+                    !_sameDay(previous.createdAt, note.createdAt);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (showDateSeparator)
+                      _DateSeparator(label: _dayLabel(note.createdAt)),
+                    _TimelineNoteBubble(note: note),
+                  ],
+                );
+              },
+            ),
+          );
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -143,9 +144,12 @@ class _AdmissionTimelineNotesSectionState
     );
 
     if (widget.asSheet) {
+      final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
       return Material(
         color: AppColors.background,
         child: SafeArea(
+          // When the keyboard is open the parent sheet already pads for it.
+          bottom: !keyboardOpen,
           child: Column(
             children: [
               Padding(
@@ -233,7 +237,9 @@ class _AdmissionTimelineNotesSectionState
   bool _sameDay(String a, String b) {
     final da = DateTime.tryParse(a);
     final db = DateTime.tryParse(b);
-    if (da == null || db == null) return a.substring(0, 10) == b.substring(0, 10);
+    if (da == null || db == null) {
+      return a.substring(0, 10) == b.substring(0, 10);
+    }
     return da.year == db.year && da.month == db.month && da.day == db.day;
   }
 
@@ -318,10 +324,7 @@ class _TimelineNoteBubble extends StatelessWidget {
             foregroundColor: AppColors.primary,
             child: Text(
               initials,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(width: 10),
@@ -336,7 +339,9 @@ class _TimelineNoteBubble extends StatelessWidget {
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
                 ),
-                border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+                border: Border.all(
+                  color: AppColors.border.withValues(alpha: 0.8),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -451,9 +456,7 @@ class _ComposerBar extends StatelessWidget {
               minLines: 1,
               maxLines: 4,
               textInputAction: TextInputAction.newline,
-              inputFormatters: [
-                LengthLimitingTextInputFormatter(5000),
-              ],
+              inputFormatters: [LengthLimitingTextInputFormatter(5000)],
               decoration: const InputDecoration(
                 hintText: AppTexts.timelineNoteHint,
                 border: InputBorder.none,

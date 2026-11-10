@@ -10,10 +10,10 @@ class HospitalAssignment {
   final String? status;
 
   Map<String, dynamic> toJson() => {
-        'hospital_id': hospitalId,
-        'role_in_hospital': roleInHospital,
-        if (status != null) 'status': status,
-      };
+    'hospital_id': hospitalId,
+    'role_in_hospital': roleInHospital,
+    if (status != null) 'status': status,
+  };
 }
 
 class UserRequest {

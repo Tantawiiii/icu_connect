@@ -32,4 +32,3 @@ class PatientDetailsFailure extends PatientDetailsState {
   @override
   List<Object?> get props => [message];
 }
-

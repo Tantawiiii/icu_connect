@@ -27,7 +27,10 @@ val useReleaseSigning = releaseStoreFile != null && releaseStoreFile.isFile
 
 android {
     namespace = "com.tantawii.icu_connect"
-    compileSdk = flutter.compileSdkVersion
+    // Google Play requires targeting the latest Android release within a year of its
+    // launch, so this is pinned to 36 (Android 16) rather than left on the Flutter
+    // SDK's own default, which lags a cycle behind.
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -42,7 +45,7 @@ android {
     defaultConfig {
         applicationId = "com.tantawii.icu_connect"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -60,8 +63,12 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             signingConfig =
                 if (useReleaseSigning) {
                     signingConfigs.getByName("release")

@@ -2,7 +2,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../core/network/network_exceptions.dart';
 import '../../auth/signup/models/signup_hospital_item.dart';
-import '../models/doctor_profile.dart';
 import '../repository/doctor_profile_repository.dart';
 import 'doctor_profile_state.dart';
 
@@ -14,12 +13,23 @@ class DoctorProfileCubit extends Cubit<DoctorProfileState> {
   Future<void> load() async {
     emit(const DoctorProfileLoading());
     try {
-      final results = await Future.wait([
-        _repository.fetchProfile(),
-        _repository.fetchHospitalCatalog(),
-      ]);
-      final profile = results[0] as DoctorProfile;
-      final catalog = results[1] as List<SignupHospitalItem>;
+      // Profile and hospital catalog are independent. Do not fail the screen
+      // when list-hospitals breaks on the backend (e.g. Hospital::accepted()).
+      final profile = await _repository.fetchProfile();
+      var catalog = <SignupHospitalItem>[];
+      try {
+        catalog = await _repository.fetchHospitalCatalog();
+      } catch (_) {
+        catalog = profile.hospitals
+            .map(
+              (h) => SignupHospitalItem(
+                id: h.id,
+                name: h.name,
+                location: h.location,
+              ),
+            )
+            .toList();
+      }
       emit(
         DoctorProfileReady(
           profile: profile,
@@ -44,11 +54,7 @@ class DoctorProfileCubit extends Cubit<DoctorProfileState> {
   void removeHospitalId(int id) {
     final s = state;
     if (s is! DoctorProfileReady || s.isSaving) return;
-    emit(
-      s.copyWith(
-        hospitalIds: s.hospitalIds.where((i) => i != id).toList(),
-      ),
-    );
+    emit(s.copyWith(hospitalIds: s.hospitalIds.where((i) => i != id).toList()));
   }
 
   Future<void> save({
@@ -82,8 +88,7 @@ class DoctorProfileCubit extends Cubit<DoctorProfileState> {
         phone: phone.trim(),
         hospitalIds: s.hospitalIds,
         password: pwd.isEmpty ? null : pwd,
-        passwordConfirmation:
-            pwd.isEmpty ? null : passwordConfirmation.trim(),
+        passwordConfirmation: pwd.isEmpty ? null : passwordConfirmation.trim(),
       );
       emit(
         DoctorProfileReady(
@@ -93,7 +98,12 @@ class DoctorProfileCubit extends Cubit<DoctorProfileState> {
         ),
       );
     } on NetworkException catch (e) {
-      emit(DoctorProfileSaveFailure(recover: s.copyWith(isSaving: false), message: e.message));
+      emit(
+        DoctorProfileSaveFailure(
+          recover: s.copyWith(isSaving: false),
+          message: e.message,
+        ),
+      );
     } catch (_) {
       emit(
         DoctorProfileSaveFailure(

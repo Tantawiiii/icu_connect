@@ -10,11 +10,11 @@ import '../models/admission_request_model.dart';
 import '../repository/admissions_repository.dart';
 import 'admission_form_state.dart';
 
-class AdmissionFormCubit extends Cubit<AdmissionFormState> {
-  AdmissionFormCubit() : super(const AdmissionFormInitial());
+class AdminAdmissionFormCubit extends Cubit<AdminAdmissionFormState> {
+  AdminAdmissionFormCubit() : super(const AdminAdmissionFormInitial());
 
   /// Non-null after reference data has loaded successfully.
-  AdmissionFormRefsReady? get refs => _refs;
+  AdminAdmissionFormRefsReady? get refs => _refs;
 
   final _admissions = const AdmissionsRepository();
   final _hospitals = const HospitalsRepository();
@@ -23,7 +23,7 @@ class AdmissionFormCubit extends Cubit<AdmissionFormState> {
   final _labsTitles = const LabsTitlesRepository();
 
   Future<void> loadReferenceData() async {
-    emit(const AdmissionFormLoadingRefs());
+    emit(const AdminAdmissionFormLoadingRefs());
     try {
       final hospitalsFuture = _hospitals.fetchHospitals(perPage: 100);
       final usersFuture = _users.fetchUsers(perPage: 100);
@@ -35,7 +35,7 @@ class AdmissionFormCubit extends Cubit<AdmissionFormState> {
       final vitalTitles = await vitalsFuture;
       final labTitles = await labsFuture;
 
-      _refs = AdmissionFormRefsReady(
+      _refs = AdminAdmissionFormRefsReady(
         hospitals: hospitalsRes.data,
         users: usersRes.data,
         vitalTitles: vitalTitles.items,
@@ -43,37 +43,37 @@ class AdmissionFormCubit extends Cubit<AdmissionFormState> {
       );
       emit(_refs!);
     } on NetworkException catch (e) {
-      emit(AdmissionFormFailure(e.message));
+      emit(AdminAdmissionFormFailure(e.message));
     } catch (_) {
-      emit(const AdmissionFormFailure('Failed to load form data'));
+      emit(const AdminAdmissionFormFailure('Failed to load form data'));
     }
   }
 
-  AdmissionFormRefsReady? _refs;
+  AdminAdmissionFormRefsReady? _refs;
 
   Future<void> createAdmission(AdmissionCreateRequest request) async {
     if (_refs == null) return;
-    emit(const AdmissionFormSubmitting());
+    emit(const AdminAdmissionFormSubmitting());
     try {
       await _admissions.createAdmission(request);
-      emit(const AdmissionFormSuccess(AppTexts.admissionCreated));
+      emit(const AdminAdmissionFormSuccess(AppTexts.admissionCreated));
     } on NetworkException catch (e) {
-      emit(AdmissionFormFailure(e.message));
+      emit(AdminAdmissionFormFailure(e.message));
     } catch (_) {
-      emit(const AdmissionFormFailure('An unexpected error occurred'));
+      emit(const AdminAdmissionFormFailure('An unexpected error occurred'));
     }
   }
 
   Future<void> updateAdmission(int id, AdmissionUpdateRequest request) async {
     if (_refs == null) return;
-    emit(const AdmissionFormSubmitting());
+    emit(const AdminAdmissionFormSubmitting());
     try {
       await _admissions.updateAdmission(id, request);
-      emit(const AdmissionFormSuccess(AppTexts.admissionUpdated));
+      emit(const AdminAdmissionFormSuccess(AppTexts.admissionUpdated));
     } on NetworkException catch (e) {
-      emit(AdmissionFormFailure(e.message));
+      emit(AdminAdmissionFormFailure(e.message));
     } catch (_) {
-      emit(const AdmissionFormFailure('An unexpected error occurred'));
+      emit(const AdminAdmissionFormFailure('An unexpected error occurred'));
     }
   }
 }

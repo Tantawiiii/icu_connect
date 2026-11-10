@@ -26,16 +26,14 @@ class CultureAntibioticDraftEntry {
   String sensitivity;
 
   CultureAntibioticModel toModel(int fallbackId) => CultureAntibioticModel(
-        id: id ?? fallbackId,
-        drugId: drugId,
-        drugName: drugName,
-        sensitivity: sensitivity,
-      );
+    id: id ?? fallbackId,
+    drugId: drugId,
+    drugName: drugName,
+    sensitivity: sensitivity,
+  );
 
   Map<String, dynamic> toApiJson({bool includeId = true}) {
-    final m = <String, dynamic>{
-      'sensitivity': sensitivity.toUpperCase(),
-    };
+    final m = <String, dynamic>{'sensitivity': sensitivity.toUpperCase()};
     if (includeId && id != null) m['id'] = id;
     if (drugId != null) {
       m['drug_id'] = drugId;
@@ -47,12 +45,13 @@ class CultureAntibioticDraftEntry {
   }
 }
 
-typedef CultureSaveCallback = void Function({
-  required String title,
-  required String note,
-  required List<CultureAntibioticDraftEntry> antibiotics,
-  required List<int> deletedAntibioticIds,
-});
+typedef CultureSaveCallback =
+    void Function({
+      required String title,
+      required String note,
+      required List<CultureAntibioticDraftEntry> antibiotics,
+      required List<int> deletedAntibioticIds,
+    });
 
 class AdmissionCulturesSection extends StatelessWidget {
   const AdmissionCulturesSection({
@@ -215,8 +214,10 @@ class _CultureCard extends StatelessWidget {
               children: culture.antibiotics.map((a) {
                 final color = _sensitivityColor(a.sensitivity);
                 return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -377,9 +378,7 @@ class _CultureFormState extends State<_CultureForm> {
               DropdownButton<String>(
                 value: _pendingSensitivity,
                 items: AdmissionCulturesSection.sensitivities
-                    .map(
-                      (s) => DropdownMenuItem(value: s, child: Text(s)),
-                    )
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                     .toList(),
                 onChanged: widget.saving
                     ? null
@@ -419,7 +418,10 @@ class _CultureFormState extends State<_CultureForm> {
               final a = _antibiotics[index];
               return Container(
                 margin: const EdgeInsets.only(bottom: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(10),
@@ -431,8 +433,8 @@ class _CultureFormState extends State<_CultureForm> {
                       child: Text(
                         a.drugName.isEmpty
                             ? (a.drugId != null
-                                ? 'Drug #${a.drugId}'
-                                : 'Antibiotic')
+                                  ? 'Drug #${a.drugId}'
+                                  : 'Antibiotic')
                             : a.drugName,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
@@ -450,13 +452,12 @@ class _CultureFormState extends State<_CultureForm> {
                           .toList(),
                       onChanged: widget.saving
                           ? null
-                          : (v) => setState(
-                                () => a.sensitivity = v ?? 'S',
-                              ),
+                          : (v) => setState(() => a.sensitivity = v ?? 'S'),
                     ),
                     IconButton(
-                      onPressed:
-                          widget.saving ? null : () => _removeAntibiotic(index),
+                      onPressed: widget.saving
+                          ? null
+                          : () => _removeAntibiotic(index),
                       icon: const Icon(Icons.close, size: 16),
                       visualDensity: VisualDensity.compact,
                     ),
@@ -472,8 +473,8 @@ class _CultureFormState extends State<_CultureForm> {
               label: widget.saving
                   ? 'Saving...'
                   : widget.isEditing
-                      ? AppTexts.saveChanges
-                      : 'Save Entry',
+                  ? AppTexts.saveChanges
+                  : 'Save Entry',
               onPressed: widget.saving ? null : _submit,
             ),
           ),

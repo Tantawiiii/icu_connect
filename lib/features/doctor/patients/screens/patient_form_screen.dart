@@ -9,8 +9,8 @@ import 'package:icu_connect/features/doctor/hospital_details/repository/hospital
 import 'package:icu_connect/features/superAdmin/patients/models/patient_admission_models.dart';
 
 /// Create (`POST /patients`) or update (`PUT /patients/{id}`).
-class PatientFormScreen extends StatefulWidget {
-  const PatientFormScreen({super.key, this.existing});
+class DoctorPatientFormScreen extends StatefulWidget {
+  const DoctorPatientFormScreen({super.key, this.existing});
 
   /// When non-null, screen performs PUT for this patient.
   final AdmissionPatientModel? existing;
@@ -18,10 +18,11 @@ class PatientFormScreen extends StatefulWidget {
   bool get isEdit => existing != null;
 
   @override
-  State<PatientFormScreen> createState() => _PatientFormScreenState();
+  State<DoctorPatientFormScreen> createState() =>
+      _DoctorPatientFormScreenState();
 }
 
-class _PatientFormScreenState extends State<PatientFormScreen> {
+class _DoctorPatientFormScreenState extends State<DoctorPatientFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _nationalIdCtrl = TextEditingController();
@@ -88,7 +89,9 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
   String? _validateName(String? v) {
     final t = v?.trim() ?? '';
     if (t.isEmpty) return AppTexts.nameRequired;
-    if (t.length > _maxNameLen) return 'Name must be at most $_maxNameLen characters';
+    if (t.length > _maxNameLen) {
+      return 'Name must be at most $_maxNameLen characters';
+    }
     return null;
   }
 
@@ -123,9 +126,9 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     final age = int.tryParse(_ageCtrl.text.trim());
     if (age == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid age')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter a valid age')));
       return;
     }
 
@@ -194,9 +197,7 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
               controller: _nameCtrl,
               hintText: AppTexts.name,
               validator: _validateName,
-              inputFormatters: [
-                LengthLimitingTextInputFormatter(_maxNameLen),
-              ],
+              inputFormatters: [LengthLimitingTextInputFormatter(_maxNameLen)],
             ),
             const SizedBox(height: 12),
             AppTextField(
@@ -230,9 +231,7 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
                   .map(
                     (g) => DropdownMenuItem(
                       value: g,
-                      child: Text(
-                        g[0].toUpperCase() + g.substring(1),
-                      ),
+                      child: Text(g[0].toUpperCase() + g.substring(1)),
                     ),
                   )
                   .toList(),
@@ -263,15 +262,9 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
               hint: const Text('Select blood group'),
               isExpanded: true,
               items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('—'),
-                ),
+                const DropdownMenuItem<String?>(value: null, child: Text('—')),
                 ..._bloodGroups.map(
-                  (b) => DropdownMenuItem<String?>(
-                    value: b,
-                    child: Text(b),
-                  ),
+                  (b) => DropdownMenuItem<String?>(value: b, child: Text(b)),
                 ),
               ],
               onChanged: _submitting
@@ -288,7 +281,9 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
             AppButton(
               label: _submitting
                   ? '…'
-                  : (widget.isEdit ? 'Update patient' : AppTexts.addPatientAdmin),
+                  : (widget.isEdit
+                        ? 'Update patient'
+                        : AppTexts.addPatientAdmin),
               onPressed: _submitting ? null : _submit,
             ),
           ],

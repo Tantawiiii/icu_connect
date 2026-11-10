@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:icu_connect/core/constants/app_colors.dart';
 import 'package:icu_connect/core/constants/app_texts.dart';
+import 'package:icu_connect/core/widgets/list_error_view.dart';
+import 'package:icu_connect/core/widgets/status_badge.dart';
 
 import '../../../superAdmin/hospitals/models/hospital_registration_request_model.dart';
 import '../cubit/doctor_hospital_requests_cubit.dart';
@@ -45,46 +47,47 @@ class _DoctorHospitalRequestsView extends StatelessWidget {
           ),
         ],
       ),
-      body: BlocBuilder<DoctorHospitalRequestsCubit, DoctorHospitalRequestsState>(
-        builder: (context, state) {
-          if (state is DoctorHospitalRequestsLoading ||
-              state is DoctorHospitalRequestsInitial) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            );
-          }
-          if (state is DoctorHospitalRequestsFailure) {
-            return _ErrorView(
-              message: state.message,
-              onRetry: () =>
-                  context.read<DoctorHospitalRequestsCubit>().refresh(),
-            );
-          }
-          if (state is DoctorHospitalRequestsLoaded) {
-            if (state.requests.isEmpty) {
-              return const Center(
-                child: Text(
-                  AppTexts.noHospitalRequests,
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-              );
-            }
-            return RefreshIndicator(
-              color: AppColors.primary,
-              onRefresh: () =>
-                  context.read<DoctorHospitalRequestsCubit>().refresh(),
-              child: ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: state.requests.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (_, index) =>
-                    _RequestCard(request: state.requests[index]),
-              ),
-            );
-          }
-          return const SizedBox.shrink();
-        },
-      ),
+      body:
+          BlocBuilder<DoctorHospitalRequestsCubit, DoctorHospitalRequestsState>(
+            builder: (context, state) {
+              if (state is DoctorHospitalRequestsLoading ||
+                  state is DoctorHospitalRequestsInitial) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                );
+              }
+              if (state is DoctorHospitalRequestsFailure) {
+                return ListErrorView(
+                  message: state.message,
+                  onRetry: () =>
+                      context.read<DoctorHospitalRequestsCubit>().refresh(),
+                );
+              }
+              if (state is DoctorHospitalRequestsLoaded) {
+                if (state.requests.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      AppTexts.noHospitalRequests,
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () =>
+                      context.read<DoctorHospitalRequestsCubit>().refresh(),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: state.requests.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (_, index) =>
+                        _RequestCard(request: state.requests[index]),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
     );
   }
 }
@@ -163,7 +166,7 @@ class _RequestCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                _StatusBadge(label: _statusLabel, color: _statusColor),
+                StatusBadge(label: _statusLabel, color: _statusColor),
               ],
             ),
             const SizedBox(height: 12),
@@ -212,33 +215,6 @@ class _RequestCard extends StatelessWidget {
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withAlpha(77)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
 class _BedStat extends StatelessWidget {
   const _BedStat({
     required this.label,
@@ -274,40 +250,6 @@ class _BedStat extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: AppColors.error, size: 48),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 20),
-            TextButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text(AppTexts.retry),
-            ),
-          ],
-        ),
       ),
     );
   }

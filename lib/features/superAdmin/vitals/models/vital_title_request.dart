@@ -14,10 +14,7 @@ class VitalTitleRequest {
   final double? normalRangeMax;
 
   Map<String, dynamic> toJson() {
-    final body = <String, dynamic>{
-      'title': title,
-      'value_type': valueType,
-    };
+    final body = <String, dynamic>{'title': title, 'value_type': valueType};
     if (unit != null && unit!.isNotEmpty) body['unit'] = unit;
     if (normalRangeMin != null) body['normal_range_min'] = normalRangeMin;
     if (normalRangeMax != null) body['normal_range_max'] = normalRangeMax;

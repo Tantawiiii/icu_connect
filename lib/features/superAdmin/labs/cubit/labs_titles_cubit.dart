@@ -44,15 +44,14 @@ class LabsTitlesCubit extends Cubit<LabsTitlesState> {
     emit(LabsTitlesActionLoading(current.items));
     try {
       final updated = await _repo.updateLabTitle(id, request);
-      final items = current.items
-          .map((e) => e.id == id ? updated : e)
-          .toList();
+      final items = current.items.map((e) => e.id == id ? updated : e).toList();
       emit(LabsTitlesActionSuccess(items, AppTexts.labTitleUpdated));
     } on NetworkException catch (e) {
       emit(LabsTitlesActionFailure(current.items, e.message));
     } catch (_) {
-      emit(LabsTitlesActionFailure(
-          current.items, 'An unexpected error occurred'));
+      emit(
+        LabsTitlesActionFailure(current.items, 'An unexpected error occurred'),
+      );
     }
   }
 
@@ -68,9 +67,9 @@ class LabsTitlesCubit extends Cubit<LabsTitlesState> {
     } on NetworkException catch (e) {
       emit(LabsTitlesActionFailure(current.items, e.message));
     } catch (_) {
-      emit(LabsTitlesActionFailure(
-          current.items, 'An unexpected error occurred'));
+      emit(
+        LabsTitlesActionFailure(current.items, 'An unexpected error occurred'),
+      );
     }
   }
 }
-

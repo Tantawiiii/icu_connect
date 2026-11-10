@@ -56,6 +56,14 @@ class HospitalDoctor extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, email, phone, role, isActive, roleInHospital, status];
+  List<Object?> get props => [
+    id,
+    name,
+    email,
+    phone,
+    role,
+    isActive,
+    roleInHospital,
+    status,
+  ];
 }
-

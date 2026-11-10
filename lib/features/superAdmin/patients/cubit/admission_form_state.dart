@@ -3,20 +3,20 @@ import '../../labs/models/lab_title_model.dart';
 import '../../users/models/user_model.dart';
 import '../../vitals/models/vital_title_model.dart';
 
-abstract class AdmissionFormState {
-  const AdmissionFormState();
+abstract class AdminAdmissionFormState {
+  const AdminAdmissionFormState();
 }
 
-class AdmissionFormInitial extends AdmissionFormState {
-  const AdmissionFormInitial();
+class AdminAdmissionFormInitial extends AdminAdmissionFormState {
+  const AdminAdmissionFormInitial();
 }
 
-class AdmissionFormLoadingRefs extends AdmissionFormState {
-  const AdmissionFormLoadingRefs();
+class AdminAdmissionFormLoadingRefs extends AdminAdmissionFormState {
+  const AdminAdmissionFormLoadingRefs();
 }
 
-class AdmissionFormRefsReady extends AdmissionFormState {
-  const AdmissionFormRefsReady({
+class AdminAdmissionFormRefsReady extends AdminAdmissionFormState {
+  const AdminAdmissionFormRefsReady({
     required this.hospitals,
     required this.users,
     required this.vitalTitles,
@@ -29,19 +29,19 @@ class AdmissionFormRefsReady extends AdmissionFormState {
   final List<LabTitleModel> labTitles;
 }
 
-class AdmissionFormSubmitting extends AdmissionFormState {
-  const AdmissionFormSubmitting();
+class AdminAdmissionFormSubmitting extends AdminAdmissionFormState {
+  const AdminAdmissionFormSubmitting();
 }
 
-class AdmissionFormSuccess extends AdmissionFormState {
-  const AdmissionFormSuccess(this.message);
+class AdminAdmissionFormSuccess extends AdminAdmissionFormState {
+  const AdminAdmissionFormSuccess(this.message);
 
   final String message;
 }
 
 /// Initial load of hospitals/users/titles failed.
-class AdmissionFormFailure extends AdmissionFormState {
-  const AdmissionFormFailure(this.message);
+class AdminAdmissionFormFailure extends AdminAdmissionFormState {
+  const AdminAdmissionFormFailure(this.message);
 
   final String message;
 }

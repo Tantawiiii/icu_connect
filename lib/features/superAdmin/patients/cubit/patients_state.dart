@@ -52,4 +52,3 @@ class PatientsActionFailure extends PatientsLoaded {
   @override
   List<Object?> get props => [patients, message];
 }
-

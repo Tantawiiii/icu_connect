@@ -24,7 +24,8 @@ class AdminsListResponse extends Equatable {
             .map((e) => AdminModel.fromJson(e as Map<String, dynamic>))
             .toList(),
         pagination: PaginationModel.fromJson(
-            json['pagination'] as Map<String, dynamic>),
+          json['pagination'] as Map<String, dynamic>,
+        ),
       );
 
   @override

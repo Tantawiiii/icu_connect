@@ -20,11 +20,11 @@ enum AiConfidence {
   }
 
   String get label => switch (this) {
-        AiConfidence.low => 'Low',
-        AiConfidence.medium => 'Medium',
-        AiConfidence.high => 'High',
-        AiConfidence.unknown => '—',
-      };
+    AiConfidence.low => 'Low',
+    AiConfidence.medium => 'Medium',
+    AiConfidence.high => 'High',
+    AiConfidence.unknown => '—',
+  };
 }
 
 class AiRecommendation extends Equatable {
@@ -35,6 +35,8 @@ class AiRecommendation extends Equatable {
     required this.missingData,
     required this.safetyFlags,
     required this.confidence,
+    this.report = '',
+    this.criticalAlert = '',
   });
 
   final String summary;
@@ -43,6 +45,13 @@ class AiRecommendation extends Equatable {
   final List<String> missingData;
   final List<String> safetyFlags;
   final AiConfidence confidence;
+
+  /// Full free-text clinical report (problems, differential diagnosis,
+  /// diagnostic plan, treatment plan, etc.).
+  final String report;
+
+  /// Single most urgent, time-critical warning surfaced by the AI.
+  final String criticalAlert;
 
   factory AiRecommendation.fromJson(Map<String, dynamic> json) {
     List<String> list(dynamic raw) {
@@ -60,18 +69,22 @@ class AiRecommendation extends Equatable {
       missingData: list(json['missing_data']),
       safetyFlags: list(json['safety_flags']),
       confidence: AiConfidence.fromApi(json['confidence']?.toString()),
+      report: json['report']?.toString().trim() ?? '',
+      criticalAlert: json['critical_alert']?.toString().trim() ?? '',
     );
   }
 
   @override
   List<Object?> get props => [
-        summary,
-        priorityConcerns,
-        recommendations,
-        missingData,
-        safetyFlags,
-        confidence,
-      ];
+    summary,
+    priorityConcerns,
+    recommendations,
+    missingData,
+    safetyFlags,
+    confidence,
+    report,
+    criticalAlert,
+  ];
 }
 
 class AiRecommendationRawMeta extends Equatable {
@@ -88,11 +101,13 @@ class AiRecommendationRawMeta extends Equatable {
   factory AiRecommendationRawMeta.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const AiRecommendationRawMeta();
     return AiRecommendationRawMeta(
-      finishReason: json['finishReason']?.toString() ??
-          json['finish_reason']?.toString(),
-      promptTokens: (json['promptTokens'] as num?)?.toInt() ??
+      finishReason:
+          json['finishReason']?.toString() ?? json['finish_reason']?.toString(),
+      promptTokens:
+          (json['promptTokens'] as num?)?.toInt() ??
           (json['prompt_tokens'] as num?)?.toInt(),
-      completionTokens: (json['completionTokens'] as num?)?.toInt() ??
+      completionTokens:
+          (json['completionTokens'] as num?)?.toInt() ??
           (json['completion_tokens'] as num?)?.toInt(),
     );
   }

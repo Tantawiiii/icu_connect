@@ -34,4 +34,3 @@ class PatientFormCubit extends Cubit<PatientFormState> {
     }
   }
 }
-

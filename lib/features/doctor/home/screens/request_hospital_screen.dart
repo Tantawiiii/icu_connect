@@ -202,11 +202,9 @@ class _RequestHospitalScreenState extends State<RequestHospitalScreen> {
 }
 
 class _GroupDraft {
-  _GroupDraft({
-    String name = '',
-    String totalBeds = '',
-  })  : nameCtrl = TextEditingController(text: name),
-        totalBedsCtrl = TextEditingController(text: totalBeds);
+  _GroupDraft({String name = '', String totalBeds = ''})
+    : nameCtrl = TextEditingController(text: name),
+      totalBedsCtrl = TextEditingController(text: totalBeds);
 
   final TextEditingController nameCtrl;
   final TextEditingController totalBedsCtrl;

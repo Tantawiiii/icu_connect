@@ -57,8 +57,14 @@ class ProfileHospital extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [id, name, location, totalBeds, availableBeds, pivot];
+  List<Object?> get props => [
+    id,
+    name,
+    location,
+    totalBeds,
+    availableBeds,
+    pivot,
+  ];
 }
 
 class DoctorProfile extends Equatable {
@@ -113,17 +119,17 @@ class DoctorProfile extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        email,
-        phone,
-        role,
-        isActive,
-        lastLoginAt,
-        emailVerifiedAt,
-        createdAt,
-        updatedAt,
-        deletedAt,
-        hospitals,
-      ];
+    id,
+    name,
+    email,
+    phone,
+    role,
+    isActive,
+    lastLoginAt,
+    emailVerifiedAt,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    hospitals,
+  ];
 }

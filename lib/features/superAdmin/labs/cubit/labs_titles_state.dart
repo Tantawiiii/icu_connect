@@ -52,4 +52,3 @@ class LabsTitlesActionFailure extends LabsTitlesLoaded {
   @override
   List<Object?> get props => [items, message];
 }
-

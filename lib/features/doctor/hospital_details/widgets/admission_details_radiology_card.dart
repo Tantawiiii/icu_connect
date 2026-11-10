@@ -45,7 +45,10 @@ class AdmissionDetailsRadiologyCard extends StatelessWidget {
 
     return Container(
       width: compact ? _compactWidth : null,
-      margin: EdgeInsets.only(bottom: compact ? 0 : 10, right: compact ? 12 : 0),
+      margin: EdgeInsets.only(
+        bottom: compact ? 0 : 10,
+        right: compact ? 12 : 0,
+      ),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -94,7 +97,10 @@ class AdmissionDetailsRadiologyCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    AdmissionDetailsItemActions(onEdit: onEdit, onDelete: onDelete),
+                    AdmissionDetailsItemActions(
+                      onEdit: onEdit,
+                      onDelete: onDelete,
+                    ),
                   ],
                 ),
                 if (image.report.isNotEmpty) ...[

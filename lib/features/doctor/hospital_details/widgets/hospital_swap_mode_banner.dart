@@ -33,8 +33,8 @@ class HospitalSwapModeBanner extends StatelessWidget {
     final stepText = first == null
         ? AppTexts.swapBedsSelectFirst
         : second == null
-            ? AppTexts.swapBedsSelectSecond
-            : AppTexts.swapBedsConfirmTitle;
+        ? AppTexts.swapBedsSelectSecond
+        : AppTexts.swapBedsConfirmTitle;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),

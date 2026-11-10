@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,10 +14,12 @@ import '../cubit/doctor_hospitals_cubit.dart';
 import '../cubit/doctor_hospitals_state.dart';
 import '../models/doctor_hospital.dart';
 
-
 const double _hospitalCardMinHeight = 110;
 
-List<DoctorHospital> _filterHospitals(List<DoctorHospital> hospitals, String query) {
+List<DoctorHospital> _filterHospitals(
+  List<DoctorHospital> hospitals,
+  String query,
+) {
   final q = query.trim().toLowerCase();
   if (q.isEmpty) return hospitals;
   return hospitals.where((h) {
@@ -88,15 +92,26 @@ class DoctorHospitalsSection extends StatefulWidget {
 
 class _DoctorHospitalsSectionState extends State<DoctorHospitalsSection> {
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() => setState(() {}));
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _query = _searchController.text);
+    });
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
@@ -113,9 +128,9 @@ class _DoctorHospitalsSectionState extends State<DoctorHospitalsSection> {
             child: Text(
               AppTexts.yourHospitals,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           AppTextField(
@@ -142,18 +157,16 @@ class _DoctorHospitalsSectionState extends State<DoctorHospitalsSection> {
               builder: (context, state) {
                 return switch (state) {
                   DoctorHospitalsInitial() ||
-                  DoctorHospitalsLoading() =>
-                    const _HospitalsShimmerList(),
-                  DoctorHospitalsLoaded(:final hospitals) =>
-                    _HospitalsListBody(
-                      hospitals: hospitals,
-                      query: _searchController.text,
-                    ),
+                  DoctorHospitalsLoading() => const _HospitalsShimmerList(),
+                  DoctorHospitalsLoaded(:final hospitals) => _HospitalsListBody(
+                    hospitals: hospitals,
+                    query: _query,
+                  ),
                   DoctorHospitalsFailure(:final message) => _HospitalsError(
-                      message: message,
-                      onRetry: () =>
-                          context.read<DoctorHospitalsCubit>().refresh(),
-                    ),
+                    message: message,
+                    onRetry: () =>
+                        context.read<DoctorHospitalsCubit>().refresh(),
+                  ),
                 };
               },
             ),
@@ -227,10 +240,7 @@ class _HospitalsError extends StatelessWidget {
 }
 
 class _HospitalsListBody extends StatelessWidget {
-  const _HospitalsListBody({
-    required this.hospitals,
-    required this.query,
-  });
+  const _HospitalsListBody({required this.hospitals, required this.query});
 
   final List<DoctorHospital> hospitals;
   final String query;
@@ -280,7 +290,11 @@ class _HospitalsListBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 4),
       children: [
-        for (var sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) ...[
+        for (
+          var sectionIndex = 0;
+          sectionIndex < sections.length;
+          sectionIndex++
+        ) ...[
           if (sectionIndex > 0) const SizedBox(height: 8),
           Padding(
             padding: EdgeInsets.only(
@@ -500,11 +514,16 @@ class _LockOverlay extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: statusColor.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: statusColor.withValues(alpha: 0.35)),
+                        border: Border.all(
+                          color: statusColor.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: Text(
                         statusLabel,

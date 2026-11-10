@@ -20,30 +20,36 @@ class HospitalAdmissionsRepository extends BaseApiService {
     required int hospitalId,
     required String status,
   }) async {
-    try {
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.admissions,
-        queryParameters: {'hospital_id': hospitalId, 'status': status},
-        cancelTag: 'hospital_admissions_list_${hospitalId}_$status',
-      );
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.admissions,
+      queryParameters: {'hospital_id': hospitalId, 'status': status},
+      cancelTag: 'hospital_admissions_list_${hospitalId}_$status',
+    );
 
-      final raw = data['data'] as List<dynamic>? ?? const [];
-      return raw
-          .map((e) => PatientAdmissionModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } on NetworkException {
-      rethrow;
-    }
+    final raw = data['data'] as List<dynamic>? ?? const [];
+    return raw
+        .map((e) => PatientAdmissionModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  /// Fetches improved, deceased, and DAMA admissions for the hospital.
   Future<List<PatientAdmissionModel>> listDischargedOutcomeAdmissions({
     required int hospitalId,
   }) async {
+    Future<List<PatientAdmissionModel>> safeList(String status) async {
+      try {
+        return await listAdmissions(
+          hospitalId: hospitalId,
+          status: status,
+        ).timeout(const Duration(seconds: 25));
+      } catch (_) {
+        return const <PatientAdmissionModel>[];
+      }
+    }
+
     final batches = await Future.wait([
-      listAdmissions(hospitalId: hospitalId, status: 'discharged'),
-      listAdmissions(hospitalId: hospitalId, status: 'deceased'),
-      listAdmissions(hospitalId: hospitalId, status: 'leaves_ama'),
+      safeList('discharged'),
+      safeList('deceased'),
+      safeList('leaves_ama'),
     ]);
 
     final byId = <int, PatientAdmissionModel>{};
@@ -56,76 +62,62 @@ class HospitalAdmissionsRepository extends BaseApiService {
   }
 
   Future<PatientAdmissionModel> getAdmission(int admissionId) async {
-    try {
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.admissionById(admissionId),
-        cancelTag: 'hospital_admissions_details_$admissionId',
-      );
-      return PatientAdmissionModel.fromJson(
-        data['data'] as Map<String, dynamic>,
-      );
-    } on NetworkException {
-      rethrow;
-    }
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.admissionById(admissionId),
+      cancelTag: 'hospital_admissions_details_$admissionId',
+    );
+    return PatientAdmissionModel.fromJson(data['data'] as Map<String, dynamic>);
   }
 
   Future<List<AdmissionActivity>> fetchAdmissionActivity(
     int admissionId, {
     AdmissionActivitySubjectType? subjectType,
   }) async {
-    try {
-      final queryParameters = <String, dynamic>{};
-      if (subjectType != null) {
-        queryParameters['subject_type'] = subjectType.apiValue;
-      }
-
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.admissionActivity(admissionId),
-        queryParameters:
-            queryParameters.isEmpty ? null : queryParameters,
-        cancelTag:
-            'hospital_admissions_activity_${admissionId}_${subjectType?.apiValue ?? 'all'}',
-      );
-
-      final raw = data['data'];
-      final List<dynamic> list;
-      if (raw is List) {
-        list = raw;
-      } else if (raw is Map<String, dynamic>) {
-        list = raw['activities'] as List<dynamic>? ??
-            raw['activity'] as List<dynamic>? ??
-            const [];
-      } else {
-        list = const [];
-      }
-
-      return list
-          .whereType<Map<String, dynamic>>()
-          .map(AdmissionActivity.fromJson)
-          .toList();
-    } on NetworkException {
-      rethrow;
+    final queryParameters = <String, dynamic>{};
+    if (subjectType != null) {
+      queryParameters['subject_type'] = subjectType.apiValue;
     }
+
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.admissionActivity(admissionId),
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+      cancelTag:
+          'hospital_admissions_activity_${admissionId}_${subjectType?.apiValue ?? 'all'}',
+    );
+
+    final raw = data['data'];
+    final List<dynamic> list;
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map<String, dynamic>) {
+      list =
+          raw['activities'] as List<dynamic>? ??
+          raw['activity'] as List<dynamic>? ??
+          const [];
+    } else {
+      list = const [];
+    }
+
+    return list
+        .whereType<Map<String, dynamic>>()
+        .map(AdmissionActivity.fromJson)
+        .toList();
   }
 
   /// GET /admissions/{id}/notes
   Future<List<AdmissionTimelineNote>> fetchAdmissionNotes(
     int admissionId,
   ) async {
-    try {
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.admissionNotes(admissionId),
-        cancelTag: 'hospital_admission_notes_$admissionId',
-      );
-      final raw = data['data'];
-      if (raw is! List) return const [];
-      return raw
-          .whereType<Map<String, dynamic>>()
-          .map(AdmissionTimelineNote.fromJson)
-          .toList();
-    } on NetworkException {
-      rethrow;
-    }
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.admissionNotes(admissionId),
+      cancelTag: 'hospital_admission_notes_$admissionId',
+    );
+    final raw = data['data'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(AdmissionTimelineNote.fromJson)
+        .toList();
   }
 
   /// POST /admissions/{id}/notes
@@ -133,85 +125,59 @@ class HospitalAdmissionsRepository extends BaseApiService {
     int admissionId, {
     required String content,
   }) async {
-    try {
-      final data = await post<Map<String, dynamic>>(
-        ApiConstants.admissionNotes(admissionId),
-        data: {'content': content.trim()},
-        cancelTag: 'hospital_admission_notes_create_$admissionId',
-      );
-      return AdmissionTimelineNote.fromJson(
-        data['data'] as Map<String, dynamic>,
-      );
-    } on NetworkException {
-      rethrow;
-    }
+    final data = await post<Map<String, dynamic>>(
+      ApiConstants.admissionNotes(admissionId),
+      data: {'content': content.trim()},
+      cancelTag: 'hospital_admission_notes_create_$admissionId',
+    );
+    return AdmissionTimelineNote.fromJson(data['data'] as Map<String, dynamic>);
   }
 
   Future<void> createAdmission(FormData formData) async {
-    try {
-      await upload<Map<String, dynamic>>(
-        ApiConstants.admissions,
-        formData,
-        cancelTag: 'hospital_admissions_create',
-      );
-    } on NetworkException {
-      rethrow;
-    }
+    await upload<Map<String, dynamic>>(
+      ApiConstants.admissions,
+      formData,
+      cancelTag: 'hospital_admissions_create',
+    );
   }
 
   Future<void> updateAdmission(int id, FormData formData) async {
-    try {
-      await upload<Map<String, dynamic>>(
-        ApiConstants.admissionById(id),
-        formData,
-        cancelTag: 'hospital_admissions_update_$id',
-      );
-    } on NetworkException {
-      rethrow;
-    }
+    await upload<Map<String, dynamic>>(
+      ApiConstants.admissionById(id),
+      formData,
+      cancelTag: 'hospital_admissions_update_$id',
+    );
   }
 
   /// Updates admission fields via raw JSON body (no FormData required).
   Future<void> updateAdmissionRaw(int id, Map<String, dynamic> body) async {
-    try {
-      await post<Map<String, dynamic>>(
-        ApiConstants.admissionById(id),
-        data: body,
-        cancelTag: 'hospital_admissions_update_raw_$id',
-      );
-    } on NetworkException {
-      rethrow;
-    }
+    await post<Map<String, dynamic>>(
+      ApiConstants.admissionById(id),
+      data: body,
+      cancelTag: 'hospital_admissions_update_raw_$id',
+    );
   }
 
   Future<void> deleteAdmission(int id) async {
-    try {
-      await delete<Map<String, dynamic>>(
-        ApiConstants.admissionById(id),
-        cancelTag: 'hospital_admissions_delete_$id',
-      );
-    } on NetworkException {
-      rethrow;
-    }
+    await delete<Map<String, dynamic>>(
+      ApiConstants.admissionById(id),
+      cancelTag: 'hospital_admissions_delete_$id',
+    );
   }
 
   Future<void> swapBeds({
     required int firstAdmissionId,
     required int secondAdmissionId,
   }) async {
-    try {
-      await post<Map<String, dynamic>>(
-        ApiConstants.admissionsSwapBeds,
-        data: {
-          'first_admission_id': firstAdmissionId,
-          'second_admission_id': secondAdmissionId,
-        },
-        cancelTag:
-            'hospital_admissions_swap_${firstAdmissionId}_$secondAdmissionId',
-      );
-    } on NetworkException {
-      rethrow;
-    }
+    await post<Map<String, dynamic>>(
+      ApiConstants.admissionsSwapBeds,
+      data: {
+        'first_admission_id': firstAdmissionId,
+        'second_admission_id': secondAdmissionId,
+      },
+      cancelTag:
+          'hospital_admissions_swap_${firstAdmissionId}_$secondAdmissionId',
+    );
   }
 
   Future<List<AdmissionPatientModel>> listPatients({
@@ -234,53 +200,45 @@ class HospitalAdmissionsRepository extends BaseApiService {
     bool archived = false,
     String? nationalId,
   }) async {
-    try {
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'per_page': perPage,
-        'archived': archived,
-      };
-      if (nationalId != null && nationalId.isNotEmpty) {
-        queryParams['national_id'] = nationalId;
-      }
-
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.patients,
-        queryParameters: queryParams,
-        cancelTag: 'hospital_patients_list_$page',
-      );
-
-      final raw = data['data'] as List<dynamic>? ?? const [];
-      final patients = raw
-          .map((e) => AdmissionPatientModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-
-      final pagination = data['pagination'] as Map<String, dynamic>?;
-      final current = (pagination?['current_page'] as num?)?.toInt() ?? page;
-      final last = (pagination?['last_page'] as num?)?.toInt() ?? 1;
-      final total = (pagination?['total'] as num?)?.toInt() ?? patients.length;
-
-      return HospitalPatientsPageResult(
-        patients: patients,
-        currentPage: current,
-        lastPage: last,
-        total: total,
-      );
-    } on NetworkException {
-      rethrow;
+    final queryParams = <String, dynamic>{
+      'page': page,
+      'per_page': perPage,
+      'archived': archived,
+    };
+    if (nationalId != null && nationalId.isNotEmpty) {
+      queryParams['national_id'] = nationalId;
     }
+
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.patients,
+      queryParameters: queryParams,
+      cancelTag: 'hospital_patients_list_$page',
+    );
+
+    final raw = data['data'] as List<dynamic>? ?? const [];
+    final patients = raw
+        .map((e) => AdmissionPatientModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    final pagination = data['pagination'] as Map<String, dynamic>?;
+    final current = (pagination?['current_page'] as num?)?.toInt() ?? page;
+    final last = (pagination?['last_page'] as num?)?.toInt() ?? 1;
+    final total = (pagination?['total'] as num?)?.toInt() ?? patients.length;
+
+    return HospitalPatientsPageResult(
+      patients: patients,
+      currentPage: current,
+      lastPage: last,
+      total: total,
+    );
   }
 
   Future<PatientModel> getPatient(int id) async {
-    try {
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.patientById('$id'),
-        cancelTag: 'hospital_patient_get_$id',
-      );
-      return PatientModel.fromJson(data['data'] as Map<String, dynamic>);
-    } on NetworkException {
-      rethrow;
-    }
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.patientById('$id'),
+      cancelTag: 'hospital_patient_get_$id',
+    );
+    return PatientModel.fromJson(data['data'] as Map<String, dynamic>);
   }
 
   Future<PatientModel> createPatient({
@@ -292,24 +250,20 @@ class HospitalAdmissionsRepository extends BaseApiService {
     required String bloodGroup,
     required String notes,
   }) async {
-    try {
-      final data = await post<Map<String, dynamic>>(
-        ApiConstants.patients,
-        data: {
-          'name': name,
-          'national_id': nationalId,
-          'age': age,
-          'gender': gender,
-          'phone': phone,
-          'blood_group': bloodGroup,
-          'notes': notes,
-        },
-        cancelTag: 'hospital_patient_create',
-      );
-      return PatientModel.fromJson(data['data'] as Map<String, dynamic>);
-    } on NetworkException {
-      rethrow;
-    }
+    final data = await post<Map<String, dynamic>>(
+      ApiConstants.patients,
+      data: {
+        'name': name,
+        'national_id': nationalId,
+        'age': age,
+        'gender': gender,
+        'phone': phone,
+        'blood_group': bloodGroup,
+        'notes': notes,
+      },
+      cancelTag: 'hospital_patient_create',
+    );
+    return PatientModel.fromJson(data['data'] as Map<String, dynamic>);
   }
 
   Future<PatientModel> updatePatient({
@@ -322,65 +276,53 @@ class HospitalAdmissionsRepository extends BaseApiService {
     required String bloodGroup,
     required String notes,
   }) async {
-    try {
-      final data = await put<Map<String, dynamic>>(
-        ApiConstants.patientById('$id'),
-        data: {
-          'name': name,
-          'national_id': nationalId,
-          'age': age,
-          'gender': gender,
-          'phone': phone,
-          'blood_group': bloodGroup,
-          'notes': notes,
-        },
-        cancelTag: 'hospital_patient_update_$id',
-      );
-      return PatientModel.fromJson(data['data'] as Map<String, dynamic>);
-    } on NetworkException {
-      rethrow;
-    }
+    final data = await put<Map<String, dynamic>>(
+      ApiConstants.patientById('$id'),
+      data: {
+        'name': name,
+        'national_id': nationalId,
+        'age': age,
+        'gender': gender,
+        'phone': phone,
+        'blood_group': bloodGroup,
+        'notes': notes,
+      },
+      cancelTag: 'hospital_patient_update_$id',
+    );
+    return PatientModel.fromJson(data['data'] as Map<String, dynamic>);
   }
 
   Future<void> deletePatient(int id) async {
-    try {
-      await delete<dynamic>(
-        ApiConstants.patientById('$id'),
-        cancelTag: 'hospital_patient_delete_$id',
-      );
-    } on NetworkException {
-      rethrow;
-    }
+    await delete<dynamic>(
+      ApiConstants.patientById('$id'),
+      cancelTag: 'hospital_patient_delete_$id',
+    );
   }
 
   Future<List<MeasurementTitleModel>> listPatientVitalsTitles(
     int patientId,
   ) async {
-    try {
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.patientVitalsTitles(patientId),
-        cancelTag: 'hospital_patient_vitals_titles_$patientId',
-      );
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.patientVitalsTitles(patientId),
+      cancelTag: 'hospital_patient_vitals_titles_$patientId',
+    );
 
-      final raw = data['data'];
-      final List<dynamic> list;
-      if (raw is List) {
-        list = raw;
-      } else if (raw is Map<String, dynamic>) {
-        list = raw['data'] as List<dynamic>? ?? const [];
-      } else {
-        list = const [];
-      }
-
-      return MeasurementTitleOrder.sortVitals(
-        list
-            .whereType<Map<String, dynamic>>()
-            .map(MeasurementTitleModel.fromJson)
-            .toList(),
-      );
-    } on NetworkException {
-      rethrow;
+    final raw = data['data'];
+    final List<dynamic> list;
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map<String, dynamic>) {
+      list = raw['data'] as List<dynamic>? ?? const [];
+    } else {
+      list = const [];
     }
+
+    return MeasurementTitleOrder.sortVitals(
+      list
+          .whereType<Map<String, dynamic>>()
+          .map(MeasurementTitleModel.fromJson)
+          .toList(),
+    );
   }
 
   Future<MeasurementTitleModel> createPatientVitalTitle({
@@ -391,57 +333,51 @@ class HospitalAdmissionsRepository extends BaseApiService {
     double? normalRangeMin,
     double? normalRangeMax,
   }) async {
-    try {
-      final body = MeasurementTitleFormValues(
-        title: title,
-        unit: unit,
-        valueType: valueType,
-        normalRangeMin: normalRangeMin,
-        normalRangeMax: normalRangeMax,
-      ).toVitalJson();
+    final body = MeasurementTitleFormValues(
+      title: title,
+      unit: unit,
+      valueType: valueType,
+      normalRangeMin: normalRangeMin,
+      normalRangeMax: normalRangeMax,
+    ).toVitalJson();
 
-      final data = await post<Map<String, dynamic>>(
-        ApiConstants.patientVitalsTitles(patientId),
-        data: body,
-        cancelTag: 'hospital_patient_vitals_title_create_$patientId',
-      );
+    final data = await post<Map<String, dynamic>>(
+      ApiConstants.patientVitalsTitles(patientId),
+      data: body,
+      cancelTag: 'hospital_patient_vitals_title_create_$patientId',
+    );
 
-      final raw = data['data'];
-      if (raw is Map<String, dynamic>) {
-        return MeasurementTitleModel.fromJson(raw);
-      }
-      throw const NetworkException(message: 'Invalid vital title response');
-    } on NetworkException {
-      rethrow;
+    final raw = data['data'];
+    if (raw is Map<String, dynamic>) {
+      return MeasurementTitleModel.fromJson(raw);
     }
+    throw const NetworkException(message: 'Invalid vital title response');
   }
 
-  Future<List<MeasurementTitleModel>> listPatientLabsTitles(int patientId) async {
-    try {
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.patientLabsTitles(patientId),
-        cancelTag: 'hospital_patient_labs_titles_$patientId',
-      );
+  Future<List<MeasurementTitleModel>> listPatientLabsTitles(
+    int patientId,
+  ) async {
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.patientLabsTitles(patientId),
+      cancelTag: 'hospital_patient_labs_titles_$patientId',
+    );
 
-      final raw = data['data'];
-      final List<dynamic> list;
-      if (raw is List) {
-        list = raw;
-      } else if (raw is Map<String, dynamic>) {
-        list = raw['data'] as List<dynamic>? ?? const [];
-      } else {
-        list = const [];
-      }
-
-      return MeasurementTitleOrder.sortLabs(
-        list
-            .whereType<Map<String, dynamic>>()
-            .map(MeasurementTitleModel.fromJson)
-            .toList(),
-      );
-    } on NetworkException {
-      rethrow;
+    final raw = data['data'];
+    final List<dynamic> list;
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map<String, dynamic>) {
+      list = raw['data'] as List<dynamic>? ?? const [];
+    } else {
+      list = const [];
     }
+
+    return MeasurementTitleOrder.sortLabs(
+      list
+          .whereType<Map<String, dynamic>>()
+          .map(MeasurementTitleModel.fromJson)
+          .toList(),
+    );
   }
 
   Future<MeasurementTitleModel> createPatientLabTitle({
@@ -452,64 +388,52 @@ class HospitalAdmissionsRepository extends BaseApiService {
     double? normalRangeMin,
     double? normalRangeMax,
   }) async {
-    try {
-      final body = MeasurementTitleFormValues(
-        title: title,
-        unit: unit,
-        valueType: valueType,
-        normalRangeMin: normalRangeMin,
-        normalRangeMax: normalRangeMax,
-      ).toLabJson();
+    final body = MeasurementTitleFormValues(
+      title: title,
+      unit: unit,
+      valueType: valueType,
+      normalRangeMin: normalRangeMin,
+      normalRangeMax: normalRangeMax,
+    ).toLabJson();
 
-      final data = await post<Map<String, dynamic>>(
-        ApiConstants.patientLabsTitles(patientId),
-        data: body,
-        cancelTag: 'hospital_patient_labs_title_create_$patientId',
-      );
+    final data = await post<Map<String, dynamic>>(
+      ApiConstants.patientLabsTitles(patientId),
+      data: body,
+      cancelTag: 'hospital_patient_labs_title_create_$patientId',
+    );
 
-      final raw = data['data'];
-      if (raw is Map<String, dynamic>) {
-        return MeasurementTitleModel.fromJson(raw);
-      }
-      throw const NetworkException(message: 'Invalid lab title response');
-    } on NetworkException {
-      rethrow;
+    final raw = data['data'];
+    if (raw is Map<String, dynamic>) {
+      return MeasurementTitleModel.fromJson(raw);
     }
+    throw const NetworkException(message: 'Invalid lab title response');
   }
 
   Future<List<MeasurementTitleModel>> listVitalsTitles() async {
-    try {
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.vitalsTitles,
-        cancelTag: 'hospital_vitals_titles_list',
-      );
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.vitalsTitles,
+      cancelTag: 'hospital_vitals_titles_list',
+    );
 
-      final raw = data['data'] as List<dynamic>? ?? const [];
-      return MeasurementTitleOrder.sortVitals(
-        raw
-            .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
-    } on NetworkException {
-      rethrow;
-    }
+    final raw = data['data'] as List<dynamic>? ?? const [];
+    return MeasurementTitleOrder.sortVitals(
+      raw
+          .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
   }
 
   Future<List<MeasurementTitleModel>> listLabsTitles() async {
-    try {
-      final data = await get<Map<String, dynamic>>(
-        ApiConstants.labsTitles,
-        cancelTag: 'hospital_labs_titles_list',
-      );
+    final data = await get<Map<String, dynamic>>(
+      ApiConstants.labsTitles,
+      cancelTag: 'hospital_labs_titles_list',
+    );
 
-      final raw = data['data'] as List<dynamic>? ?? const [];
-      return MeasurementTitleOrder.sortLabs(
-        raw
-            .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
-    } on NetworkException {
-      rethrow;
-    }
+    final raw = data['data'] as List<dynamic>? ?? const [];
+    return MeasurementTitleOrder.sortLabs(
+      raw
+          .map((e) => MeasurementTitleModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
   }
 }

@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_texts.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/network_exceptions.dart';
 import '../../../../core/network/token_storage.dart';
+import '../../../../core/utils/date_formatters.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/confirm_action_dialog.dart';
 import '../../auth/login/screens/login_screen.dart';
 import '../../session/doctor_session_display.dart';
 import '../cubit/doctor_profile_cubit.dart';
@@ -90,27 +93,13 @@ class _ProfileViewState extends State<_ProfileView> {
   }
 
   Future<void> _confirmAndDeleteAccount() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(AppTexts.deleteAccountConfirmTitle),
-        content: Text(AppTexts.deleteAccountConfirmMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppTexts.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              AppTexts.deleteAccount,
-              style: TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
+    final ok = await ConfirmActionDialog.show(
+      context,
+      title: AppTexts.deleteAccountConfirmTitle,
+      message: AppTexts.deleteAccountConfirmMessage,
+      confirmLabel: AppTexts.deleteAccount,
     );
-    if (ok != true || !mounted) return;
+    if (!ok || !mounted) return;
 
     setState(() => _deletingAccount = true);
     try {
@@ -171,18 +160,8 @@ class _ProfileViewState extends State<_ProfileView> {
       },
       builder: (context, state) {
         return Scaffold(
-          backgroundColor: AppColors.background,
           appBar: AppBar(
-            backgroundColor: AppColors.background,
-            elevation: 0,
-            iconTheme: const IconThemeData(color: AppColors.textPrimary),
-            title: const Text(
-              AppTexts.profileScreenTitle,
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            title: const Text(AppTexts.profileScreenTitle),
             centerTitle: true,
           ),
           body: switch (state) {
@@ -213,7 +192,10 @@ class _ProfileViewState extends State<_ProfileView> {
     final busy = ready.isSaving || _deletingAccount;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
       child: Form(
         key: _formKey,
         child: Column(
@@ -243,7 +225,7 @@ class _ProfileViewState extends State<_ProfileView> {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             AppTextField(
               controller: _emailController,
               labelText: AppTexts.emailLabel,
@@ -258,7 +240,7 @@ class _ProfileViewState extends State<_ProfileView> {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             AppTextField(
               controller: _phoneController,
               labelText: AppTexts.phone,
@@ -273,7 +255,7 @@ class _ProfileViewState extends State<_ProfileView> {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             AppTextField(
               controller: _passwordController,
               labelText: AppTexts.passwordOptionalHint,
@@ -282,7 +264,7 @@ class _ProfileViewState extends State<_ProfileView> {
               textInputAction: TextInputAction.next,
               enabled: !busy,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             AppTextField(
               controller: _confirmPasswordController,
               labelText: AppTexts.confirmPasswordLabel,
@@ -310,11 +292,10 @@ class _ProfileViewState extends State<_ProfileView> {
                 letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               AppTexts.profileJoinHospitalHint,
-              style: TextStyle(
-                fontSize: 13,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppColors.textSecondary.withValues(alpha: 0.9),
               ),
             ),
@@ -322,7 +303,7 @@ class _ProfileViewState extends State<_ProfileView> {
             _HospitalChips(ready: ready),
             const SizedBox(height: 12),
             _AddHospitalDropdown(ready: ready, enabled: !busy),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.xl),
             AppButton(
               label: AppTexts.save,
               onPressed: busy ? null : _submit,
@@ -333,11 +314,15 @@ class _ProfileViewState extends State<_ProfileView> {
               onPressed: busy ? null : _confirmAndDeleteAccount,
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.error,
-                textStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
               ),
               child: Text(_deletingAccount ? '…' : AppTexts.deleteAccount),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
           ],
         ),
       ),
@@ -360,11 +345,7 @@ class _ProfileHeader extends StatelessWidget {
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
-  String? _shortDate(String? iso) {
-    if (iso == null || iso.isEmpty) return null;
-    final i = iso.indexOf('T');
-    return i > 0 ? iso.substring(0, i) : iso;
-  }
+  String? _shortDate(String? iso) => isoDateOnlyOrNull(iso);
 
   @override
   Widget build(BuildContext context) {
@@ -375,54 +356,46 @@ class _ProfileHeader extends StatelessWidget {
           backgroundColor: AppColors.primary,
           child: Text(
             _initials,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(color: Colors.white),
           ),
         ),
         const SizedBox(height: 14),
         Text(
           profile.name,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
+          style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 6),
         Wrap(
-          spacing: 8,
+          spacing: AppSpacing.sm,
           runSpacing: 6,
           alignment: WrapAlignment.center,
           children: [
             Chip(
               label: Text(
                 profile.role.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(fontSize: 11),
               ),
               backgroundColor: AppColors.accent.withValues(alpha: 0.12),
               side: BorderSide.none,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
             ),
             Chip(
               label: Text(
                 profile.isActive ? AppTexts.active : AppTexts.inactive,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(fontSize: 11),
               ),
               backgroundColor: profile.isActive
                   ? AppColors.success.withValues(alpha: 0.15)
                   : AppColors.error.withValues(alpha: 0.12),
               side: BorderSide.none,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
             ),
           ],
         ),
@@ -430,10 +403,7 @@ class _ProfileHeader extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             '${AppTexts.lastLogin}: ${_shortDate(profile.lastLoginAt)}',
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ],
@@ -474,16 +444,15 @@ class _HospitalChips extends StatelessWidget {
     if (ready.hospitalIds.isEmpty) {
       return Text(
         AppTexts.profileMinOneHospital,
-        style: TextStyle(
-          fontSize: 13,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: AppColors.warning.withValues(alpha: 0.95),
         ),
       );
     }
 
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
       children: ready.hospitalIds.map((id) {
         final ph = _profileHospital(id, ready.profile);
         final status = _statusLine(ph);
@@ -498,18 +467,16 @@ class _HospitalChips extends StatelessWidget {
                   _nameForId(id, ready),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    fontSize: 13,
                   ),
                 ),
                 if (status != null)
                   Text(
                     status,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppColors.textSecondary,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(fontSize: 10),
                   ),
               ],
             ),
@@ -520,7 +487,10 @@ class _HospitalChips extends StatelessWidget {
           deleteIconColor: AppColors.textSecondary,
           backgroundColor: AppColors.surface,
           side: const BorderSide(color: AppColors.border),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
+          ),
         );
       }).toList(),
     );
@@ -544,7 +514,7 @@ class _AddHospitalDropdown extends StatelessWidget {
         ready.catalogHospitals.isEmpty
             ? AppTexts.noHospitalsAvailable
             : AppTexts.profileAllHospitalsInList,
-        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        style: Theme.of(context).textTheme.bodyMedium,
       );
     }
 
@@ -557,7 +527,7 @@ class _AddHospitalDropdown extends StatelessWidget {
       ),
       hint: Text(
         AppTexts.selectHospital,
-        style: TextStyle(
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
           color: AppColors.textSecondary.withValues(alpha: 0.85),
         ),
       ),
@@ -596,7 +566,7 @@ class _LoadError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -605,13 +575,13 @@ class _LoadError extends StatelessWidget {
               size: 52,
               color: AppColors.error,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textPrimary),
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             AppButton(label: AppTexts.retry, onPressed: onRetry, width: 160),
           ],
         ),
